@@ -201,3 +201,19 @@ export interface TaskStatusPayload {
   status: string;
   report_id: string | null;
 }
+
+export type ReportProgressEventType =
+  | "task_queued"
+  | "started"
+  | "step_progress"
+  | "assertion_result"
+  | "finished";
+
+export interface ReportProgressEvent {
+  type: ReportProgressEventType;
+  report_id: string;
+  step_alias?: string | null;
+  payload?: Record<string, unknown> | null;
+  timestamp?: string;
+  truncated?: boolean;
+}

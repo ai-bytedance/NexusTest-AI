@@ -16,6 +16,7 @@ from app.logging import get_logger
 from app.models import ReportEntityType, ReportStatus, TestCase, TestReport, TestSuite
 from app.services.assertions.engine import AssertionEngine
 from app.services.execution.context import ExecutionContext, render_value
+from app.services.reports.progress import publish_progress_event
 from app.services.runner.http_runner import HttpRunner, HttpRunnerError
 
 logger = get_logger()
@@ -58,6 +59,18 @@ def execute_test_suite(self, report_id: str, suite_id: str, project_id: str) -> 
         overall_error: str | None = None
 
         steps = suite.steps if isinstance(suite.steps, list) else []
+
+        publish_progress_event(
+            report_id,
+            "started",
+            payload={
+                "task_id": self.request.id,
+                "entity_type": report.entity_type.value,
+                "entity_id": str(report.entity_id),
+                "step_count": len(steps),
+            },
+        )
+
         for index, raw_step in enumerate(steps):
             if not isinstance(raw_step, dict):
                 continue
@@ -90,45 +103,99 @@ def execute_test_suite(self, report_id: str, suite_id: str, project_id: str) -> 
             if not merged_assertions:
                 merged_assertions = base_assertions
 
+            publish_progress_event(
+                report_id,
+                "step_progress",
+                step_alias=alias,
+                payload={
+                    "status": "started",
+                    "case_id": case_identifier,
+                    "index": index,
+                },
+            )
+
             attempts = 0
             result = None
             while attempts < NETWORK_RETRY_ATTEMPTS:
                 attempts += 1
                 try:
                     result = runner.execute(merged_inputs, context)
+                    publish_progress_event(
+                        report_id,
+                        "step_progress",
+                        step_alias=alias,
+                        payload={
+                            "status": "completed",
+                            "attempt": attempts,
+                            "case_id": case_identifier,
+                            "metrics": _compact_metrics(result.metrics),
+                        },
+                    )
                     break
                 except HttpRunnerError as exc:
-                    if attempts >= NETWORK_RETRY_ATTEMPTS:
-                        logger.error(
-                            "suite_step_network_error",
+                    will_retry = attempts < NETWORK_RETRY_ATTEMPTS
+                    event_payload: dict[str, Any] = {
+                        "status": "retrying" if will_retry else "error",
+                        "attempt": attempts,
+                        "case_id": case_identifier,
+                        "message": str(exc),
+                        "metrics": _compact_metrics(exc.metrics),
+                    }
+                    if will_retry:
+                        delay = min(BACKOFF_BASE_SECONDS ** attempts, MAX_BACKOFF_DELAY_SECONDS)
+                        event_payload["retry_in_seconds"] = delay
+                        publish_progress_event(
+                            report_id,
+                            "step_progress",
+                            step_alias=alias,
+                            payload=event_payload,
+                        )
+                        logger.warning(
+                            "suite_runner_retry",
                             suite_id=str(suite_uuid),
                             alias=alias,
+                            attempt=attempts,
+                            delay_seconds=delay,
                             error=str(exc),
                         )
-                        _record_step_error(
-                            request_steps,
-                            response_steps,
-                            assertion_steps,
-                            metric_steps,
-                            alias,
-                            case_identifier,
-                            exc,
-                        )
-                        total_duration += exc.metrics.get("duration_ms") or 0
-                        total_response_size += exc.metrics.get("response_size") or 0
-                        overall_passed = False
-                        overall_error = str(exc)
-                        break
-                    delay = min(BACKOFF_BASE_SECONDS ** attempts, MAX_BACKOFF_DELAY_SECONDS)
-                    logger.warning(
-                        "suite_runner_retry",
+                        time.sleep(delay)
+                        continue
+                    publish_progress_event(
+                        report_id,
+                        "step_progress",
+                        step_alias=alias,
+                        payload=event_payload,
+                    )
+                    logger.error(
+                        "suite_step_network_error",
                         suite_id=str(suite_uuid),
                         alias=alias,
-                        attempt=attempts,
-                        delay_seconds=delay,
                         error=str(exc),
                     )
-                    time.sleep(delay)
+                    _record_step_error(
+                        request_steps,
+                        response_steps,
+                        assertion_steps,
+                        metric_steps,
+                        alias,
+                        case_identifier,
+                        exc,
+                    )
+                    publish_progress_event(
+                        report_id,
+                        "assertion_result",
+                        step_alias=alias,
+                        payload={
+                            "case_id": case_identifier,
+                            "passed": False,
+                            "error": str(exc),
+                        },
+                    )
+                    total_duration += exc.metrics.get("duration_ms") or 0
+                    total_response_size += exc.metrics.get("response_size") or 0
+                    overall_passed = False
+                    overall_error = str(exc)
+                    break
             if result is None:
                 break
 
@@ -144,13 +211,25 @@ def execute_test_suite(self, report_id: str, suite_id: str, project_id: str) -> 
             })
 
             step_passed, assertion_results = assertion_engine.evaluate(merged_assertions, result.context_data, context)
+            assertion_detail = [item.to_dict() for item in assertion_results]
             assertion_steps.append(
                 {
                     "alias": alias,
                     "case_id": case_identifier,
                     "passed": step_passed,
-                    "assertions": [item.to_dict() for item in assertion_results],
+                    "assertions": assertion_detail,
                 }
+            )
+
+            publish_progress_event(
+                report_id,
+                "assertion_result",
+                step_alias=alias,
+                payload={
+                    "case_id": case_identifier,
+                    "passed": step_passed,
+                    "assertions": _trim_assertions(assertion_detail),
+                },
             )
 
             step_metrics = {
@@ -202,12 +281,35 @@ def execute_test_suite(self, report_id: str, suite_id: str, project_id: str) -> 
         session.add(report)
         session.commit()
 
+        finished_payload: dict[str, Any] = {
+            "status": final_status.value,
+            "finished_at": finished_at.isoformat(),
+            "duration_ms": report.duration_ms,
+            "step_count": len(steps),
+            "task_id": self.request.id,
+        }
+        if overall_error:
+            finished_payload["error"] = overall_error
+        publish_progress_event(
+            report_id,
+            "finished",
+            payload=finished_payload,
+        )
+
     except Exception as exc:  # pragma: no cover - unexpected safeguard
         session.rollback()
         logger.error("execute_suite_error", report_id=report_id, error=str(exc))
         report = session.get(TestReport, report_uuid)
         if report:
             _mark_unexpected_error(session, report, str(exc), self.request.id)
+            publish_progress_event(
+                report_id,
+                "finished",
+                payload={
+                    "status": ReportStatus.ERROR.value,
+                    "message": str(exc),
+                },
+            )
         raise
     finally:
         session.close()
@@ -340,6 +442,25 @@ def _mark_unexpected_error(session: Session, report: TestReport, message: str, t
     report.metrics = _merge_dicts(report.metrics, {"task_id": task_id, "status": "error"})
     session.add(report)
     session.commit()
+
+
+def _compact_metrics(metrics: dict[str, Any] | None) -> dict[str, Any]:
+    if not metrics:
+        return {}
+    compact: dict[str, Any] = {}
+    for key in ("duration_ms", "status", "response_size"):
+        value = metrics.get(key)
+        if value is not None:
+            compact[key] = value
+    return compact
+
+
+def _trim_assertions(results: list[dict[str, Any]], limit: int = 25) -> list[dict[str, Any]]:
+    if len(results) <= limit:
+        return results
+    trimmed = results[:limit]
+    trimmed.append({"info": f"{len(results) - limit} additional assertions truncated"})
+    return trimmed
 
 
 def _merge_inputs(base: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:
