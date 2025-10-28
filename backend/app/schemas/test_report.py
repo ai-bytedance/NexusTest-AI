@@ -4,6 +4,8 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+from pydantic import BaseModel
+
 from app.models.test_report import ReportEntityType, ReportStatus
 from app.schemas.common import IdentifierModel, ORMModel
 
@@ -21,6 +23,10 @@ class TestReportRead(IdentifierModel):
     assertions_result: dict[str, Any]
     metrics: dict[str, Any]
     summary: str | None
+
+
+class ReportSummarizeRequest(BaseModel):
+    overwrite: bool = False
 
 
 class ExecutionTriggerResponse(ORMModel):
