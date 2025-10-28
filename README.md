@@ -44,6 +44,89 @@ frontend/           # Placeholder for future frontend implementation
      -d '{"email": "user@example.com", "password": "changeme"}'
    ```
 
+## API Overview
+
+All business endpoints live under `/api/v1` and return a standard envelope:
+
+```json
+{
+  "code": "SUCCESS",
+  "message": "Success",
+  "data": {}
+}
+```
+
+### Projects and RBAC
+
+Create a project (the creator becomes the project admin):
+
+```bash
+curl -X POST http://localhost/api/v1/projects \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "name": "Payments",
+        "key": "PAY",
+        "description": "Demo project"
+      }'
+```
+
+Add another user as a member:
+
+```bash
+curl -X POST http://localhost/api/v1/projects/<project-id>/members \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "teammate@example.com", "role": "member"}'
+```
+
+Project admins can update or delete the project and manage membership, while members can manage APIs, test cases, and test suites.
+
+### CRUD Examples
+
+Create an API definition inside a project:
+
+```bash
+curl -X POST http://localhost/api/v1/projects/<project-id>/apis \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "name": "Get user",
+        "method": "GET",
+        "path": "/users/{id}",
+        "version": "v1",
+        "group_name": "users",
+        "headers": {},
+        "params": {},
+        "body": {},
+        "mock_example": {}
+      }'
+```
+
+Test cases live under `/projects/<project-id>/test-cases` and test suites under `/projects/<project-id>/test-suites` with the same CRUD semantics.
+
+### Importers
+
+Import an OpenAPI document (supports URL fetch or raw JSON payload) and upsert API definitions by method/path/version:
+
+```bash
+curl -X POST http://localhost/api/v1/projects/<project-id>/import/openapi \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com/openapi.json", "dry_run": false}'
+```
+
+Import a Postman v2 collection via JSON:
+
+```bash
+curl -X POST http://localhost/api/v1/projects/<project-id>/import/postman \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"collection": {"info": {"name": "Demo", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"}, "item": []}}'
+```
+
+For form uploads, submit the `collection` file (JSON) using `multipart/form-data` with optional `dry_run=true`.
+
 ## Makefile Helpers
 
 ```bash

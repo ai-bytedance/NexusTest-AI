@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import ForeignKey, Index, String, text
+from sqlalchemy import ForeignKey, Index, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -18,6 +18,7 @@ class Api(BaseModel, Base):
     __tablename__ = "apis"
 
     __table_args__ = (
+        UniqueConstraint("project_id", "method", "path", "version", name="uq_apis_project_method_path_version"),
         Index("ix_apis_headers_gin", "headers", postgresql_using="gin"),
         Index("ix_apis_params_gin", "params", postgresql_using="gin"),
         Index("ix_apis_body_gin", "body", postgresql_using="gin"),
