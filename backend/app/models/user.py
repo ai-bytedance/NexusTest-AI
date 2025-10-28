@@ -1,10 +1,17 @@
+from __future__ import annotations
+
 import enum
-from datetime import datetime
+from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Enum, String, text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base
+from app.db.base import Base, BaseModel
+
+if TYPE_CHECKING:
+    from app.models.project import Project
+    from app.models.test_case import TestCase
+    from app.models.test_suite import TestSuite
 
 
 class UserRole(str, enum.Enum):
@@ -12,13 +19,18 @@ class UserRole(str, enum.Enum):
     MEMBER = "member"
 
 
-class User(Base):
+class User(BaseModel, Base):
     __tablename__ = "users"
 
-    id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    email: Mapped[str] = mapped_column(unique=True, index=True)
-    hashed_password: Mapped[str]
-    role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.MEMBER, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
+    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[UserRole] = mapped_column(
+        Enum(UserRole, name="user_role_enum", native_enum=True),
+        nullable=False,
+        default=UserRole.MEMBER,
+        server_default=text("'member'::user_role_enum"),
     )
+
+    projects_created: Mapped[list["Project"]] = relationship("Project", back_populates="creator")
+    test_cases_created: Mapped[list["TestCase"]] = relationship("TestCase", back_populates="creator")
+    test_suites_created: Mapped[list["TestSuite"]] = relationship("TestSuite", back_populates="creator")

@@ -4,10 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import auth, health
 from app.core.config import get_settings
-from app.db.base import Base
-from app.db.session import engine
 from app.logging import RequestIdMiddleware, configure_logging, get_logger
-from app.models import user  # noqa: F401
 
 load_dotenv()
 configure_logging()
@@ -33,7 +30,6 @@ def create_app() -> FastAPI:
 
     @app.on_event("startup")
     async def on_startup() -> None:
-        Base.metadata.create_all(bind=engine)
         logger.info("application_started", environment=settings.app_env)
 
     return app
