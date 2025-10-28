@@ -1,0 +1,58 @@
+from __future__ import annotations
+
+import uuid
+from typing import TYPE_CHECKING, Any
+
+from sqlalchemy import Boolean, ForeignKey, Index, String, text
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.db.base import Base, BaseModel
+
+if TYPE_CHECKING:
+    from app.models.api import Api
+    from app.models.project import Project
+    from app.models.user import User
+
+
+class TestCase(BaseModel, Base):
+    __tablename__ = "test_cases"
+
+    __table_args__ = (
+        Index("ix_test_cases_inputs_gin", "inputs", postgresql_using="gin"),
+        Index("ix_test_cases_expected_gin", "expected", postgresql_using="gin"),
+        Index("ix_test_cases_assertions_gin", "assertions", postgresql_using="gin"),
+    )
+
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        "project_id",
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    api_id: Mapped[uuid.UUID] = mapped_column(
+        "api_id",
+        ForeignKey("apis.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    inputs: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    expected: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    assertions: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default=text("TRUE"),
+    )
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        "created_by",
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+
+    project: Mapped["Project"] = relationship("Project", back_populates="test_cases")
+    api: Mapped["Api"] = relationship("Api", back_populates="test_cases")
+    creator: Mapped["User"] = relationship("User", back_populates="test_cases_created")
