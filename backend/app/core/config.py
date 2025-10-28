@@ -16,7 +16,8 @@ class Settings(BaseSettings):
     provider: str = "mock"
     algorithm: str = "HS256"
     request_timeout_seconds: int = 30
-    max_response_size_bytes: int = 262_144
+    max_response_size_bytes: int = 512_000
+    redact_fields: List[str] = ["authorization", "password", "token", "secret"]
     deepseek_api_key: str | None = None
     deepseek_base_url: str = "https://api.deepseek.com"
     openai_api_key: str | None = None
@@ -46,6 +47,17 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [origin.strip() for origin in value.split(",") if origin.strip()]
         raise ValueError("Invalid format for CORS_ORIGINS")
+
+    @field_validator("redact_fields", mode="before")
+    @classmethod
+    def split_redact_fields(cls, value: List[str] | str | None) -> List[str]:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return [item.strip().lower() for item in value if isinstance(item, str) and item.strip()]
+        if isinstance(value, str):
+            return [item.strip().lower() for item in value.split(",") if item.strip()]
+        raise ValueError("Invalid format for REDACT_FIELDS")
 
 
 @lru_cache(maxsize=1)

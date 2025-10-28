@@ -44,6 +44,13 @@ frontend/           # Placeholder for future frontend implementation
      -d '{"email": "user@example.com", "password": "changeme"}'
    ```
 
+## Configuration
+
+The backend reads its configuration from environment variables (see `.env.example`). Key toggles for reporting include:
+
+- `MAX_RESPONSE_SIZE_BYTES` (default `512000`): upper bound for response payloads sent back to the UI. Anything larger is replaced with a truncation note.
+- `REDACT_FIELDS` (comma-separated list): case-insensitive field names to mask with `***` inside request/response payloads (defaults to `authorization,password,token,secret`).
+
 ## API Overview
 
 All business endpoints live under `/api/v1` and return a standard envelope:
@@ -183,6 +190,58 @@ curl -X POST http://localhost/api/v1/ai/summarize-report \
 ```
 
 Each response follows the standard `{code, message, data}` envelope. On success the payload includes the generated artefacts alongside the `task_id` that was recorded in the `ai_tasks` table.
+
+### Reporting & Metrics
+
+Reports and analytics endpoints live under `/api/v1/reports` and `/api/v1/metrics`.
+
+List reports with filters, ordering, and pagination:
+
+```bash
+curl -G http://localhost/api/v1/reports \
+  -H "Authorization: Bearer <token>" \
+  --data-urlencode "project_id=<project-id>" \
+  --data-urlencode "status=passed" \
+  --data-urlencode "entity_type=case" \
+  --data-urlencode "date_from=2024-10-01T00:00:00Z" \
+  --data-urlencode "page=1" \
+  --data-urlencode "page_size=10"
+```
+
+Fetch a detailed report with computed assertion metrics and redacted payloads:
+
+```bash
+curl http://localhost/api/v1/reports/<report-id> \
+  -H "Authorization: Bearer <token>"
+```
+
+Generate (or refresh) an AI summary for a report:
+
+```bash
+curl -X POST http://localhost/api/v1/reports/<report-id>/summarize \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"overwrite": false}'
+```
+
+Export a report as Markdown (the payload contains the filename, content type, and Markdown string):
+
+```bash
+curl -G http://localhost/api/v1/reports/<report-id>/export \
+  -H "Authorization: Bearer <token>" \
+  --data-urlencode "format=markdown"
+```
+
+Retrieve aggregated pass/fail/error counts for charting:
+
+```bash
+curl -G http://localhost/api/v1/metrics/reports/summary \
+  -H "Authorization: Bearer <token>" \
+  --data-urlencode "project_id=<project-id>" \
+  --data-urlencode "days=14"
+```
+
+The reporting endpoints always respond with the `{code, message, data}` envelope. When exports are requested, the `data` object carries the file metadata and content (Markdown text today; PDF returns a `501` error with code `R002` until a generator is configured).
 
 ## Makefile Helpers
 
