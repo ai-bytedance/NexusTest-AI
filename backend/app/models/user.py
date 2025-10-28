@@ -10,6 +10,7 @@ from app.db.base import Base, BaseModel
 
 if TYPE_CHECKING:
     from app.models.project import Project
+    from app.models.project_member import ProjectMember
     from app.models.test_case import TestCase
     from app.models.test_suite import TestSuite
 
@@ -32,5 +33,10 @@ class User(BaseModel, Base):
     )
 
     projects_created: Mapped[list["Project"]] = relationship("Project", back_populates="creator")
+    memberships: Mapped[list["ProjectMember"]] = relationship(
+        "ProjectMember",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
     test_cases_created: Mapped[list["TestCase"]] = relationship("TestCase", back_populates="creator")
     test_suites_created: Mapped[list["TestSuite"]] = relationship("TestSuite", back_populates="creator")
