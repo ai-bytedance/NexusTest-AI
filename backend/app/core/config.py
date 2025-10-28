@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     cors_origins: List[str] = ["*"]
     provider: str = "mock"
     algorithm: str = "HS256"
+    request_timeout_seconds: int = 30
+    max_response_size_bytes: int = 262_144
 
     model_config = SettingsConfigDict(
         env_file=(".env", "/app/.env"),

@@ -61,7 +61,7 @@ services:
       - ../.env
     volumes:
       - ../.env:/app/.env:ro
-    command: ["sh", "-c", "celery -A app.core.celery.celery_app worker --loglevel=info"]
+    command: ["sh", "-c", "celery -A app.core.celery:celery_app worker --loglevel=info -Q cases,suites"]
 
   celery-beat:
     image: api-automation-backend
@@ -73,7 +73,7 @@ services:
       - ../.env
     volumes:
       - ../.env:/app/.env:ro
-    command: ["sh", "-c", "celery -A app.core.celery.celery_app beat --loglevel=info"]
+    command: ["sh", "-c", "celery -A app.core.celery:celery_app beat --loglevel=info"]
 
   flower:
     image: api-automation-backend
@@ -87,7 +87,7 @@ services:
       - ../.env
     volumes:
       - ../.env:/app/.env:ro
-    command: ["sh", "-c", "flower --app=app.core.celery.celery_app --port=5555 --url-prefix=flower"]
+    command: ["sh", "-c", "flower --app=app.core.celery:celery_app --port=5555 --url-prefix=flower --queues=cases,suites"]
     expose:
       - "5555"
 
