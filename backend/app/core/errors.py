@@ -14,6 +14,12 @@ class ErrorCode(str, Enum):
     NOT_FOUND = "N001"
     CONFLICT = "C001"
     BAD_REQUEST = "B001"
+    AI_PROVIDER_ERROR = "AI001"
+    AI_PROVIDER_RATE_LIMIT = "AI002"
+    AI_PROVIDER_TIMEOUT = "AI003"
+    AI_PROVIDER_UNAVAILABLE = "AI004"
+    AI_PROVIDER_NOT_CONFIGURED = "AI005"
+    AI_PROVIDER_NOT_IMPLEMENTED = "AI006"
 
 
 def create_error_detail(code: ErrorCode | str, message: str, data: Any | None = None) -> dict[str, Any | None]:
