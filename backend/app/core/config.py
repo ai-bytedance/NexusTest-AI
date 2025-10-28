@@ -17,6 +17,20 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     request_timeout_seconds: int = 30
     max_response_size_bytes: int = 262_144
+    deepseek_api_key: str | None = None
+    deepseek_base_url: str = "https://api.deepseek.com"
+    openai_api_key: str | None = None
+    openai_base_url: str | None = None
+    anthropic_api_key: str | None = None
+    anthropic_base_url: str | None = None
+    google_api_key: str | None = None
+    google_base_url: str | None = None
+    qwen_api_key: str | None = None
+    qwen_base_url: str | None = None
+    zhipu_api_key: str | None = None
+    zhipu_base_url: str | None = None
+    doubao_api_key: str | None = None
+    doubao_base_url: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=(".env", "/app/.env"),

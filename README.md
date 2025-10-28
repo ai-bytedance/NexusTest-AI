@@ -127,6 +127,63 @@ curl -X POST http://localhost/api/v1/projects/<project-id>/import/postman \
 
 For form uploads, submit the `collection` file (JSON) using `multipart/form-data` with optional `dry_run=true`.
 
+### AI Assistance
+
+AI-powered helpers are exposed under `/api/v1/ai` to bootstrap test assets, generate mock payloads, and summarise execution reports.
+
+#### Configure providers
+
+Set the `PROVIDER` environment variable to the vendor you want to use. Supported values are `deepseek`, `openai`, `anthropic`, `gemini`, `qwen`, `glm`, `doubao`, and `mock` (default).
+
+Provide the matching API keys in `.env`:
+
+- `DEEPSEEK_API_KEY` (+ optional `DEEPSEEK_BASE_URL`)
+- `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`, `QWEN_API_KEY`, `ZHIPU_API_KEY`, `DOUBAO_API_KEY` (+ optional `<PROVIDER>_BASE_URL` where applicable)
+
+If a required key is missing, the registry automatically falls back to the deterministic mock provider so the platform keeps working in local environments.
+
+#### Sample requests
+
+```bash
+# Generate test cases from an API specification
+curl -X POST http://localhost/api/v1/ai/generate-cases \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "project_id": "<project-id>",
+        "api_spec": {"path": "/users", "method": "GET"}
+      }'
+
+# Generate assertions from an example response payload
+curl -X POST http://localhost/api/v1/ai/generate-assertions \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "project_id": "<project-id>",
+        "example_response": {"status": "success", "data": {"id": 1}}
+      }'
+
+# Produce mock data using a JSON schema
+curl -X POST http://localhost/api/v1/ai/mock-data \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "project_id": "<project-id>",
+        "json_schema": {"type": "object", "properties": {"id": {"type": "string"}}}
+      }'
+
+# Summarise an execution report (inline payload)
+curl -X POST http://localhost/api/v1/ai/summarize-report \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "project_id": "<project-id>",
+        "report": {"status": "passed", "metrics": {"total": 10, "passed": 9, "failed": 1}}
+      }'
+```
+
+Each response follows the standard `{code, message, data}` envelope. On success the payload includes the generated artefacts alongside the `task_id` that was recorded in the `ai_tasks` table.
+
 ## Makefile Helpers
 
 ```bash
