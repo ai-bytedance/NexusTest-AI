@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# Packaging
+build/
+dist/
+.eggs/
+*.egg-info/
+
+# Logs and databases
+*.log
+*.pid
+*.db
+*.sqlite3
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Coverage
+htmlcov/
+.coverage*
+.tox/
+.pytest_cache/
+.mypy_cache/
