@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>{{ branding.title or "Test Report" }}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 18mm 16mm 18mm 16mm;
+      @top-center {
+        content: element(page-header);
+      }
+      @bottom-center {
+        content: element(page-footer);
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Sans SC', 'Source Han Sans', 'Helvetica Neue', Arial, sans-serif;
+      font-size: 10.5pt;
+      color: #222;
+      line-height: 1.45;
+    }
+
+    header.page-header {
+      position: running(page-header);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #dadada;
+      padding-bottom: 6px;
+      margin-bottom: 12px;
+    }
+
+    header.page-header .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      font-size: 12pt;
+    }
+
+    header.page-header img {
+      height: 22px;
+    }
+
+    header.page-header .meta {
+      text-align: right;
+      font-size: 8.5pt;
+      color: #666;
+    }
+
+    footer.page-footer {
+      position: running(page-footer);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 8.5pt;
+      color: #777;
+      border-top: 1px solid #dadada;
+      padding-top: 6px;
+    }
+
+    footer.page-footer .page-count::after {
+      content: "Page " counter(page) " / " counter(pages);
+    }
+
+    main {
+      display: block;
+    }
+
+    h1 {
+      font-size: 20pt;
+      margin: 0 0 12px;
+      color: #0f172a;
+    }
+
+    h2 {
+      font-size: 14pt;
+      margin: 18px 0 8px;
+      color: #0f172a;
+      border-bottom: 1px solid #d4d4d8;
+      padding-bottom: 4px;
+    }
+
+    h3 {
+      font-size: 12pt;
+      margin: 12px 0 6px;
+      color: #1e293b;
+    }
+
+    p {
+      margin: 6px 0;
+    }
+
+    ul {
+      padding-left: 18px;
+      margin: 6px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 14px;
+      font-size: 9.5pt;
+    }
+
+    table th,
+    table td {
+      border: 1px solid #d4d4d8;
+      padding: 6px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    table th {
+      background-color: #f4f4f5;
+      font-weight: 600;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 8pt;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge--success {
+      background-color: #dcfce7;
+      color: #166534;
+    }
+
+    .badge--danger {
+      background-color: #fee2e2;
+      color: #991b1b;
+    }
+
+    .badge--warn {
+      background-color: #fef3c7;
+      color: #92400e;
+    }
+
+    pre {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 8px;
+      overflow-wrap: anywhere;
+      font-size: 8.5pt;
+    }
+
+    .muted {
+      color: #6b7280;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+    }
+
+    .card {
+      border: 1px solid #e4e4e7;
+      border-radius: 6px;
+      padding: 10px;
+      background: #fff;
+    }
+
+    .section-note {
+      border-left: 3px solid #2563eb;
+      padding-left: 10px;
+      margin: 6px 0 12px;
+      color: #1d4ed8;
+      font-size: 9.5pt;
+    }
+  </style>
+  {% if assets.font_uri %}
+  <style>
+    @font-face {
+      font-family: 'ReportSans';
+      src: url('{{ assets.font_uri }}');
+      font-weight: normal;
+      font-style: normal;
+    }
+
+    body {
+      font-family: 'ReportSans', 'Noto Sans SC', 'Source Han Sans', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    }
+  </style>
+  {% endif %}
+</head>
+<body>
+  <header class="page-header">
+    <div class="brand">
+      {% if branding.logo %}
+      <img src="{{ branding.logo }}" alt="logo" />
+      {% endif %}
+      <span>{{ branding.title or "Test Report" }}</span>
+    </div>
+    <div class="meta">
+      <div>{{ metadata.started_at }}</div>
+      <div>{{ metadata.id }}</div>
+    </div>
+  </header>
+
+  <footer class="page-footer">
+    <span>{% if branding.company %}{{ branding.company }} · {% endif %}{{ metadata.project_id }}</span>
+    <span class="page-count"></span>
+  </footer>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

@@ -1,0 +1,203 @@
+{% extends "base.html.j2" %}
+
+{% block content %}
+<h1>{{ branding.title or "Test Report" }}</h1>
+<p class="muted">{{ metadata.entity_type | capitalize }} · {{ metadata.entity_id }}</p>
+
+<h2>Overview</h2>
+<table>
+  <tbody>
+    <tr><th>Report ID</th><td>{{ metadata.id }}</td></tr>
+    <tr><th>Project ID</th><td>{{ metadata.project_id }}</td></tr>
+    <tr><th>Status</th><td>{{ metadata.status | upper }}</td></tr>
+    <tr><th>Started</th><td>{{ metadata.started_at }}</td></tr>
+    <tr><th>Finished</th><td>{{ metadata.finished_at }}</td></tr>
+    <tr><th>Duration</th><td>{{ metadata.duration_display }}</td></tr>
+    <tr><th>Assertions</th><td>{{ metadata.assertions_display }} ({{ metadata.pass_rate_display }})</td></tr>
+    <tr><th>Response Size</th><td>{{ metadata.response_size_display }}</td></tr>
+    <tr><th>Redacted Fields</th><td>{% if redaction.redacted_fields %}{{ redaction.redacted_fields | join(", ") }}{% else %}None{% endif %}</td></tr>
+  </tbody>
+</table>
+
+<h2>Summary</h2>
+{% if summary_text %}
+<p>{{ summary_text }}</p>
+{% else %}
+<p class="muted">No AI summary has been provided for this report.</p>
+{% endif %}
+
+<h2>Steps</h2>
+{% if steps %}
+<table>
+  <thead>
+    <tr>
+      <th>Step</th>
+      <th>Status</th>
+      <th>Assertions</th>
+      <th>Duration</th>
+      <th>Response Size</th>
+      <th>Runner Status</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for step in steps %}
+    <tr>
+      <td>
+        <strong>{{ step.alias }}</strong><br />
+        {% if step.case_id %}<span class="muted">Case {{ step.case_id }}</span>{% endif %}
+      </td>
+      <td>
+        {% if step.status == 'passed' %}<span class="badge badge--success">Passed</span>
+        {% elif step.status == 'failed' %}<span class="badge badge--danger">Failed</span>
+        {% else %}<span class="badge badge--warn">{{ step.status | capitalize }}</span>
+        {% endif %}
+      </td>
+      <td>{{ step.assertion_count }}</td>
+      <td>{{ step.metrics.duration_display or 'n/a' }}</td>
+      <td>{{ step.metrics.response_size_display or 'n/a' }}</td>
+      <td>{{ step.metrics.status or 'n/a' }}</td>
+    </tr>
+    {% if step.error %}
+    <tr>
+      <td colspan="6"><div class="section-note">⚠️ {{ step.error }}</div></td>
+    </tr>
+    {% endif %}
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">No discrete steps were recorded.</p>
+{% endif %}
+
+<h2>Assertions</h2>
+<table>
+  <tbody>
+    <tr><th>Total</th><td>{{ assertions.total }}</td></tr>
+    <tr><th>Passed</th><td>{{ assertions.passed }}</td></tr>
+    <tr><th>Failed</th><td>{{ assertions.failed }}</td></tr>
+    <tr><th>Pass Rate</th><td>{{ assertions.pass_rate_display }}</td></tr>
+  </tbody>
+</table>
+{% if assertions.error %}
+<div class="section-note">⚠️ {{ assertions.error }}</div>
+{% endif %}
+
+{% if assertions.results %}
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Operator</th>
+      <th>Result</th>
+      <th>Path</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for assertion in assertions.results %}
+    <tr>
+      <td>{{ assertion.name }}{% if assertion.step %}<br /><span class="muted">{{ assertion.step }}</span>{% endif %}</td>
+      <td>{{ assertion.operator or '—' }}</td>
+      <td>{% if assertion.passed %}<span class="badge badge--success">Pass</span>{% else %}<span class="badge badge--danger">Fail</span>{% endif %}</td>
+      <td>{{ assertion.path or '—' }}</td>
+      <td>{{ assertion.message or '' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">No assertion results recorded.</p>
+{% endif %}
+
+<h2>Failures</h2>
+{% if failures %}
+{% for failure in failures %}
+<h3>{{ failure.name }}{% if failure.step %} · {{ failure.step }}{% endif %}</h3>
+<p class="muted">Operator: {{ failure.operator or 'n/a' }}</p>
+{% if failure.message %}<div class="section-note">{{ failure.message }}</div>{% endif %}
+{% if failure.expected_display is not none %}
+<p><strong>Expected</strong></p>
+<pre>{{ failure.expected_display }}</pre>
+{% endif %}
+{% if failure.actual_display is not none %}
+<p><strong>Actual</strong></p>
+<pre>{{ failure.actual_display }}</pre>
+{% endif %}
+{% if failure.diff %}
+<p><strong>Diff</strong></p>
+<pre>{{ failure.diff }}</pre>
+{% endif %}
+{% endfor %}
+{% else %}
+<p class="muted">All assertions passed.</p>
+{% endif %}
+
+<h2>Requests</h2>
+{% for request in payloads.requests %}
+<h3>Request {{ request.index }}{% if request.alias %}: {{ request.alias }}{% endif %}</h3>
+{% if request.note %}<div class="section-note">{{ request.note }}</div>{% endif %}
+{% if request.truncated %}<div class="section-note">Payload truncated due to size limits.</div>{% endif %}
+{% if request.content %}<pre>{{ request.content }}</pre>{% else %}<p class="muted">(empty)</p>{% endif %}
+{% endfor %}
+
+<h2>Responses</h2>
+{% for response in payloads.responses %}
+<h3>Response {{ response.index }}{% if response.alias %}: {{ response.alias }}{% endif %}</h3>
+{% if response.note %}<div class="section-note">{{ response.note }}</div>{% endif %}
+{% if response.truncated %}<div class="section-note">Payload truncated due to size limits.</div>{% endif %}
+{% if response.content %}<pre>{{ response.content }}</pre>{% else %}<p class="muted">(empty)</p>{% endif %}
+{% endfor %}
+
+<h2>Metrics</h2>
+<table>
+  <tbody>
+    <tr><th>Execution Duration</th><td>{{ metrics.duration_display }}</td></tr>
+    <tr><th>Response Size</th><td>{{ metrics.response_size_display }}</td></tr>
+    <tr><th>Runner Status</th><td>{{ metrics.status or 'n/a' }}</td></tr>
+    <tr><th>Task ID</th><td>{{ metrics.task_id or 'n/a' }}</td></tr>
+  </tbody>
+</table>
+{% if metrics.steps %}
+<table>
+  <thead>
+    <tr>
+      <th>Step</th>
+      <th>Duration</th>
+      <th>Response Size</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for metric in metrics.steps %}
+    <tr>
+      <td>{{ metric.alias }}</td>
+      <td>{{ metric.duration_display }}</td>
+      <td>{{ metric.response_size_display }}</td>
+      <td>{{ metric.status or 'n/a' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if environment %}
+<h2>Environment</h2>
+<pre>{{ environment | to_pretty_json }}</pre>
+{% endif %}
+
+{% if dataset %}
+<h2>Dataset</h2>
+<pre>{{ dataset | to_pretty_json }}</pre>
+{% endif %}
+
+<h2>Redaction &amp; Notes</h2>
+<ul>
+  <li>Request Truncated: {{ redaction.request_truncated }}{% if redaction.request_note %} · {{ redaction.request_note }}{% endif %}</li>
+  <li>Response Truncated: {{ redaction.response_truncated }}{% if redaction.response_note %} · {{ redaction.response_note }}{% endif %}</li>
+  <li>Redacted Fields: {% if redaction.redacted_fields %}{{ redaction.redacted_fields | join(', ') }}{% else %}none{% endif %}</li>
+</ul>
+
+{% if branding.footer %}
+<div class="section-note">{{ branding.footer }}</div>
+{% endif %}
+{% endblock %}

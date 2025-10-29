@@ -25,6 +25,13 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     request_timeout_seconds: int = 30
     max_response_size_bytes: int = 512_000
+    report_export_max_bytes: int = 5_242_880
+    pdf_engine: str = "weasyprint"
+    report_export_font_path: str | None = None
+    report_export_branding_logo: str | None = None
+    report_export_branding_title: str = "Test Execution Report"
+    report_export_branding_footer: str | None = None
+    report_export_branding_company: str | None = None
     httpx_connect_timeout: float = 5.0
     httpx_read_timeout: float = 30.0
     httpx_write_timeout: float = 30.0
@@ -112,6 +119,7 @@ class Settings(BaseSettings):
         "httpx_retry_attempts",
         "ai_chat_rate_limit_per_minute",
         "ai_chat_message_max_bytes",
+        "report_export_max_bytes",
         mode="before",
     )
     @classmethod
@@ -164,6 +172,38 @@ class Settings(BaseSettings):
         if not placeholder:
             raise ValueError("REDACTION_PLACEHOLDER cannot be empty")
         return placeholder
+
+    @field_validator(
+        "report_export_font_path",
+        "report_export_branding_logo",
+        "report_export_branding_footer",
+        "report_export_branding_company",
+        mode="before",
+    )
+    @classmethod
+    def normalize_optional_branding(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = str(value).strip()
+        return normalized or None
+
+    @field_validator("report_export_branding_title", mode="before")
+    @classmethod
+    def normalize_branding_title(cls, value: str | None) -> str:
+        if value is None:
+            return "Test Execution Report"
+        normalized = str(value).strip()
+        if not normalized:
+            raise ValueError("REPORT_EXPORT_BRANDING_TITLE cannot be empty")
+        return normalized
+
+    @field_validator("pdf_engine", mode="before")
+    @classmethod
+    def normalize_pdf_engine(cls, value: str | None) -> str:
+        engine = str(value or "weasyprint").strip().lower()
+        if engine not in {"weasyprint", "wkhtml"}:
+            raise ValueError("PDF_ENGINE must be either 'weasyprint' or 'wkhtml'")
+        return engine
 
     @field_validator("httpx_retry_statuses", mode="before")
     @classmethod

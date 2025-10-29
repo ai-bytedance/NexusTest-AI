@@ -1,0 +1,76 @@
+# {{ branding.title or "Test Report" }} · Compact
+
+## Snapshot
+- Report: {{ metadata.id }} ({{ metadata.status | upper }})
+- Project: {{ metadata.project_id }}
+- Entity: {{ metadata.entity_type }} · {{ metadata.entity_id }}
+- Duration: {{ metadata.duration_display }}
+- Assertions: {{ assertions.passed }}/{{ assertions.total }} ({{ assertions.pass_rate_display }})
+- Response Size: {{ metadata.response_size_display }}
+
+## Summary
+{% if summary_text %}{{ summary_text }}{% else %}_No AI summary available._{% endif %}
+
+## Failures
+{% if failures %}
+{% for failure in failures %}- **{{ failure.name }}{% if failure.step %} · {{ failure.step }}{% endif %}** — {{ failure.message or "Assertion failed" }}
+{% if failure.diff %}
+```diff
+{{ failure.diff }}
+```
+{% elif failure.actual_display is not none or failure.expected_display is not none %}
+```json
+Expected:
+{{ failure.expected_display or 'null' }}
+Actual:
+{{ failure.actual_display or 'null' }}
+```
+{% endif %}
+{% endfor %}
+{% else %}
+All assertions passed.
+{% endif %}
+
+## Key Metrics
+- Runner Status: {{ metrics.status or "n/a" }}
+- Task ID: {{ metrics.task_id or "n/a" }}
+{% if metrics.steps %}
+- Steps: {% for metric in metrics.steps %}{{ metric.alias }} ({{ metric.status or "n/a" }}){% if not loop.last %}, {% endif %}{% endfor %}
+{% endif %}
+
+## Request & Response Excerpts
+{% set req = payloads.requests[0] if payloads.requests else None %}
+{% if req %}
+### Request
+{% if req.note %}> {{ req.note }}{% endif %}
+{% if req.content %}
+```json
+{{ req.content }}
+```
+{% else %}
+_(empty)_
+{% endif %}
+{% endif %}
+
+{% set res = payloads.responses[0] if payloads.responses else None %}
+{% if res %}
+### Response
+{% if res.note %}> {{ res.note }}{% endif %}
+{% if res.content %}
+```json
+{{ res.content }}
+```
+{% else %}
+_(empty)_
+{% endif %}
+{% endif %}
+
+## Notes
+- Request Truncated: {{ redaction.request_truncated }}{% if redaction.request_note %} · {{ redaction.request_note }}{% endif %}
+- Response Truncated: {{ redaction.response_truncated }}{% if redaction.response_note %} · {{ redaction.response_note }}{% endif %}
+- Redacted Fields: {% if redaction.redacted_fields %}{{ redaction.redacted_fields | join(", ") }}{% else %}none{% endif %}
+
+{% if branding.footer %}
+---
+{{ branding.footer }}
+{% endif %}

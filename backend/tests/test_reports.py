@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import os
 import uuid
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -45,6 +47,14 @@ def _create_report(
     db.commit()
     db.refresh(report)
     return report
+
+
+def _normalize_export_snapshot(content: str, report: TestReport, project_id: uuid.UUID) -> str:
+    normalized = content.replace(str(report.id), "<REPORT-ID>")
+    normalized = normalized.replace(str(project_id), "<PROJECT-ID>")
+    normalized = normalized.replace(str(report.entity_id), "<ENTITY-ID>")
+    normalized = normalized.strip()
+    return normalized + "\n"
 
 
 def test_reports_listing_filters_and_pagination(client: TestClient, db_session: Session) -> None:
@@ -223,7 +233,7 @@ def test_report_summarize_is_idempotent(client: TestClient, db_session: Session)
     get_settings.cache_clear()
 
 
-def test_report_export_markdown_and_pdf_stub(client: TestClient, db_session: Session) -> None:
+def test_report_export_markdown_matches_golden(client: TestClient, db_session: Session) -> None:
     token = register_and_login(client, "reports-export@example.com")
     project_response = client.post(
         "/api/v1/projects",
@@ -233,34 +243,134 @@ def test_report_export_markdown_and_pdf_stub(client: TestClient, db_session: Ses
     assert project_response.status_code == 200, project_response.text
     project_id = uuid.UUID(project_response.json()["data"]["id"])
 
+    started_at = datetime(2024, 10, 25, 10, 15, tzinfo=timezone.utc)
     report = _create_report(
         db_session,
         project_id=project_id,
         status=ReportStatus.FAILED,
+        started_at=started_at,
+        duration_ms=1500,
+        request_payload={
+            "method": "GET",
+            "url": "https://api.example.com/data",
+            "headers": {"Authorization": "Bearer token"},
+        },
+        response_payload={
+            "status": 200,
+            "body": {"result": "fail"},
+        },
+        assertions=[
+            {"name": "status_code", "operator": "status_code", "passed": True, "expected": 200, "actual": 200},
+            {
+                "name": "body_equals",
+                "operator": "equals",
+                "passed": False,
+                "expected": {"result": "ok"},
+                "actual": {"result": "fail"},
+                "message": "Body mismatch",
+            },
+        ],
+        summary="Automated execution summary.",
+    )
+    report.metrics = {
+        "task_id": "task-12345",
+        "status": "completed",
+        "duration_ms": 1500,
+        "response_size": 256,
+        "environment": {"name": "staging", "base_url": "https://staging.example.com"},
+        "dataset": {"name": "sample", "version": "1.0"},
+    }
+    db_session.add(report)
+    db_session.commit()
+    db_session.refresh(report)
+
+    response = client.get(
+        f"/api/v1/reports/{report.id}/export",
+        params={"format": "markdown", "template": "default"},
+        headers=auth_headers(token),
+    )
+    assert response.status_code == 200, response.text
+    assert response.headers["content-type"].startswith("text/markdown")
+
+    content = response.content.decode("utf-8")
+    normalized = _normalize_export_snapshot(content, report, project_id)
+
+    golden_path = Path(__file__).parent / "fixtures" / "exports" / "report_default.md"
+    if os.environ.get("UPDATE_GOLDEN_EXPORTS") == "1":
+        golden_path.write_text(normalized, encoding="utf-8")
+    expected = golden_path.read_text(encoding="utf-8")
+    assert normalized == expected
+
+
+def test_report_export_pdf_smoke(client: TestClient, db_session: Session) -> None:
+    token = register_and_login(client, "reports-export-pdf@example.com")
+    project_response = client.post(
+        "/api/v1/projects",
+        json={"name": "Export PDF", "key": "EPF", "description": "Export project"},
+        headers=auth_headers(token),
+    )
+    assert project_response.status_code == 200, project_response.text
+    project_id = uuid.UUID(project_response.json()["data"]["id"])
+
+    report = _create_report(
+        db_session,
+        project_id=project_id,
+        status=ReportStatus.FAILED,
+        started_at=datetime(2024, 10, 25, 10, 45, tzinfo=timezone.utc),
+        assertions=[{"name": "status_code", "operator": "status_code", "passed": True, "expected": 200, "actual": 200}],
+        summary="PDF smoke summary.",
+    )
+    report.metrics = {
+        "task_id": "task-compact",
+        "status": "completed",
+        "duration_ms": 500,
+        "response_size": 128,
+    }
+    db_session.add(report)
+    db_session.commit()
+
+    response = client.get(
+        f"/api/v1/reports/{report.id}/export",
+        params={"format": "pdf", "template": "compact"},
+        headers=auth_headers(token),
+    )
+    assert response.status_code == 200, response.text
+    assert response.headers["content-type"] == "application/pdf"
+    assert response.headers["X-Export-Template"] == "compact"
+    assert response.headers["X-Export-Format"] == "pdf"
+
+    payload = response.content
+    assert payload.startswith(b"%PDF"), "Expected binary payload to be a PDF document"
+    assert len(payload) > 500
+    assert b"/Title" in payload or b"/Producer" in payload
+
+
+def test_report_export_unknown_template_returns_400(client: TestClient, db_session: Session) -> None:
+    token = register_and_login(client, "reports-export-error@example.com")
+    project_response = client.post(
+        "/api/v1/projects",
+        json={"name": "Export Err", "key": "ERR", "description": "Export project"},
+        headers=auth_headers(token),
+    )
+    assert project_response.status_code == 200, project_response.text
+    project_id = uuid.UUID(project_response.json()["data"]["id"])
+
+    report = _create_report(
+        db_session,
+        project_id=project_id,
+        status=ReportStatus.PASSED,
         started_at=datetime.now(timezone.utc),
-        assertions=[{"passed": False}],
-        summary="Sample summary",
+        summary="Template error test",
     )
 
-    markdown_response = client.get(
+    response = client.get(
         f"/api/v1/reports/{report.id}/export",
-        params={"format": "markdown"},
+        params={"format": "markdown", "template": "unknown"},
         headers=auth_headers(token),
     )
-    assert markdown_response.status_code == 200, markdown_response.text
-    markdown_payload = markdown_response.json()["data"]
-    assert markdown_payload["format"] == "markdown"
-    assert markdown_payload["content_type"] == "text/markdown"
-    assert markdown_payload["content"].startswith("# Test Report")
-
-    pdf_response = client.get(
-        f"/api/v1/reports/{report.id}/export",
-        params={"format": "pdf"},
-        headers=auth_headers(token),
-    )
-    assert pdf_response.status_code == 501
-    error_payload = pdf_response.json()
-    assert error_payload["code"] == "R002"
+    assert response.status_code == 400
+    error_payload = response.json()
+    assert error_payload["code"] == "R003"
 
 
 def test_metrics_reports_summary(client: TestClient, db_session: Session) -> None:

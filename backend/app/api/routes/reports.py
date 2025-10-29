@@ -5,6 +5,7 @@ from typing import Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -20,6 +21,7 @@ from app.models.test_report import ReportEntityType, ReportStatus
 from app.schemas.test_report import ReportSummarizeRequest, TestReportRead
 from app.services.ai import get_ai_provider
 from app.services.ai.base import AIProviderError
+from app.services.exports import get_template_definition, render_markdown_report, render_pdf_report
 from app.services.reports.formatter import format_report_detail, format_report_summary
 from app.tasks import celery_app
 
@@ -200,35 +202,67 @@ def summarize_report(
     )
 
 
-@router.get("/reports/{report_id}/export", response_model=ResponseEnvelope)
+@router.get(
+    "/reports/{report_id}/export",
+    response_class=StreamingResponse,
+    tags=["reports"],
+)
 def export_report(
     report_id: UUID,
     format: Literal["markdown", "pdf"] = Query("markdown", description="Export format"),
+    template: str = Query("default", description="Template to use for rendering the export"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-) -> dict[str, Any]:
+) -> StreamingResponse:
     report = _get_report_or_404(db, report_id)
     _ensure_membership(db, report.project_id, current_user.id)
+
+    export_format = (format or "markdown").lower()
+    template_key = (template or "default").strip().lower()
+
+    if export_format not in {"markdown", "pdf"}:
+        raise http_exception(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCode.REPORT_EXPORT_FORMAT_UNSUPPORTED,
+            "Unsupported export format",
+        )
+
+    if get_template_definition(template_key) is None:
+        raise http_exception(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCode.REPORT_EXPORT_TEMPLATE_UNKNOWN,
+            "Unknown export template",
+        )
 
     settings = get_settings()
     detail = format_report_detail(report, settings=settings)
 
-    if format == "markdown":
-        markdown = _build_markdown_export(detail)
-        response_data = {
-            "report_id": str(report.id),
-            "format": "markdown",
-            "filename": f"report-{report.id}.md",
-            "content_type": "text/markdown",
-            "content": markdown,
-        }
-        return success_response(response_data)
+    if export_format == "markdown":
+        content = render_markdown_report(detail, template_key, settings)
+        payload_bytes = content.encode("utf-8")
+        media_type = "text/markdown; charset=utf-8"
+        extension = "md"
+    else:
+        try:
+            payload_bytes = render_pdf_report(detail, template_key, settings)
+        except RuntimeError as exc:
+            raise http_exception(
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+                ErrorCode.REPORT_EXPORT_ENGINE_UNAVAILABLE,
+                str(exc),
+            ) from exc
+        media_type = "application/pdf"
+        extension = "pdf"
 
-    raise http_exception(
-        status.HTTP_501_NOT_IMPLEMENTED,
-        ErrorCode.REPORT_EXPORT_UNSUPPORTED,
-        "PDF export is not currently supported",
-    )
+    _ensure_export_size(payload_bytes, settings.report_export_max_bytes)
+
+    filename = f"{_build_export_basename(detail, template_key, export_format)}.{extension}"
+    response = StreamingResponse(iter([payload_bytes]), media_type=media_type)
+    response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+    response.headers["Content-Length"] = str(len(payload_bytes))
+    response.headers["X-Export-Format"] = export_format
+    response.headers["X-Export-Template"] = template_key
+    return response
 
 
 @router.get("/metrics/reports/summary", response_model=ResponseEnvelope)
@@ -398,50 +432,45 @@ def _serialize_report(report: TestReport) -> dict[str, Any]:
     return schema.model_dump(mode="json")
 
 
-def _build_markdown_export(report: dict[str, Any]) -> str:
-    duration_ms = report.get("duration_ms")
-    duration_display = f"{duration_ms} ms" if duration_ms is not None else "N/A"
-    pass_rate = report.get("pass_rate")
-    pass_rate_display = f"{round(pass_rate * 100)}%" if isinstance(pass_rate, (int, float)) else "0%"
+def _ensure_export_size(payload: bytes, limit: int | None) -> None:
+    if limit is None or int(limit) <= 0:
+        return
+    limit_value = int(limit)
+    if len(payload) > limit_value:
+        raise http_exception(
+            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            ErrorCode.REPORT_EXPORT_TOO_LARGE,
+            f"Export exceeds configured limit of {limit_value} bytes",
+        )
 
-    lines = [
-        f"# Test Report {report['id']}",
-        "",
-        "## Overview",
-        f"- Project ID: {report['project_id']}",
-        f"- Entity Type: {report['entity_type']}",
-        f"- Entity ID: {report['entity_id']}",
-        f"- Status: {report['status']}",
-        f"- Started At: {report['started_at']}",
-        f"- Finished At: {report.get('finished_at') or 'N/A'}",
-        f"- Duration: {duration_display}",
-        f"- Assertions: {report.get('assertions_passed', 0)}/{report.get('assertions_total', 0)}",
-        f"- Pass Rate: {pass_rate_display}",
-        f"- Response Size: {report.get('response_size', 0)} bytes",
-        "",
-        "## AI Summary",
-    ]
 
-    summary_text = report.get("summary")
-    if summary_text:
-        lines.append(summary_text)
-    else:
-        lines.append("_No AI summary has been generated for this report._")
+def _build_export_basename(report: dict[str, Any], template_key: str, export_format: str) -> str:
+    report_id = str(report.get("id") or "report")
+    status_value = str(report.get("status") or "status")
+    timestamp = _timestamp_for_filename(report.get("started_at")) or _timestamp_for_filename(report.get("created_at"))
+    segments = ["report", status_value, report_id]
+    if timestamp:
+        segments.append(timestamp)
+    segments.append(template_key)
+    segments.append(export_format)
+    base = "-".join(filter(None, segments))
+    return _slugify(base)
 
-    lines.extend(
-        [
-            "",
-            "## Notes",
-        ]
-    )
 
-    if report.get("response_payload_truncated"):
-        note = report.get("response_payload_note") or "Response payload was truncated due to size limits."
-        lines.append(f"- {note}")
-    if report.get("request_payload_truncated"):
-        note = report.get("request_payload_note") or "Request payload was truncated due to size limits."
-        lines.append(f"- {note}")
-    if report.get("response_payload_truncated") is False and report.get("request_payload_truncated") is False:
-        lines.append("- No truncation applied to request or response payloads.")
+def _timestamp_for_filename(value: Any) -> str | None:
+    if not value:
+        return None
+    text = str(value)
+    try:
+        dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return dt.strftime("%Y%m%d%H%M%S")
 
-    return "\n".join(lines)
+
+def _slugify(value: str | None) -> str:
+    if not value:
+        return "report"
+    normalized = "".join(char if char.isalnum() else "-" for char in value.lower())
+    parts = [segment for segment in normalized.split("-") if segment]
+    return "-".join(parts) or "report"

@@ -1,0 +1,163 @@
+# {{ branding.title or "Test Report" }}
+{% if branding.company %}_{{ branding.company }}_
+{% endif %}
+
+## Overview
+- **Report ID:** {{ metadata.id }}
+- **Project ID:** {{ metadata.project_id }}
+- **Entity:** {{ metadata.entity_type }} · {{ metadata.entity_id }}
+- **Status:** {{ metadata.status | upper }}
+- **Started:** {{ metadata.started_at }}
+- **Finished:** {{ metadata.finished_at }}
+- **Duration:** {{ metadata.duration_display }}
+- **Assertions:** {{ metadata.assertions_display }} ({{ metadata.pass_rate_display }})
+- **Response Size:** {{ metadata.response_size_display }}
+{% if redaction.redacted_fields %}- **Redacted Fields:** {{ redaction.redacted_fields | join(", ") }}
+{% endif %}
+
+{% if summary_text %}
+## Summary
+{{ summary_text }}
+{% else %}
+## Summary
+_No AI summary has been provided for this report._
+{% endif %}
+
+## Steps
+{% if steps %}
+{% for step in steps %}
+### Step {{ step.index }} · {{ step.alias }}
+- Status: {{ step.status | capitalize }}
+{% if step.case_id %}- Case ID: {{ step.case_id }}
+{% endif %}
+- Assertions: {{ step.assertion_count }}
+{% if step.metrics.duration_display %}- Duration: {{ step.metrics.duration_display }}
+{% endif %}
+{% if step.metrics.response_size_display %}- Response Size: {{ step.metrics.response_size_display }}
+{% endif %}
+{% if step.metrics.status %}- Runner Status: {{ step.metrics.status }}
+{% endif %}
+{% if step.error %}> ⚠️  {{ step.error }}
+{% endif %}
+{% endfor %}
+{% else %}
+_No discrete steps were recorded for this execution._
+{% endif %}
+
+## Assertions
+- Total: {{ assertions.total }}
+- Passed: {{ assertions.passed }}
+- Failed: {{ assertions.failed }}
+- Pass Rate: {{ assertions.pass_rate_display }}
+{% if assertions.error %}> ⚠️  {{ assertions.error }}
+{% endif %}
+
+{% if assertions.results %}
+| Name | Operator | Result | Notes |
+| ---- | -------- | ------ | ----- |
+{% for assertion in assertions.results %}
+| {{ assertion.name }}{% if assertion.step %} <br><sub>{{ assertion.step }}</sub>{% endif %} | {{ assertion.operator or "—" }} | {% if assertion.passed %}✅ Pass{% else %}❌ Fail{% endif %} | {% if assertion.message %}{{ assertion.message }}{% else %}{% if assertion.path %}`{{ assertion.path }}`{% else %}&nbsp;{% endif %}{% endif %} |
+{% endfor %}
+{% else %}
+_No assertion results recorded._
+{% endif %}
+
+## Failures
+{% if failures %}
+{% for failure in failures %}
+### {{ failure.name }}{% if failure.step %} · {{ failure.step }}{% endif %}
+- Operator: {{ failure.operator or "n/a" }}
+{% if failure.message %}> {{ failure.message }}
+{% endif %}
+{% if failure.expected_display is not none %}
+**Expected**
+```json
+{{ failure.expected_display }}
+```
+{% endif %}
+{% if failure.actual_display is not none %}
+**Actual**
+```json
+{{ failure.actual_display }}
+```
+{% endif %}
+{% if failure.diff %}
+**Diff**
+```diff
+{{ failure.diff }}
+```
+{% endif %}
+{% endfor %}
+{% else %}
+_All assertions passed._
+{% endif %}
+
+## Requests
+{% for request in payloads.requests %}
+### Request {{ request.index }}{% if request.alias %}: {{ request.alias }}{% endif %}
+{% if request.note %}> {{ request.note }}
+{% endif %}
+{% if request.truncated %}> ⚠️  Payload truncated in storage; original content exceeded limits.
+{% endif %}
+{% if request.content %}
+```json
+{{ request.content }}
+```
+{% else %}
+_(empty)_
+{% endif %}
+{% endfor %}
+
+## Responses
+{% for response in payloads.responses %}
+### Response {{ response.index }}{% if response.alias %}: {{ response.alias }}{% endif %}
+{% if response.note %}> {{ response.note }}
+{% endif %}
+{% if response.truncated %}> ⚠️  Payload truncated in storage; original content exceeded limits.
+{% endif %}
+{% if response.content %}
+```json
+{{ response.content }}
+```
+{% else %}
+_(empty)_
+{% endif %}
+{% endfor %}
+
+## Metrics
+- Execution Duration: {{ metrics.duration_display }}
+- Response Size: {{ metrics.response_size_display }}
+- Runner Status: {{ metrics.status or "n/a" }}
+{% if metrics.task_id %}- Task ID: {{ metrics.task_id }}
+{% endif %}
+{% if metrics.steps %}
+
+### Step Metrics
+| Step | Duration | Response Size | Status |
+| ---- | -------- | ------------- | ------ |
+{% for metric in metrics.steps %}
+| {{ metric.alias }} | {{ metric.duration_display }} | {{ metric.response_size_display }} | {{ metric.status or "n/a" }} |
+{% endfor %}
+{% endif %}
+
+{% if environment %}
+## Environment
+{% for key, value in environment.items() %}- {{ key | replace('_', ' ') | title }}: {{ value }}
+{% endfor %}
+{% endif %}
+
+{% if dataset %}
+## Dataset
+{% for key, value in dataset.items() %}- {{ key | replace('_', ' ') | title }}: {{ value }}
+{% endfor %}
+{% endif %}
+
+## Redaction & Truncation
+- Request Truncated: {{ redaction.request_truncated }}{% if redaction.request_note %} · {{ redaction.request_note }}{% endif %}
+- Response Truncated: {{ redaction.response_truncated }}{% if redaction.response_note %} · {{ redaction.response_note }}{% endif %}
+- Redacted Fields: {% if redaction.redacted_fields %}{{ redaction.redacted_fields | join(", ") }}{% else %}none{% endif %}
+
+{% if branding.footer %}
+---
+{{ branding.footer }}
+{% endif %}
