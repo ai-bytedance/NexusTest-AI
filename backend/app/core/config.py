@@ -12,6 +12,17 @@ class Settings(BaseSettings):
     dataset_storage_dir: str = "./storage/datasets"
     access_token_expire_minutes: int = 60
     token_clock_skew_seconds: int = 0
+    sso_state_ttl_seconds: int = 600
+    feishu_client_id: str | None = None
+    feishu_client_secret: str | None = None
+    google_client_id: str | None = None
+    google_client_secret: str | None = None
+    github_client_id: str | None = None
+    github_client_secret: str | None = None
+    oidc_issuer: str | None = None
+    oidc_client_id: str | None = None
+    oidc_client_secret: str | None = None
+    oidc_scopes: List[str] = ["openid", "profile", "email"]
     database_url: str
     redis_url: str
     uvicorn_workers: int = 2
@@ -105,7 +116,13 @@ class Settings(BaseSettings):
             raise ValueError("TOKEN_CLOCK_SKEW_SECONDS must be zero or a positive integer")
         return int_value
 
-    @field_validator("plan_refresh_seconds", "notify_backoff_seconds", "celery_visibility_timeout_seconds", mode="before")
+    @field_validator(
+        "plan_refresh_seconds",
+        "notify_backoff_seconds",
+        "celery_visibility_timeout_seconds",
+        "sso_state_ttl_seconds",
+        mode="before",
+    )
     @classmethod
     def validate_positive_seconds(cls, value: int | str) -> int:
         int_value = int(value) if isinstance(value, str) else value
@@ -136,6 +153,17 @@ class Settings(BaseSettings):
         if int_value < 0:
             raise ValueError("NOTIFY_MAX_RETRIES must be zero or a positive integer")
         return int_value
+
+    @field_validator("oidc_scopes", mode="before")
+    @classmethod
+    def parse_oidc_scopes(cls, value: List[str] | str | None) -> List[str]:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return [scope.strip() for scope in value if isinstance(scope, str) and scope.strip()]
+        if isinstance(value, str):
+            return [scope.strip() for scope in value.split(",") if scope.strip()]
+        raise ValueError("Invalid format for OIDC_SCOPES")
 
     @field_validator("cors_origins", mode="before")
     @classmethod
