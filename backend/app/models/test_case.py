@@ -41,7 +41,11 @@ class TestCase(BaseModel, Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     inputs: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
     expected: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
-    assertions: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    assertions: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default=text("'[]'::jsonb"),
+    )
     environment_id: Mapped[uuid.UUID | None] = mapped_column(
         "environment_id",
         ForeignKey("environments.id", ondelete="SET NULL"),
