@@ -1,0 +1,82 @@
+{% extends "base.html.j2" %}
+
+{% block content %}
+<h1>{{ branding.title or "Test Report" }} <span class="muted">· Compact</span></h1>
+
+<h2>Snapshot</h2>
+<div class="grid">
+  <div class="card">
+    <strong>Status</strong>
+    <p>{{ metadata.status | upper }}</p>
+  </div>
+  <div class="card">
+    <strong>Duration</strong>
+    <p>{{ metadata.duration_display }}</p>
+  </div>
+  <div class="card">
+    <strong>Assertions</strong>
+    <p>{{ assertions.passed }}/{{ assertions.total }} ({{ assertions.pass_rate_display }})</p>
+  </div>
+  <div class="card">
+    <strong>Response Size</strong>
+    <p>{{ metadata.response_size_display }}</p>
+  </div>
+</div>
+
+<h2>Summary</h2>
+{% if summary_text %}
+<p>{{ summary_text }}</p>
+{% else %}
+<p class="muted">No AI summary available.</p>
+{% endif %}
+
+<h2>Failures</h2>
+{% if failures %}
+{% for failure in failures %}
+<h3>{{ failure.name }}{% if failure.step %} · {{ failure.step }}{% endif %}</h3>
+<p class="muted">{{ failure.message or 'Assertion failed' }}</p>
+{% if failure.diff %}<pre>{{ failure.diff }}</pre>{% elif failure.actual_display is not none or failure.expected_display is not none %}
+<pre>Expected:
+{{ failure.expected_display or 'null' }}
+Actual:
+{{ failure.actual_display or 'null' }}</pre>
+{% endif %}
+{% endfor %}
+{% else %}
+<p class="muted">All assertions passed.</p>
+{% endif %}
+
+<h2>Key Metrics</h2>
+<ul>
+  <li>Runner Status: {{ metrics.status or 'n/a' }}</li>
+  <li>Task ID: {{ metrics.task_id or 'n/a' }}</li>
+  <li>Steps: {% if steps %}{% for step in steps %}{{ step.alias }} ({{ step.status }}){% if not loop.last %}, {% endif %}{% endfor %}{% else %}n/a{% endif %}</li>
+</ul>
+
+{% set req = payloads.requests[0] if payloads.requests else None %}
+{% if req %}
+<h2>Request</h2>
+{% if req.note %}<div class="section-note">{{ req.note }}</div>{% endif %}
+{% if req.truncated %}<div class="section-note">Payload truncated due to size limits.</div>{% endif %}
+{% if req.content %}<pre>{{ req.content }}</pre>{% else %}<p class="muted">(empty)</p>{% endif %}
+{% endif %}
+
+{% set res = payloads.responses[0] if payloads.responses else None %}
+{% if res %}
+<h2>Response</h2>
+{% if res.note %}<div class="section-note">{{ res.note }}</div>{% endif %}
+{% if res.truncated %}<div class="section-note">Payload truncated due to size limits.</div>{% endif %}
+{% if res.content %}<pre>{{ res.content }}</pre>{% else %}<p class="muted">(empty)</p>{% endif %}
+{% endif %}
+
+<h2>Notes</h2>
+<ul>
+  <li>Request Truncated: {{ redaction.request_truncated }}{% if redaction.request_note %} · {{ redaction.request_note }}{% endif %}</li>
+  <li>Response Truncated: {{ redaction.response_truncated }}{% if redaction.response_note %} · {{ redaction.response_note }}{% endif %}</li>
+  <li>Redacted Fields: {% if redaction.redacted_fields %}{{ redaction.redacted_fields | join(', ') }}{% else %}none{% endif %}</li>
+</ul>
+
+{% if branding.footer %}
+<div class="section-note">{{ branding.footer }}</div>
+{% endif %}
+{% endblock %}

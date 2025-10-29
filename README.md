@@ -81,6 +81,45 @@ Authentication endpoints under `/api/auth` follow the same `{code, message, data
 
 Token lifetimes are governed by `ACCESS_TOKEN_EXPIRE_MINUTES` and `TOKEN_CLOCK_SKEW_SECONDS`.
 
+### Report Exports
+
+The reports API exposes a streaming export endpoint at `/api/v1/reports/{report_id}/export`. It supports Markdown and PDF outputs and allows callers to select a rendering template.
+
+```bash
+curl -G \
+  "http://localhost/api/v1/reports/<report-id>/export" \
+  -H "Authorization: Bearer <token>" \
+  --data-urlencode "format=pdf" \
+  --data-urlencode "template=detailed" \
+  --output report.pdf
+```
+
+Available templates are:
+
+- `default` – balanced layout with full summary, assertions and payload excerpts.
+- `compact` – high level report focused on failures and key metrics (ideal for dashboards).
+- `detailed` – full execution transcript including raw metrics and payload JSON dumps.
+
+Exports inherit redaction rules (`REDACT_FIELDS`) and honour truncation notes produced during execution. Unknown templates or unsupported formats return a `400` error (`R003`/`R006`).
+
+#### Configuration
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `REPORT_EXPORT_MAX_BYTES` | Maximum payload size (bytes) before the export is rejected. | `5242880` (5 MiB) |
+| `PDF_ENGINE` | PDF renderer to use (`weasyprint` or `wkhtml`). | `weasyprint` |
+| `REPORT_EXPORT_FONT_PATH` | Absolute path to a font file (e.g. Noto Sans SC) used for PDF rendering. | _unset_ |
+| `REPORT_EXPORT_BRANDING_TITLE` | Heading shown on exports. | `Test Execution Report` |
+| `REPORT_EXPORT_BRANDING_LOGO` | Optional logo URL for the header. | _unset_ |
+| `REPORT_EXPORT_BRANDING_FOOTER` | Optional footer copy rendered on the last page. | _unset_ |
+| `REPORT_EXPORT_BRANDING_COMPANY` | Company/organisation name displayed alongside IDs. | _unset_ |
+
+Templates are implemented with Jinja and live under `backend/app/services/exports/templates`. You can duplicate the shipped markdown or HTML files to create bespoke layouts (logo, colours, additional metadata, and so on) without touching application code.
+
+#### Chinese font support
+
+Set `REPORT_EXPORT_FONT_PATH` to point at a font file that supports Chinese glyphs (e.g. `NotoSansSC-Regular.otf`). Inside Docker containers mount the font file and ensure the path is reachable by the backend, or bake fonts into the image (install `fonts-noto-cjk` or copy the `.otf` file). When the env var is absent the renderer falls back to system fonts, which may not cover the full CJK range.
+
 ### Projects and RBAC
 
 Create a project (the creator becomes the project admin):
