@@ -5,14 +5,17 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
+import httpx
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.celery import celery_app
 from app.core.config import get_settings
+from app.core.http import get_http_client
 from app.db.session import SessionLocal
 from app.logging import get_logger
 from app.models import Dataset, Environment, ReportEntityType, ReportStatus, TestCase, TestReport
+from app.observability import track_task
 from app.services.assertions.engine import AssertionEngine
 from app.services.datasets.loader import DatasetLoadError, load_dataset_rows
 from app.services.execution.context import ExecutionContext
@@ -33,7 +36,24 @@ STEP_ALIAS = "case"
 
 def get_http_runner() -> HttpRunner:
     settings = get_settings()
-    return HttpRunner(settings.request_timeout_seconds, settings.max_response_size_bytes)
+    timeout = httpx.Timeout(
+        connect=settings.httpx_connect_timeout,
+        read=settings.httpx_read_timeout,
+        write=settings.httpx_write_timeout,
+        pool=settings.httpx_pool_timeout,
+    )
+    return HttpRunner(
+        settings.request_timeout_seconds,
+        settings.max_response_size_bytes,
+        timeout=timeout,
+        client=get_http_client(),
+        max_retries=settings.httpx_retry_attempts,
+        retry_backoff_factor=settings.httpx_retry_backoff_factor,
+        retry_statuses=settings.httpx_retry_statuses,
+        retry_methods=settings.httpx_retry_methods,
+        redact_fields=settings.redact_fields,
+        redaction_placeholder=settings.redaction_placeholder,
+    )
 
 
 @celery_app.task(name="app.tasks.execute_case.execute_test_case", bind=True, queue="cases")
@@ -44,6 +64,9 @@ def execute_test_case(self, report_id: str, case_id: str, project_id: str) -> No
     case_uuid = uuid.UUID(case_id)
     project_uuid = uuid.UUID(project_id)
 
+    cm = track_task("execute_test_case")
+    exc_info: tuple[Any, Any, Any] = (None, None, None)
+    cm.__enter__()
     try:
         report = _get_report(session, report_uuid, project_uuid, ReportEntityType.CASE, case_uuid)
         case = _get_case(session, case_uuid, project_uuid)
@@ -180,6 +203,7 @@ def execute_test_case(self, report_id: str, case_id: str, project_id: str) -> No
         queue_run_finished_notifications(session, report)
 
     except Exception as exc:  # pragma: no cover - unexpected safeguard
+        exc_info = (type(exc), exc, exc.__traceback__)
         session.rollback()
         logger.error("execute_case_error", report_id=report_id, error=str(exc))
         report = session.get(TestReport, report_uuid)
@@ -196,6 +220,7 @@ def execute_test_case(self, report_id: str, case_id: str, project_id: str) -> No
             queue_run_finished_notifications(session, report)
         raise
     finally:
+        cm.__exit__(*exc_info)
         session.close()
 
 

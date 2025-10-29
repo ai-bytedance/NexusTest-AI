@@ -1,6 +1,6 @@
 import logging
 import sys
-from typing import Awaitable, Callable
+from typing import Any, Awaitable, Callable
 from uuid import uuid4
 
 import structlog
@@ -8,6 +8,25 @@ from structlog import contextvars
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
+
+MAX_LOG_VALUE_LENGTH = 2048
+TRUNCATION_SUFFIX = "...(truncated)"
+
+
+def _truncate_large_values(_: Any, __: str, event_dict: dict[str, Any]) -> dict[str, Any]:
+    for key, value in list(event_dict.items()):
+        if isinstance(value, str) and len(value) > MAX_LOG_VALUE_LENGTH:
+            event_dict[key] = f"{value[:MAX_LOG_VALUE_LENGTH]}{TRUNCATION_SUFFIX}"
+        elif isinstance(value, (bytes, bytearray)):
+            decoded = bytes(value).decode("utf-8", errors="replace")
+            if len(decoded) > MAX_LOG_VALUE_LENGTH:
+                event_dict[key] = f"{decoded[:MAX_LOG_VALUE_LENGTH]}{TRUNCATION_SUFFIX}"
+        elif isinstance(value, list):
+            event_dict[key] = [
+                item if not isinstance(item, str) or len(item) <= MAX_LOG_VALUE_LENGTH else f"{item[:MAX_LOG_VALUE_LENGTH]}{TRUNCATION_SUFFIX}"
+                for item in value
+            ]
+    return event_dict
 
 
 def configure_logging() -> None:
@@ -20,6 +39,7 @@ def configure_logging() -> None:
             structlog.contextvars.merge_contextvars,
             structlog.processors.add_log_level,
             structlog.processors.TimeStamper(fmt="iso"),
+            _truncate_large_values,
             structlog.processors.JSONRenderer(),
         ],
         logger_factory=structlog.stdlib.LoggerFactory(),
