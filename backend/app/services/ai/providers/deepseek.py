@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
+import random
 import time
-from typing import Any
+from typing import Any, Callable
 
 import httpx
 
@@ -13,7 +14,24 @@ from app.services.ai.base import (
     AIProviderRateLimitError,
     AIProviderTimeoutError,
     AIProviderUnavailableError,
+    ProviderResponse,
+    TokenUsage,
+    extract_json_object,
 )
+from app.services.ai.prompts import (
+    build_generate_assertions_prompts,
+    build_generate_cases_prompts,
+    build_generate_mock_data_prompts,
+    build_summarize_report_prompts,
+)
+from app.services.ai.validators import (
+    validate_generate_assertions,
+    validate_generate_cases,
+    validate_generate_mock_data,
+    validate_summarize_report,
+)
+
+Validator = Callable[[dict[str, Any]], dict[str, Any]]
 
 
 class DeepSeekProvider(AIProvider):
@@ -31,6 +49,7 @@ class DeepSeekProvider(AIProvider):
         temperature: float = 0.2,
         max_tokens: int = 1024,
     ) -> None:
+        super().__init__()
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.model = model
@@ -40,82 +59,30 @@ class DeepSeekProvider(AIProvider):
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.logger = get_logger().bind(provider=self.name)
+        self._max_backoff = 12.0
 
-    def generate_test_cases(self, api_spec: dict[str, Any] | str) -> dict[str, Any]:
-        prompt = self._format_input(api_spec)
-        response = self._invoke_structured(
-            system_prompt=(
-                "You are an expert API testing assistant. Generate high quality API test "
-                "cases covering positive, negative, and edge scenarios. Always respond "
-                "with a valid JSON object following the required schema."
-            ),
-            user_prompt=(
-                "API specification for generating test cases:\n\n"
-                f"{prompt}\n\n"
-                "Respond with a JSON object: {\"cases\": [ { ... } ]}. Each case must contain\n"
-                "`name`, `description`, `steps` (list of instructions), and `assertions` (list of assertions)."
-            ),
-        )
-        cases = response.get("cases")
-        if not isinstance(cases, list):
-            raise AIProviderError("DeepSeek response did not include 'cases'", data=response)
-        return {"cases": cases}
+    def generate_test_cases(self, api_spec: dict[str, Any] | str) -> ProviderResponse:
+        system_prompt, user_prompt = build_generate_cases_prompts(api_spec)
+        return self._invoke_structured(system_prompt, user_prompt, validate_generate_cases)
 
-    def generate_assertions(self, example_response: dict[str, Any] | str) -> dict[str, Any]:
-        prompt = self._format_input(example_response)
-        response = self._invoke_structured(
-            system_prompt=(
-                "You are an assistant that creates response assertions for API automation. "
-                "Return structured assertion definitions suitable for JSONPath and status checks."
-            ),
-            user_prompt=(
-                "Given this example API response, create a set of assertions.\n\n"
-                f"Response:\n{prompt}\n\n"
-                "Respond with a JSON object: {\"assertions\": [ { ... } ]}. Each assertion must include\n"
-                "`name`, `operator`, and the relevant fields (`expected`, `actual`, or `path`)."
-            ),
-        )
-        assertions = response.get("assertions")
-        if not isinstance(assertions, list):
-            raise AIProviderError("DeepSeek response did not include 'assertions'", data=response)
-        return {"assertions": assertions}
+    def generate_assertions(self, example_response: dict[str, Any] | str) -> ProviderResponse:
+        system_prompt, user_prompt = build_generate_assertions_prompts(example_response)
+        return self._invoke_structured(system_prompt, user_prompt, validate_generate_assertions)
 
-    def generate_mock_data(self, json_schema: dict[str, Any]) -> dict[str, Any]:
-        response = self._invoke_structured(
-            system_prompt=(
-                "You generate realistic mock data that conforms to the provided JSON schema. "
-                "Always return a JSON object with a top-level 'data' key."
-            ),
-            user_prompt=(
-                "Create a mock payload that matches this JSON schema:\n\n"
-                f"{self._format_input(json_schema)}\n\n"
-                "Respond with: {\"data\": <mock object>}."
-            ),
-        )
-        data = response.get("data")
-        if not isinstance(data, (dict, list)):  # allow list payloads if schema defines arrays
-            raise AIProviderError("DeepSeek response did not include mock 'data'", data=response)
-        return {"data": data}
+    def generate_mock_data(self, json_schema: dict[str, Any]) -> ProviderResponse:
+        system_prompt, user_prompt = build_generate_mock_data_prompts(json_schema)
+        return self._invoke_structured(system_prompt, user_prompt, validate_generate_mock_data)
 
-    def summarize_report(self, report: dict[str, Any]) -> str:
-        response = self._invoke_structured(
-            system_prompt=(
-                "You summarize API test execution reports into clear Markdown formatted notes. "
-                "Highlight pass/fail counts, flaky areas, regression risks, and next actions."
-            ),
-            user_prompt=(
-                "Summarize the following test execution report.\n\n"
-                f"{self._format_input(report)}\n\n"
-                "Respond with a JSON object: {\"markdown\": "
-                """<summary markdown string>""""} (use double quotes)."
-            ),
-        )
-        markdown = response.get("markdown")
-        if not isinstance(markdown, str):
-            raise AIProviderError("DeepSeek response did not include 'markdown'", data=response)
-        return markdown.strip()
+    def summarize_report(self, report: dict[str, Any]) -> ProviderResponse:
+        system_prompt, user_prompt = build_summarize_report_prompts(report)
+        return self._invoke_structured(system_prompt, user_prompt, validate_summarize_report)
 
-    def _invoke_structured(self, *, system_prompt: str, user_prompt: str) -> dict[str, Any]:
+    def _invoke_structured(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        validator: Validator,
+    ) -> ProviderResponse:
         payload = {
             "model": self.model,
             "messages": [
@@ -127,7 +94,17 @@ class DeepSeekProvider(AIProvider):
             "response_format": {"type": "json_object"},
         }
         raw_response = self._chat_completion(payload)
-        return self._extract_json_payload(raw_response)
+        content = self._extract_message_content(raw_response)
+        try:
+            parsed = extract_json_object(content)
+        except ValueError as exc:
+            self.logger.error("deepseek_json_parse_error", content=content)
+            raise AIProviderError("Unable to parse DeepSeek response as JSON", data={"content": content}) from exc
+
+        validated = validator(parsed)
+        usage = self._record_usage(TokenUsage.from_raw(raw_response.get("usage")))
+        model_name = raw_response.get("model") or self.model
+        return ProviderResponse(payload=validated, model=model_name, usage=usage)
 
     def _chat_completion(self, payload: dict[str, Any]) -> dict[str, Any]:
         url = f"{self.base_url}/v1/chat/completions"
@@ -145,7 +122,7 @@ class DeepSeekProvider(AIProvider):
                     self.logger.warning("deepseek_timeout", attempt=attempt)
                     if attempt >= self.max_retries:
                         raise AIProviderTimeoutError("DeepSeek request timed out") from exc
-                    time.sleep(self._backoff(attempt))
+                    self._sleep(attempt)
                     continue
                 except httpx.HTTPError as exc:
                     self.logger.error("deepseek_transport_error", error=str(exc))
@@ -158,7 +135,7 @@ class DeepSeekProvider(AIProvider):
                             "DeepSeek rate limit exceeded",
                             data=self._safe_json(response),
                         )
-                    time.sleep(self._backoff(attempt))
+                    self._sleep(attempt)
                     continue
 
                 if 500 <= response.status_code < 600:
@@ -170,7 +147,7 @@ class DeepSeekProvider(AIProvider):
                             "DeepSeek service unavailable",
                             data=self._safe_json(response),
                         )
-                    time.sleep(self._backoff(attempt))
+                    self._sleep(attempt)
                     continue
 
                 try:
@@ -187,28 +164,25 @@ class DeepSeekProvider(AIProvider):
 
         raise AIProviderUnavailableError("DeepSeek service unavailable")
 
-    def _extract_json_payload(self, response: dict[str, Any]) -> dict[str, Any]:
+    def _extract_message_content(self, response: dict[str, Any]) -> str:
         choices = response.get("choices")
         if not isinstance(choices, list) or not choices:
             raise AIProviderError("DeepSeek response missing choices", data=response)
-        message = choices[0].get("message") if isinstance(choices[0], dict) else None
-        if not isinstance(message, dict):
+        first_choice = choices[0]
+        if not isinstance(first_choice, dict):
             raise AIProviderError("DeepSeek response missing message", data=response)
+        message = first_choice.get("message")
+        if not isinstance(message, dict):
+            raise AIProviderError("DeepSeek response missing message content", data=response)
         content = message.get("content")
+        if isinstance(content, list):
+            content = "\n".join(
+                part.get("text", "") if isinstance(part, dict) else str(part)
+                for part in content
+            )
         if not isinstance(content, str):
             raise AIProviderError("DeepSeek response missing content", data=response)
-        text = content.strip()
-        if text.startswith("```"):
-            segments = [segment.strip() for segment in text.split("```") if segment.strip()]
-            for segment in segments:
-                if segment.startswith("{"):
-                    text = segment
-                    break
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError as exc:
-            self.logger.error("deepseek_json_parse_error", content=text)
-            raise AIProviderError("Unable to parse DeepSeek response as JSON", data={"content": content}) from exc
+        return content.strip()
 
     def _safe_json(self, response: httpx.Response) -> dict[str, Any]:
         try:
@@ -230,16 +204,14 @@ class DeepSeekProvider(AIProvider):
         message = payload.get("message") if isinstance(payload, dict) else None
         return message if isinstance(message, str) else ""
 
-    def _format_input(self, value: dict[str, Any] | str) -> str:
-        if isinstance(value, str):
-            return value
-        try:
-            return json.dumps(value, indent=2, ensure_ascii=False)
-        except (TypeError, ValueError):
-            return str(value)
+    def _sleep(self, attempt: int) -> None:
+        delay = self._backoff(attempt)
+        time.sleep(delay)
 
     def _backoff(self, attempt: int) -> float:
-        return min(self.backoff_factor * (2 ** (attempt - 1)), 10.0)
+        base = min(self.backoff_factor * (2 ** (attempt - 1)), self._max_backoff)
+        jitter = random.uniform(0, base / 2)
+        return base + jitter
 
 
 __all__ = ["DeepSeekProvider"]

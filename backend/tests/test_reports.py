@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.models.ai_task import AITask, TaskType
 from app.models.test_report import ReportEntityType, ReportStatus, TestReport
-from app.services.ai.registry import get_ai_provider
+from app.services.ai import clear_ai_provider_cache
 from tests.test_projects import auth_headers, register_and_login
 
 
@@ -165,7 +165,7 @@ def test_report_detail_redaction_and_truncation(
 
 def test_report_summarize_is_idempotent(client: TestClient, db_session: Session) -> None:
     get_settings.cache_clear()
-    get_ai_provider.cache_clear()
+    clear_ai_provider_cache()
 
     token = register_and_login(client, "reports-summary@example.com")
     project_response = client.post(
@@ -212,8 +212,14 @@ def test_report_summarize_is_idempotent(client: TestClient, db_session: Session)
     task_stmt = select(AITask).where(AITask.project_id == project_id, AITask.task_type == TaskType.SUMMARIZE_REPORT)
     tasks = db_session.execute(task_stmt).scalars().all()
     assert len(tasks) == 1
+    task_record = tasks[0]
+    assert task_record.provider == "mock"
+    assert task_record.model == "mock-model"
+    assert task_record.prompt_tokens == 0
+    assert task_record.completion_tokens == 0
+    assert task_record.total_tokens == 0
 
-    get_ai_provider.cache_clear()
+    clear_ai_provider_cache()
     get_settings.cache_clear()
 
 

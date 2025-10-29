@@ -18,7 +18,7 @@ from app.models import ProjectMember, TestReport, User
 from app.models.ai_task import AITask, TaskStatus, TaskType
 from app.models.test_report import ReportEntityType, ReportStatus
 from app.schemas.test_report import ReportSummarizeRequest, TestReportRead
-from app.services.ai import AIProvider, get_ai_provider
+from app.services.ai import get_ai_provider
 from app.services.ai.base import AIProviderError
 from app.services.reports.formatter import format_report_detail, format_report_summary
 from app.tasks import celery_app
@@ -114,10 +114,11 @@ def get_report(
 def summarize_report(
     report_id: UUID,
     body: ReportSummarizeRequest,
-    provider: AIProvider = Depends(get_ai_provider),
+    provider_key: str | None = Query(default=None, alias="provider"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
+    provider = get_ai_provider(provider_key)
     report = _get_report_or_404(db, report_id)
     _ensure_membership(db, report.project_id, current_user.id)
 
@@ -145,7 +146,7 @@ def summarize_report(
     )
 
     try:
-        markdown = provider.summarize_report(report_payload)
+        result = provider.summarize_report(report_payload)
     except AIProviderError as exc:
         _resolve_task_failure(db, task, exc.message)
         raise http_exception(exc.status_code, exc.code, exc.message, data=exc.data) from exc
@@ -159,10 +160,30 @@ def summarize_report(
             data={"task_id": str(task.id)},
         ) from exc
 
+    markdown_payload = result.payload.get("markdown") if isinstance(result.payload, dict) else None
+    if not isinstance(markdown_payload, str) or not markdown_payload.strip():
+        _resolve_task_failure(db, task, "Provider returned an empty summary")
+        raise http_exception(
+            status.HTTP_502_BAD_GATEWAY,
+            ErrorCode.AI_PROVIDER_ERROR,
+            "Provider returned an empty summary",
+            data={"task_id": str(task.id)},
+        )
+
     task.status = TaskStatus.SUCCESS
-    task.output_payload = {"markdown": markdown}
+    task.output_payload = result.payload
     task.error_message = None
-    report.summary = markdown
+    task.model = result.model
+    if result.usage:
+        task.prompt_tokens = result.usage.prompt_tokens
+        task.completion_tokens = result.usage.completion_tokens
+        task.total_tokens = result.usage.total_tokens
+    else:
+        task.prompt_tokens = None
+        task.completion_tokens = None
+        task.total_tokens = None
+
+    report.summary = markdown_payload.strip()
     db.add(task)
     db.add(report)
     db.commit()
@@ -172,7 +193,7 @@ def summarize_report(
     return success_response(
         {
             "report_id": str(report.id),
-            "summary": markdown,
+            "summary": report.summary,
             "task_id": str(task.id),
             "updated": True,
         }
@@ -364,6 +385,10 @@ def _create_ai_task(
 def _resolve_task_failure(db: Session, task: AITask, message: str) -> None:
     task.status = TaskStatus.FAILED
     task.error_message = message
+    task.model = None
+    task.prompt_tokens = None
+    task.completion_tokens = None
+    task.total_tokens = None
     db.add(task)
     db.commit()
 

@@ -55,6 +55,7 @@ The backend reads its configuration from environment variables (see `.env.exampl
 - `APP_VERSION`, `GIT_COMMIT_SHA`, and `BUILD_TIME`: surfaced via the `/api/v1/version` endpoint for build metadata.
 - `MAX_RESPONSE_SIZE_BYTES` (default `512000`): upper bound for response payloads sent back to the UI. Anything larger is replaced with a truncation note.
 - `REDACT_FIELDS` (comma-separated list): case-insensitive field names to mask with `***` inside request/response payloads (defaults to `authorization,password,token,secret`).
+- Multi-provider AI setup, environment variables, and troubleshooting tips are documented in [README/ai-providers.md](README/ai-providers.md).
 
 ## API Overview
 

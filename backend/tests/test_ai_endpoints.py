@@ -10,15 +10,15 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models.ai_task import AITask, TaskStatus, TaskType
+from app.services.ai import clear_ai_provider_cache
 from app.services.ai.providers.mock import MockProvider
-from app.services.ai.registry import get_ai_provider
 from tests.test_projects import auth_headers, register_and_login
 
 
 def reset_provider_cache(monkeypatch: MonkeyPatch, provider_name: str) -> None:
     monkeypatch.setenv("PROVIDER", provider_name)
     get_settings.cache_clear()
-    get_ai_provider.cache_clear()
+    clear_ai_provider_cache()
 
 
 def test_mock_provider_outputs_are_deterministic() -> None:
@@ -64,7 +64,7 @@ def test_ai_endpoints_with_mock_provider(
     project_id = project_response.json()["data"]["id"]
 
     cases_response = client.post(
-        "/api/v1/ai/generate-cases",
+        "/api/v1/ai/generate-cases?provider=mock",
         json={"project_id": project_id, "api_spec": {"path": "/users", "method": "GET"}},
         headers=auth_headers(token),
     )
@@ -119,9 +119,13 @@ def test_ai_endpoints_with_mock_provider(
     }
     assert all(task.status == TaskStatus.SUCCESS for task in tasks)
     assert all(task.provider == "mock" for task in tasks)
+    assert all(task.model == "mock-model" for task in tasks)
+    assert all(task.prompt_tokens == 0 for task in tasks)
+    assert all(task.completion_tokens == 0 for task in tasks)
+    assert all(task.total_tokens == 0 for task in tasks)
     assert tasks[0].output_payload.get("cases")
 
-    get_ai_provider.cache_clear()
+    clear_ai_provider_cache()
 
 
 @pytest.mark.skipif(not os.getenv("DEEPSEEK_API_KEY"), reason="DeepSeek credentials not configured")
@@ -162,4 +166,4 @@ def test_deepseek_smoke(
     assert task.status == TaskStatus.SUCCESS
     assert task.provider == "deepseek"
 
-    get_ai_provider.cache_clear()
+    clear_ai_provider_cache()
