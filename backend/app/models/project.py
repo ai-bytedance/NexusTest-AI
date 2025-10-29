@@ -18,7 +18,9 @@ if TYPE_CHECKING:
     from app.models.import_source import ImportRun, ImportSource
     from app.models.notifier import Notifier
     from app.models.notifier_event import NotifierEvent
+    from app.models.organization import Organization
     from app.models.project_member import ProjectMember
+    from app.models.project_team_role import ProjectTeamRole
     from app.models.test_case import TestCase
     from app.models.test_report import TestReport
     from app.models.test_suite import TestSuite
@@ -31,6 +33,11 @@ class Project(BaseModel, Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     key: Mapped[str] = mapped_column(String(32), nullable=False, unique=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    organization_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     created_by: Mapped[uuid.UUID] = mapped_column(
         "created_by",
         ForeignKey("users.id", ondelete="RESTRICT"),
@@ -38,6 +45,7 @@ class Project(BaseModel, Base):
         index=True,
     )
 
+    organization: Mapped["Organization" | None] = relationship("Organization", back_populates="projects")
     creator: Mapped["User"] = relationship("User", back_populates="projects_created")
     members: Mapped[list["ProjectMember"]] = relationship(
         "ProjectMember",
@@ -92,6 +100,11 @@ class Project(BaseModel, Base):
     )
     import_runs: Mapped[list["ImportRun"]] = relationship(
         "ImportRun",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+    team_roles: Mapped[list["ProjectTeamRole"]] = relationship(
+        "ProjectTeamRole",
         back_populates="project",
         cascade="all, delete-orphan",
     )

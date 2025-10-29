@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import enum
+from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Enum, String, text
+from sqlalchemy import DateTime, Enum, Integer, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, BaseModel
@@ -18,6 +19,9 @@ if TYPE_CHECKING:
     from app.models.project_member import ProjectMember
     from app.models.test_case import TestCase
     from app.models.test_suite import TestSuite
+    from app.models.organization import OrganizationMembership
+    from app.models.team_membership import TeamMembership
+    from app.models.user_identity import UserIdentity
 
 
 class UserRole(str, enum.Enum):
@@ -36,6 +40,13 @@ class User(BaseModel, Base):
         default=UserRole.MEMBER,
         server_default=text("'member'::user_role_enum"),
     )
+    failed_login_attempts: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default=text("0"),
+    )
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     projects_created: Mapped[list["Project"]] = relationship("Project", back_populates="creator")
     ai_chats_created: Mapped[list["AiChat"]] = relationship("AiChat", back_populates="creator")
@@ -62,4 +73,19 @@ class User(BaseModel, Base):
     notifiers_created: Mapped[list["Notifier"]] = relationship(
         "Notifier",
         back_populates="creator",
+    )
+    organization_memberships: Mapped[list["OrganizationMembership"]] = relationship(
+        "OrganizationMembership",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    team_memberships: Mapped[list["TeamMembership"]] = relationship(
+        "TeamMembership",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    identities: Mapped[list["UserIdentity"]] = relationship(
+        "UserIdentity",
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
