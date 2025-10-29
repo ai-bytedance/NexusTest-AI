@@ -21,6 +21,8 @@ dist/
 *.pid
 *.db
 *.sqlite3
+storage/
+backend/storage/
 
 # IDEs and editors
 .idea/

@@ -20,12 +20,18 @@ class ExecutionContext:
     variables: dict[str, Any] = field(default_factory=dict)
     previous_steps: dict[str, dict[str, Any]] = field(default_factory=dict)
     current_response: dict[str, Any] | None = None
+    environment: dict[str, Any] = field(default_factory=dict)
+    dataset_row: dict[str, Any] | None = None
+    secrets: dict[str, Any] = field(default_factory=dict)
 
     def clone(self) -> ExecutionContext:
         return ExecutionContext(
             variables=deepcopy(self.variables),
             previous_steps=deepcopy(self.previous_steps),
             current_response=deepcopy(self.current_response),
+            environment=deepcopy(self.environment),
+            dataset_row=deepcopy(self.dataset_row),
+            secrets=deepcopy(self.secrets),
         )
 
     def remember_step(self, alias: str, response: dict[str, Any]) -> None:
@@ -73,6 +79,12 @@ def _resolve_expression(expr: str, context: ExecutionContext) -> Any:
 
     if root == "variables":
         return _traverse(context.variables, remainder)
+    if root == "env":
+        return _traverse(context.environment, remainder)
+    if root == "row":
+        return _traverse(context.dataset_row, remainder)
+    if root == "secret":
+        return _traverse(context.secrets, remainder)
     if root == "prev":
         if not remainder:
             return None

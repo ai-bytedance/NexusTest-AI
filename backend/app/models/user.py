@@ -9,6 +9,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, BaseModel
 
 if TYPE_CHECKING:
+    from app.models.dataset import Dataset
+    from app.models.environment import Environment
     from app.models.execution_plan import ExecutionPlan
     from app.models.notifier import Notifier
     from app.models.project import Project
@@ -42,6 +44,14 @@ class User(BaseModel, Base):
     )
     test_cases_created: Mapped[list["TestCase"]] = relationship("TestCase", back_populates="creator")
     test_suites_created: Mapped[list["TestSuite"]] = relationship("TestSuite", back_populates="creator")
+    environments_created: Mapped[list["Environment"]] = relationship(
+        "Environment",
+        back_populates="creator",
+    )
+    datasets_created: Mapped[list["Dataset"]] = relationship(
+        "Dataset",
+        back_populates="creator",
+    )
     execution_plans_created: Mapped[list["ExecutionPlan"]] = relationship(
         "ExecutionPlan",
         back_populates="creator",

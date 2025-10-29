@@ -11,6 +11,8 @@ from app.db.base import Base, BaseModel
 if TYPE_CHECKING:
     from app.models.ai_task import AITask
     from app.models.api import Api
+    from app.models.dataset import Dataset
+    from app.models.environment import Environment
     from app.models.execution_plan import ExecutionPlan
     from app.models.notifier import Notifier
     from app.models.notifier_event import NotifierEvent
@@ -41,6 +43,16 @@ class Project(BaseModel, Base):
         cascade="all, delete-orphan",
     )
     apis: Mapped[list["Api"]] = relationship("Api", back_populates="project", cascade="all, delete-orphan")
+    environments: Mapped[list["Environment"]] = relationship(
+        "Environment",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+    datasets: Mapped[list["Dataset"]] = relationship(
+        "Dataset",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
     test_cases: Mapped[list["TestCase"]] = relationship(
         "TestCase", back_populates="project", cascade="all, delete-orphan"
     )

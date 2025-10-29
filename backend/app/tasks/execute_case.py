@@ -12,9 +12,11 @@ from app.core.celery import celery_app
 from app.core.config import get_settings
 from app.db.session import SessionLocal
 from app.logging import get_logger
-from app.models import ReportEntityType, ReportStatus, TestCase, TestReport
+from app.models import Dataset, Environment, ReportEntityType, ReportStatus, TestCase, TestReport
 from app.services.assertions.engine import AssertionEngine
+from app.services.datasets.loader import DatasetLoadError, load_dataset_rows
 from app.services.execution.context import ExecutionContext
+from app.services.execution.parameterization import ParameterizationEngine, ParameterizationError
 from app.services.notify.dispatcher import queue_run_finished_notifications
 from app.services.reports.progress import publish_progress_event
 from app.services.runner.http_runner import HttpRunner, HttpRunnerError
@@ -25,6 +27,7 @@ NETWORK_RETRY_ATTEMPTS = 3
 BACKOFF_BASE_SECONDS = 2
 MAX_BACKOFF_DELAY_SECONDS = 30
 assertion_engine = AssertionEngine()
+parameterization_engine = ParameterizationEngine()
 STEP_ALIAS = "case"
 
 

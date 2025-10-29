@@ -8,6 +8,8 @@ from app.api.routes import (
     ai,
     apis,
     auth,
+    datasets,
+    environments,
     execution,
     health,
     importers,
@@ -49,6 +51,8 @@ def create_app() -> FastAPI:
     app.include_router(projects.router, prefix="/api/v1")
     app.include_router(ai.router, prefix="/api/v1")
     app.include_router(apis.router, prefix="/api/v1")
+    app.include_router(environments.router, prefix="/api/v1")
+    app.include_router(datasets.router, prefix="/api/v1")
     app.include_router(test_cases.router, prefix="/api/v1")
     app.include_router(test_suites.router, prefix="/api/v1")
     app.include_router(execution.router, prefix="/api/v1")

@@ -1,5 +1,7 @@
 from app.models.ai_task import AITask, TaskStatus, TaskType
 from app.models.api import Api
+from app.models.dataset import Dataset, DatasetType
+from app.models.environment import Environment
 from app.models.execution_plan import ExecutionPlan, ExecutionPlanType
 from app.models.notifier import Notifier, NotifierType
 from app.models.notifier_event import NotifierEvent, NotifierEventStatus, NotifierEventType
@@ -13,6 +15,9 @@ from app.models.user import User, UserRole
 __all__ = [
     "AITask",
     "Api",
+    "Dataset",
+    "DatasetType",
+    "Environment",
     "ExecutionPlan",
     "ExecutionPlanType",
     "Notifier",

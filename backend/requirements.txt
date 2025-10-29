@@ -18,3 +18,4 @@ httpx==0.25.1
 jsonpath-ng==1.6.0
 croniter==1.4.1
 python-multipart==0.0.6
+openpyxl==3.1.2

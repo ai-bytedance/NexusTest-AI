@@ -18,6 +18,9 @@ class TestCaseBase(ORMModel):
 
 class TestCaseCreate(TestCaseBase):
     api_id: UUID
+    environment_id: UUID | None = None
+    dataset_id: UUID | None = None
+    param_mapping: dict[str, Any] = Field(default_factory=dict)
 
 
 class TestCaseUpdate(ORMModel):
@@ -26,6 +29,9 @@ class TestCaseUpdate(ORMModel):
     expected: dict[str, Any] | None = None
     assertions: dict[str, Any] | None = None
     enabled: bool | None = None
+    environment_id: UUID | None = None
+    dataset_id: UUID | None = None
+    param_mapping: dict[str, Any] | None = None
 
 
 class TestCaseRead(IdentifierModel):
@@ -35,5 +41,8 @@ class TestCaseRead(IdentifierModel):
     inputs: dict[str, Any]
     expected: dict[str, Any]
     assertions: dict[str, Any]
+    environment_id: UUID | None
+    dataset_id: UUID | None
+    param_mapping: dict[str, Any]
     enabled: bool
     created_by: UUID
