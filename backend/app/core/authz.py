@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.core.errors import ErrorCode, http_exception
 from app.core.security import InvalidTokenError, decode_access_token
 from app.db.session import get_db
+from app.logging import bind_log_context
 from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
 from app.models.user import User
@@ -115,6 +116,8 @@ def get_project_context(
             ErrorCode.NO_PERMISSION,
             "You do not have access to this project",
         )
+
+    bind_log_context(project_id=str(project.id))
 
     return ProjectContext(project=project, membership=membership)
 

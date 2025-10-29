@@ -9,8 +9,11 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+from app.core.config import get_settings
+
 MAX_LOG_VALUE_LENGTH = 2048
 TRUNCATION_SUFFIX = "...(truncated)"
+_MAX_MASK_DEPTH = 4
 
 
 def _truncate_large_values(_: Any, __: str, event_dict: dict[str, Any]) -> dict[str, Any]:
@@ -29,6 +32,47 @@ def _truncate_large_values(_: Any, __: str, event_dict: dict[str, Any]) -> dict[
     return event_dict
 
 
+def _mask_sensitive_values(_: Any, __: str, event_dict: dict[str, Any]) -> dict[str, Any]:
+    settings = get_settings()
+    redacted_keys = {entry.lower() for entry in settings.redact_fields}
+    placeholder = settings.redaction_placeholder
+
+    def _mask(value: Any, depth: int = 0) -> Any:
+        if depth > _MAX_MASK_DEPTH:
+            return value
+        if isinstance(value, dict):
+            for key, item in list(value.items()):
+                lowered = key.lower() if isinstance(key, str) else None
+                if lowered and lowered in redacted_keys:
+                    value[key] = placeholder
+                    continue
+                value[key] = _mask(item, depth + 1)
+            return value
+        if isinstance(value, list):
+            return [_mask(item, depth + 1) for item in value]
+        if isinstance(value, tuple):
+            return tuple(_mask(item, depth + 1) for item in value)
+        if isinstance(value, set):
+            return {_mask(item, depth + 1) for item in value}
+        if isinstance(value, (bytes, bytearray)) and "authorization" in redacted_keys:
+            return placeholder
+        return value
+
+    return _mask(event_dict)
+
+
+def _extract_trace_id(traceparent: str | None) -> str | None:
+    if not traceparent:
+        return None
+    parts = traceparent.split("-")
+    if len(parts) < 2:
+        return None
+    trace_id = parts[1].strip()
+    if len(trace_id) != 32:
+        return None
+    return trace_id
+
+
 def configure_logging() -> None:
     logging.basicConfig(level=logging.INFO, handlers=[logging.StreamHandler(sys.stdout)], format="%(message)s")
     for logger_name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
@@ -36,9 +80,10 @@ def configure_logging() -> None:
 
     structlog.configure(
         processors=[
-            structlog.contextvars.merge_contextvars,
+            contextvars.merge_contextvars,
             structlog.processors.add_log_level,
             structlog.processors.TimeStamper(fmt="iso"),
+            _mask_sensitive_values,
             _truncate_large_values,
             structlog.processors.JSONRenderer(),
         ],
@@ -48,15 +93,52 @@ def configure_logging() -> None:
     )
 
 
+def bind_log_context(**params: Any) -> None:
+    payload = {key: str(value) for key, value in params.items() if value is not None}
+    if payload:
+        contextvars.bind_contextvars(**payload)
+
+
+def unbind_log_context(*keys: str) -> None:
+    for key in keys:
+        try:
+            contextvars.unbind_contextvars(key)
+        except KeyError:
+            continue
+
+
 class RequestIdMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:  # type: ignore[override]
+        settings = get_settings()
         request_id = request.headers.get("X-Request-ID", str(uuid4()))
+        traceparent = request.headers.get("traceparent")
+        trace_id = _extract_trace_id(traceparent) if settings.otel_trace_propagation_enabled else None
+
         contextvars.clear_contextvars()
-        contextvars.bind_contextvars(request_id=request_id, path=str(request.url.path))
-        response = await call_next(request)
+        bind_log_context(request_id=request_id, path=str(request.url.path))
+        if trace_id:
+            bind_log_context(trace_id=trace_id)
+
+        try:
+            response = await call_next(request)
+        finally:
+            if trace_id:
+                unbind_log_context("trace_id")
+
         response.headers["X-Request-ID"] = request_id
+        if traceparent and settings.otel_trace_propagation_enabled:
+            response.headers.setdefault("Traceparent", traceparent)
         return response
 
 
 def get_logger() -> structlog.stdlib.BoundLogger:
     return structlog.get_logger()
+
+
+__all__ = [
+    "RequestIdMiddleware",
+    "bind_log_context",
+    "configure_logging",
+    "get_logger",
+    "unbind_log_context",
+]

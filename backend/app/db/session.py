@@ -6,6 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import get_settings
+from app.observability.metrics import instrument_engine
 
 settings = get_settings()
 
@@ -23,6 +24,9 @@ engine = create_engine(
     future=True,
     connect_args=connect_args,
 )
+
+instrument_engine(engine)
+
 SessionLocal = sessionmaker(bind=engine, class_=Session, autoflush=False, autocommit=False, expire_on_commit=False)
 
 

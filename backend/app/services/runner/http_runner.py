@@ -5,11 +5,13 @@ import time
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Sequence, cast
+from urllib.parse import urlparse
 
 import httpx
 
 from app.core.http import get_http_client
 from app.logging import get_logger
+from app.observability.metrics import track_external_http_call
 from app.services.execution.context import ExecutionContext, render_value
 
 _MAX_RETRY_DELAY_SECONDS = 30.0
@@ -73,6 +75,7 @@ class HttpRunner:
         inputs: dict[str, Any],
         context: ExecutionContext | None = None,
         *,
+        project_id: str | None = None,
         prepared_inputs: dict[str, Any] | None = None,
         display_inputs: dict[str, Any] | None = None,
     ) -> HttpRunnerResult:
@@ -159,6 +162,9 @@ class HttpRunner:
             _sanitize_payload(deepcopy(request_payload), self._redact_fields, self._redaction_placeholder, secret_values),
         )
 
+        parsed_target = urlparse(url_value)
+        target_label = parsed_target.netloc or parsed_target.path or url_value
+
         timeout = self._timeout
         client = self._client or get_http_client()
 
@@ -217,9 +223,11 @@ class HttpRunner:
             last_exception = None
             break
 
-        duration_ms = int((time.perf_counter() - overall_start) * 1000)
+        total_duration = time.perf_counter() - overall_start
+        duration_ms = int(total_duration * 1000)
 
         if response is None:
+            track_external_http_call(target_label, method, 0, project_id, total_duration)
             error_message = str(last_exception) if last_exception is not None else "HTTP request failed"
             error_metrics = {
                 "duration_ms": duration_ms,
@@ -236,6 +244,8 @@ class HttpRunner:
                 metrics=error_metrics,
                 original=last_exception,
             )
+
+        track_external_http_call(target_label, method, response.status_code, project_id, total_duration)
 
         response_size = len(response.content)
         truncated_body, is_truncated, note = _truncate_text(response.text, self._max_response_size_bytes)

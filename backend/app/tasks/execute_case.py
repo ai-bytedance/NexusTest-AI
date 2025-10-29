@@ -13,7 +13,7 @@ from app.core.celery import celery_app
 from app.core.config import get_settings
 from app.core.http import get_http_client
 from app.db.session import SessionLocal
-from app.logging import get_logger
+from app.logging import bind_log_context, get_logger, unbind_log_context
 from app.models import Dataset, Environment, ReportEntityType, ReportStatus, TestCase, TestReport
 from app.observability import track_task
 from app.services.assertions.engine import AssertionEngine
@@ -64,7 +64,9 @@ def execute_test_case(self, report_id: str, case_id: str, project_id: str) -> No
     case_uuid = uuid.UUID(case_id)
     project_uuid = uuid.UUID(project_id)
 
-    cm = track_task("execute_test_case")
+    bind_log_context(report_id=report_id, project_id=project_id, task_id=getattr(self.request, "id", None))
+
+    cm = track_task("execute_test_case", queue="cases", project_id=project_id)
     exc_info: tuple[Any, Any, Any] = (None, None, None)
     cm.__enter__()
     try:
@@ -96,7 +98,7 @@ def execute_test_case(self, report_id: str, case_id: str, project_id: str) -> No
         while attempts < NETWORK_RETRY_ATTEMPTS:
             attempts += 1
             try:
-                result = runner.execute(case.inputs, context)
+                result = runner.execute(case.inputs, context, project_id=project_id)
                 publish_progress_event(
                     report_id,
                     "step_progress",
@@ -221,6 +223,7 @@ def execute_test_case(self, report_id: str, case_id: str, project_id: str) -> No
         raise
     finally:
         cm.__exit__(*exc_info)
+        unbind_log_context("report_id", "project_id", "task_id")
         session.close()
 
 
