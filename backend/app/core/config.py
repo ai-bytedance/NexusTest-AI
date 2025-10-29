@@ -20,6 +20,8 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5173",
     ]
     provider: str = "mock"
+    ai_chat_rate_limit_per_minute: int = 30
+    ai_chat_message_max_bytes: int = 16000
     algorithm: str = "HS256"
     request_timeout_seconds: int = 30
     max_response_size_bytes: int = 512_000
@@ -104,7 +106,14 @@ class Settings(BaseSettings):
             raise ValueError("Value must be greater than zero")
         return int_value
 
-    @field_validator("celery_worker_prefetch_multiplier", "celery_worker_concurrency", "httpx_retry_attempts", mode="before")
+    @field_validator(
+        "celery_worker_prefetch_multiplier",
+        "celery_worker_concurrency",
+        "httpx_retry_attempts",
+        "ai_chat_rate_limit_per_minute",
+        "ai_chat_message_max_bytes",
+        mode="before",
+    )
     @classmethod
     def validate_positive_integers(cls, value: int | str) -> int:
         int_value = int(value) if isinstance(value, str) else value

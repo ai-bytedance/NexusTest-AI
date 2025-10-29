@@ -1,3 +1,4 @@
+from app.models.ai_chat import AiChat, AiChatMessage
 from app.models.ai_task import AITask, TaskStatus, TaskType
 from app.models.api import Api
 from app.models.dataset import Dataset, DatasetType
@@ -20,6 +21,8 @@ from app.models.test_suite import TestSuite
 from app.models.user import User, UserRole
 
 __all__ = [
+    "AiChat",
+    "AiChatMessage",
     "AITask",
     "Api",
     "Dataset",

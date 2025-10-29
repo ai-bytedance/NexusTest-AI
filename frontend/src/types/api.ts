@@ -217,3 +217,68 @@ export interface ReportProgressEvent {
   timestamp?: string;
   truncated?: boolean;
 }
+
+export type ChatTool =
+  | "generate_cases"
+  | "generate_assertions"
+  | "generate_mock"
+  | "summarize";
+
+export interface GeneratedCaseOutput {
+  name: string;
+  description?: string | null;
+  request: Record<string, unknown>;
+  expected: Record<string, unknown>;
+  assertions: Record<string, unknown>[];
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface AIChatMessageContent {
+  kind: "text" | "cases" | "assertions" | "mock" | "summary" | "system";
+  text?: string | null;
+  cases?: GeneratedCaseOutput[];
+  assertions?: Record<string, unknown>[];
+  mock?: Record<string, unknown> | null;
+  summary?: Record<string, unknown> | null;
+  tool?: ChatTool | null;
+  saved_case_ids?: string[] | null;
+}
+
+export interface AIChatMessage {
+  id: string;
+  chat_id: string;
+  role: "user" | "assistant" | "system";
+  sequence: number;
+  content: AIChatMessageContent;
+  tool_invoked?: ChatTool | null;
+  result_ref?: string | null;
+  author_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AIChat {
+  id: string;
+  project_id: string;
+  title: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AIChatSummary extends AIChat {
+  last_message_at?: string | null;
+  message_count: number;
+}
+
+export interface ChatCompletion {
+  chat: AIChat;
+  messages: AIChatMessage[];
+  tool?: ChatTool | null;
+  usage?: Record<string, number> | null;
+}
+
+export interface ChatDetail {
+  chat: AIChat;
+  messages: AIChatMessage[];
+}

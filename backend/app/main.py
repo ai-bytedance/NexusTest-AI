@@ -11,6 +11,7 @@ from app.api.routes import (
     datasets,
     environments,
     execution,
+    exports,
     health,
     importers,
     plans,
@@ -65,6 +66,7 @@ def create_app() -> FastAPI:
     app.include_router(notifiers.router, prefix="/api/v1")
     app.include_router(importers.router, prefix="/api/v1")
     app.include_router(reports.router, prefix="/api/v1")
+    app.include_router(exports.router, prefix="/api/v1")
     app.include_router(version.router, prefix="/api/v1")
     app.include_router(progress.router)
     if settings.metrics_enabled:

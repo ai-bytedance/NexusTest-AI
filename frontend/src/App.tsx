@@ -10,6 +10,7 @@ const ProjectsPage = lazy(() => import("@/pages/ProjectsPage"));
 const ProjectApisPage = lazy(() => import("@/pages/ProjectApisPage"));
 const ProjectTestCasesPage = lazy(() => import("@/pages/ProjectTestCasesPage"));
 const ProjectTestSuitesPage = lazy(() => import("@/pages/ProjectTestSuitesPage"));
+const AiAssistantPage = lazy(() => import("@/pages/AiAssistantPage"));
 const ReportsPage = lazy(() => import("@/pages/ReportsPage"));
 const ReportDetailPage = lazy(() => import("@/pages/ReportDetailPage"));
 
