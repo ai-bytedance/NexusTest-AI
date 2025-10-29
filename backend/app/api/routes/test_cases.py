@@ -15,6 +15,8 @@ from app.db.session import get_db
 from app.models.api import Api
 from app.models.dataset import Dataset
 from app.models.environment import Environment
+from app.models.execution_queue import ExecutionQueue, ExecutionQueueKind
+from app.models.execution_routing import AgentSelectionPolicy
 from app.models.test_case import TestCase
 from app.schemas.test_case import (
     TestCaseAssertionsUpdateRequest,
@@ -87,6 +89,50 @@ def _validate_dataset_belongs_to_project(
         raise http_exception(status.HTTP_400_BAD_REQUEST, ErrorCode.BAD_REQUEST, "Dataset not found in this project")
 
 
+def _validate_queue_belongs_to_project(
+    db: Session,
+    project_id: UUID,
+    queue_id: UUID | None,
+    expected_kind: ExecutionQueueKind,
+    environment_id: UUID | None,
+) -> ExecutionQueue | None:
+    if queue_id is None:
+        return None
+    queue = db.execute(
+        select(ExecutionQueue).where(
+            ExecutionQueue.id == queue_id,
+            ExecutionQueue.project_id == project_id,
+            ExecutionQueue.is_deleted.is_(False),
+        )
+    ).scalar_one_or_none()
+    if queue is None:
+        raise http_exception(status.HTTP_400_BAD_REQUEST, ErrorCode.BAD_REQUEST, "Queue not found in this project")
+    if queue.kind != expected_kind:
+        raise http_exception(status.HTTP_400_BAD_REQUEST, ErrorCode.BAD_REQUEST, "Queue kind does not match entity type")
+    if queue.environment_id is not None and queue.environment_id != environment_id:
+        raise http_exception(status.HTTP_400_BAD_REQUEST, ErrorCode.BAD_REQUEST, "Queue is scoped to a different environment")
+    return queue
+
+
+def _normalize_agent_tags(tags: list[str] | None) -> list[str]:
+    if not tags:
+        return []
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for item in tags:
+        if not isinstance(item, str):
+            continue
+        candidate = item.strip()
+        if not candidate:
+            continue
+        key = candidate.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized.append(candidate)
+    return normalized
+
+
 def _serialise_assertions(assertions: Any | None) -> list[dict[str, Any]]:
     if not assertions:
         return []
@@ -123,6 +169,14 @@ def create_test_case(
     _validate_api_belongs_to_project(db, context.project.id, payload.api_id)
     _validate_environment_belongs_to_project(db, context.project.id, payload.environment_id)
     _validate_dataset_belongs_to_project(db, context.project.id, payload.dataset_id)
+    queue = _validate_queue_belongs_to_project(
+        db,
+        context.project.id,
+        payload.queue_id,
+        ExecutionQueueKind.CASE,
+        payload.environment_id,
+    )
+    agent_tags = _normalize_agent_tags(payload.agent_tags)
 
     test_case = TestCase(
         project_id=context.project.id,
@@ -133,6 +187,9 @@ def create_test_case(
         assertions=_serialise_assertions(payload.assertions),
         environment_id=payload.environment_id,
         dataset_id=payload.dataset_id,
+        queue_id=queue.id if queue else None,
+        agent_selection_policy=payload.agent_selection_policy,
+        agent_tags=agent_tags,
         param_mapping=payload.param_mapping or {},
         enabled=payload.enabled,
         created_by=context.membership.user_id,
@@ -168,6 +225,14 @@ def update_test_case(
         _validate_environment_belongs_to_project(db, context.project.id, updates["environment_id"])
     if "dataset_id" in updates:
         _validate_dataset_belongs_to_project(db, context.project.id, updates["dataset_id"])
+    if "environment_id" in updates and "queue_id" not in updates and test_case.queue_id is not None:
+        _validate_queue_belongs_to_project(
+            db,
+            context.project.id,
+            test_case.queue_id,
+            ExecutionQueueKind.CASE,
+            updates["environment_id"],
+        )
     if "param_mapping" in updates and updates["param_mapping"] is None:
         updates["param_mapping"] = {}
     if "assertions" in updates:
@@ -175,6 +240,25 @@ def update_test_case(
             updates["assertions"] = []
         else:
             updates["assertions"] = _serialise_assertions(updates["assertions"])
+
+    environment_id = updates.get("environment_id", test_case.environment_id)
+    if "queue_id" in updates:
+        queue_id_value = updates["queue_id"]
+        if queue_id_value is None:
+            updates["queue_id"] = None
+        else:
+            queue = _validate_queue_belongs_to_project(
+                db,
+                context.project.id,
+                queue_id_value,
+                ExecutionQueueKind.CASE,
+                environment_id,
+            )
+            updates["queue_id"] = queue.id
+    if "agent_tags" in updates:
+        updates["agent_tags"] = _normalize_agent_tags(updates["agent_tags"]) if updates["agent_tags"] is not None else []
+    if "agent_selection_policy" in updates:
+        updates["agent_selection_policy"] = updates["agent_selection_policy"] or AgentSelectionPolicy.ROUND_ROBIN
 
     for field, value in updates.items():
         setattr(test_case, field, value)

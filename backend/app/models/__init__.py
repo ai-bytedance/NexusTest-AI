@@ -1,3 +1,4 @@
+from app.models.agent import Agent, AgentStatus
 from app.models.ai_chat import AiChat, AiChatMessage
 from app.models.ai_task import AITask, TaskStatus, TaskType
 from app.models.api import Api
@@ -6,6 +7,8 @@ from app.models.dataset import Dataset, DatasetType
 from app.models.environment import Environment
 from app.models.execution_plan import ExecutionPlan, ExecutionPlanType
 from app.models.execution_policy import ExecutionPolicy
+from app.models.execution_queue import ExecutionQueue, ExecutionQueueKind
+from app.models.execution_routing import AgentSelectionPolicy
 from app.models.import_source import (
     ImportRun,
     ImportRunStatus,
@@ -28,6 +31,9 @@ from app.models.user import User, UserRole
 from app.models.user_identity import IdentityProvider, UserIdentity
 
 __all__ = [
+    "Agent",
+    "AgentStatus",
+    "AgentSelectionPolicy",
     "AiChat",
     "AiChatMessage",
     "AITask",
@@ -39,6 +45,8 @@ __all__ = [
     "ExecutionPlan",
     "ExecutionPlanType",
     "ExecutionPolicy",
+    "ExecutionQueue",
+    "ExecutionQueueKind",
     "ImportSource",
     "ImportSourceType",
     "ImportRun",

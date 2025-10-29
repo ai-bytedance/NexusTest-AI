@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, BaseModel
 
 if TYPE_CHECKING:
+    from app.models.agent import Agent
     from app.models.ai_chat import AiChat
     from app.models.ai_task import AITask
     from app.models.api import Api
@@ -16,6 +17,7 @@ if TYPE_CHECKING:
     from app.models.environment import Environment
     from app.models.execution_plan import ExecutionPlan
     from app.models.execution_policy import ExecutionPolicy
+    from app.models.execution_queue import ExecutionQueue
     from app.models.import_source import ImportRun, ImportSource
     from app.models.notifier import Notifier
     from app.models.notifier_event import NotifierEvent
@@ -50,6 +52,11 @@ class Project(BaseModel, Base):
         nullable=True,
         index=True,
     )
+    default_queue_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("execution_queues.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
 
     organization: Mapped["Organization" | None] = relationship("Organization", back_populates="projects")
     creator: Mapped["User"] = relationship("User", back_populates="projects_created")
@@ -66,6 +73,16 @@ class Project(BaseModel, Base):
     )
     datasets: Mapped[list["Dataset"]] = relationship(
         "Dataset",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+    queues: Mapped[list["ExecutionQueue"]] = relationship(
+        "ExecutionQueue",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+    agents: Mapped[list["Agent"]] = relationship(
+        "Agent",
         back_populates="project",
         cascade="all, delete-orphan",
     )
@@ -122,5 +139,10 @@ class Project(BaseModel, Base):
     default_policy: Mapped["ExecutionPolicy" | None] = relationship(
         "ExecutionPolicy",
         foreign_keys=[default_policy_id],
+        post_update=True,
+    )
+    default_queue: Mapped["ExecutionQueue" | None] = relationship(
+        "ExecutionQueue",
+        foreign_keys=[default_queue_id],
         post_update=True,
     )

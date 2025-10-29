@@ -6,6 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+from app.models.execution_routing import AgentSelectionPolicy
 from app.models.test_report import ReportEntityType, ReportStatus
 from app.schemas.common import IdentifierModel, ORMModel
 
@@ -27,6 +28,10 @@ class TestReportRead(IdentifierModel):
     run_number: int
     retry_attempt: int
     policy_snapshot: dict[str, Any]
+    queue_id: UUID | None
+    agent_id: UUID | None
+    agent_tags: list[str]
+    agent_selection_policy: AgentSelectionPolicy | None
 
 
 class ReportSummarizeRequest(BaseModel):
@@ -36,6 +41,8 @@ class ReportSummarizeRequest(BaseModel):
 class ExecutionTriggerResponse(ORMModel):
     task_id: str
     report_id: UUID
+    queue_id: UUID | None = None
+    agent_id: UUID | None = None
 
 
 class TaskStatusRead(ORMModel):

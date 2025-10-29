@@ -10,8 +10,11 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, BaseModel
+from app.models.execution_routing import AgentSelectionPolicy
 
 if TYPE_CHECKING:
+    from app.models.agent import Agent
+    from app.models.execution_queue import ExecutionQueue
     from app.models.project import Project
 
 
@@ -120,6 +123,25 @@ class TestReport(BaseModel, Base):
         default=dict,
         server_default=text("'{}'::jsonb"),
     )
+    queue_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("execution_queues.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    agent_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("agents.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    agent_tags: Mapped[list[str]] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default=text("'[]'::jsonb"),
+    )
+    agent_selection_policy: Mapped[AgentSelectionPolicy | None] = mapped_column(
+        Enum(AgentSelectionPolicy, name="agent_selection_policy_enum", native_enum=True),
+        nullable=True,
+    )
 
     parent_report: Mapped["TestReport" | None] = relationship(
         "TestReport",
@@ -133,3 +155,5 @@ class TestReport(BaseModel, Base):
         passive_deletes=True,
     )
     project: Mapped["Project"] = relationship("Project", back_populates="test_reports")
+    queue: Mapped["ExecutionQueue" | None] = relationship("ExecutionQueue", back_populates="reports")
+    agent: Mapped["Agent" | None] = relationship("Agent", back_populates="reports")
