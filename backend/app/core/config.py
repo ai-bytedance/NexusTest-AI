@@ -8,6 +8,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     app_env: str = "local"
     secret_key: str = "replace_me"
+    secret_enc_key: str = ""
+    dataset_storage_dir: str = "./storage/datasets"
     access_token_expire_minutes: int = 60
     token_clock_skew_seconds: int = 0
     database_url: str

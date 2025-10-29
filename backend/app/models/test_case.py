@@ -11,6 +11,8 @@ from app.db.base import Base, BaseModel
 
 if TYPE_CHECKING:
     from app.models.api import Api
+    from app.models.dataset import Dataset
+    from app.models.environment import Environment
     from app.models.project import Project
     from app.models.user import User
 
@@ -40,6 +42,23 @@ class TestCase(BaseModel, Base):
     inputs: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
     expected: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
     assertions: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    environment_id: Mapped[uuid.UUID | None] = mapped_column(
+        "environment_id",
+        ForeignKey("environments.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    dataset_id: Mapped[uuid.UUID | None] = mapped_column(
+        "dataset_id",
+        ForeignKey("datasets.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    param_mapping: Mapped[dict[str, Any]] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default=text("'{}'::jsonb"),
+    )
     enabled: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
@@ -55,4 +74,6 @@ class TestCase(BaseModel, Base):
 
     project: Mapped["Project"] = relationship("Project", back_populates="test_cases")
     api: Mapped["Api"] = relationship("Api", back_populates="test_cases")
+    environment: Mapped["Environment | None"] = relationship("Environment", back_populates="test_cases")
+    dataset: Mapped["Dataset | None"] = relationship("Dataset", back_populates="test_cases")
     creator: Mapped["User"] = relationship("User", back_populates="test_cases_created")

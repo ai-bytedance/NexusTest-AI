@@ -39,25 +39,47 @@ class HttpRunner:
         self._timeout_seconds = timeout_seconds
         self._max_response_size_bytes = max_response_size_bytes
 
-    def execute(self, inputs: dict[str, Any], context: ExecutionContext | None = None) -> HttpRunnerResult:
+    def execute(
+        self,
+        inputs: dict[str, Any],
+        context: ExecutionContext | None = None,
+        *,
+        prepared_inputs: dict[str, Any] | None = None,
+        display_inputs: dict[str, Any] | None = None,
+    ) -> HttpRunnerResult:
         active_context = context or ExecutionContext()
-        prepared_inputs = render_value(inputs, active_context)
+        actual_inputs = prepared_inputs if prepared_inputs is not None else render_value(inputs, active_context)
+        display_mapping = display_inputs if isinstance(display_inputs, dict) else (
+            actual_inputs if isinstance(actual_inputs, dict) else {}
+        )
 
-        method = str(prepared_inputs.get("method", "GET")).upper()
-        url = prepared_inputs.get("url")
-        if not isinstance(url, str) or not url:
+        if not isinstance(actual_inputs, dict):
+            raise ValueError("HTTP runner requires input payload to be an object")
+
+        method = str(actual_inputs.get("method", "GET")).upper()
+        url_value = actual_inputs.get("url")
+        if not isinstance(url_value, str) or not url_value:
             raise ValueError("HTTP runner requires a non-empty URL")
 
-        headers = _normalize_mapping(prepared_inputs.get("headers"))
-        params = _normalize_mapping(prepared_inputs.get("params"))
+        display_url = display_mapping.get("url") if isinstance(display_mapping, dict) else None
+        request_url = display_url if isinstance(display_url, str) and display_url else url_value
+
+        headers = _normalize_mapping(actual_inputs.get("headers"))
+        display_headers = _normalize_mapping(display_mapping.get("headers"))
+        params = _normalize_mapping(actual_inputs.get("params"))
+        display_params = _normalize_mapping(display_mapping.get("params"))
 
         request_payload: dict[str, Any] = {
             "method": method,
-            "url": url,
+            "url": request_url,
         }
-        if headers:
+        if display_headers:
+            request_payload["headers"] = display_headers
+        elif headers:
             request_payload["headers"] = headers
-        if params:
+        if display_params:
+            request_payload["params"] = display_params
+        elif params:
             request_payload["params"] = params
 
         request_kwargs: dict[str, Any] = {
@@ -65,23 +87,34 @@ class HttpRunner:
             "params": params or None,
         }
 
-        if "json" in prepared_inputs:
-            request_kwargs["json"] = prepared_inputs["json"]
-            request_payload["json"] = prepared_inputs["json"]
-        elif "body" in prepared_inputs:
-            body = prepared_inputs.get("body")
+        if "json" in actual_inputs:
+            actual_json = actual_inputs.get("json")
+            request_kwargs["json"] = actual_json
+            display_json = display_mapping.get("json") if isinstance(display_mapping, dict) else None
+            if display_json is not None:
+                request_payload["json"] = display_json
+            else:
+                request_payload["json"] = actual_json
+        elif "body" in actual_inputs:
+            body = actual_inputs.get("body")
+            display_body = display_mapping.get("body") if isinstance(display_mapping, dict) else None
             if isinstance(body, (dict, list)):
                 request_kwargs["json"] = body
-                request_payload["json"] = body
+                request_payload["json"] = display_body if isinstance(display_body, (dict, list)) else body
             elif body is not None:
                 if isinstance(body, (bytes, bytearray)):
                     content_bytes = bytes(body)
-                    display_body = content_bytes.decode("utf-8", errors="replace")
+                    display_body_text = (
+                        display_body
+                        if isinstance(display_body, str)
+                        else content_bytes.decode("utf-8", errors="replace")
+                    )
                 else:
-                    display_body = str(body)
-                    content_bytes = display_body.encode("utf-8")
+                    body_text = str(body)
+                    content_bytes = body_text.encode("utf-8")
+                    display_body_text = str(display_body) if isinstance(display_body, str) else body_text
                 request_kwargs["content"] = content_bytes
-                truncated_body, is_truncated, note = _truncate_text(display_body, self._max_response_size_bytes)
+                truncated_body, is_truncated, note = _truncate_text(display_body_text, self._max_response_size_bytes)
                 body_payload = {"text": truncated_body, "truncated": is_truncated}
                 if note:
                     body_payload["note"] = note
@@ -91,7 +124,7 @@ class HttpRunner:
         start = time.perf_counter()
         try:
             with httpx.Client(timeout=timeout, follow_redirects=True) as client:
-                response = client.request(method, url, **{k: v for k, v in request_kwargs.items() if v is not None})
+                response = client.request(method, url_value, **{k: v for k, v in request_kwargs.items() if v is not None})
         except httpx.RequestError as exc:
             duration_ms = int((time.perf_counter() - start) * 1000)
             metrics = {
