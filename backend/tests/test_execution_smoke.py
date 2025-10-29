@@ -126,7 +126,9 @@ def test_case_and_suite_execution_flow(client: TestClient, monkeypatch: MonkeyPa
             headers=auth_headers(token),
         )
         assert task_status.status_code == 200
-        assert task_status.json()["data"]["report_id"] == case_report_id
+        payload = task_status.json()["data"]
+        assert payload["report_id"] == case_report_id
+        assert payload["report_url"] == f"/reports/{case_report_id}"
 
         suite_response = client.post(
             f"/api/v1/projects/{project_id}/test-suites",
@@ -154,7 +156,11 @@ def test_case_and_suite_execution_flow(client: TestClient, monkeypatch: MonkeyPa
                         },
                         "assertions": [
                             {"operator": "status_code", "expected": 200},
-                            {"operator": "contains", "actual": "{{response.jsonpath('$.value')}}", "expected": "second"},
+                            {
+                                "operator": "contains",
+                                "actual": "{{response.jsonpath('$.value')}}",
+                                "expected": "second",
+                            },
                             {"operator": "equals", "actual": "{{prev.first.jsonpath('$.value')}}", "expected": "first"},
                         ],
                     },

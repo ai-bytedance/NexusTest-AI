@@ -282,11 +282,18 @@ def get_task_status(
     async_result = celery_app.AsyncResult(task_id)
     report = _find_report_by_task_id(db, task_id)
     report_id: UUID | None = None
+    report_url: str | None = None
     if report is not None:
         _ensure_membership(db, report.project_id, current_user.id)
         report_id = report.id
+        report_url = f"/reports/{report.id}"
     status_value = async_result.status.lower() if async_result.status else "pending"
-    payload = {"task_id": task_id, "status": status_value, "report_id": report_id}
+    payload = {
+        "task_id": task_id,
+        "status": status_value,
+        "report_id": report_id,
+        "report_url": report_url,
+    }
     return success_response(payload)
 
 

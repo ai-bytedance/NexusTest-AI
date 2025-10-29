@@ -1,0 +1,39 @@
+stages:
+  - test
+
+api-tests:
+  stage: test
+  image: python:3.11
+  variables:
+    NT_API_BASE: $NT_API_BASE
+    NT_PROJECT_ID: $NT_PROJECT_ID
+    NT_SUITE_ID: $NT_SUITE_ID
+    # Optional: define NT_PASS_THRESHOLD to override the default of 1.0
+    NT_API_TOKEN: $NT_API_TOKEN
+    NT_EMAIL: $NT_EMAIL
+    NT_PASSWORD: $NT_PASSWORD
+    NT_OUTPUT_FORMAT: json
+    NT_OUTPUT_FILE: nt_result.json
+  script:
+    - python -m pip install --upgrade pip httpx
+    - python scripts/nt_cli.py
+    - python - <<'PY'
+import json
+import os
+
+path = 'nt_result.json'
+if not os.path.exists(path):
+    raise SystemExit('nt_result.json missing after CLI run')
+with open(path, 'r', encoding='utf-8') as handle:
+    data = json.load(handle)
+print('NetTests summary:')
+print(json.dumps(data, indent=2))
+exit_code = data.get('exit_code', 1)
+if exit_code:
+    raise SystemExit(exit_code)
+PY
+  artifacts:
+    when: always
+    paths:
+      - nt_result.json
+    expire_in: 7 days
