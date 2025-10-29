@@ -131,25 +131,88 @@ Test cases live under `/projects/<project-id>/test-cases` and test suites under 
 
 ### Importers
 
-Import an OpenAPI document (supports URL fetch or raw JSON payload) and upsert API definitions by method/path/version:
+The importers are production-ready and idempotent. They normalise method + path combinations, surface field-level diffs, and store import metadata for resynchronisation.
+
+#### OpenAPI
+
+* Resolves local and remote `$ref`, merges `allOf`/`oneOf`/`anyOf`, and expands component schemas.
+* Parses servers (including variable substitution) and records the selected URL template for each endpoint.
+* Generates request/response bodies for JSON, multipart form-data, and `application/x-www-form-urlencoded` payloads.
+* Maps bearer/API key/basic auth schemes into default headers or query parameters.
+* Preserves tags and `x-*` vendor extensions inside the API metadata alongside mock examples.
 
 ```bash
 curl -X POST http://localhost/api/v1/projects/<project-id>/import/openapi \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
-  -d '{"url": "https://example.com/openapi.json", "dry_run": false}'
+  -d '{
+        "url": "https://example.com/openapi.json",
+        "dry_run": true,
+        "options": {
+          "server": "https://api.example.com/v1",
+          "server_variables": {"stage": "v2"},
+          "include_tags": ["billing"],
+          "resolve_remote_refs": true
+        }
+      }'
 ```
 
-Import a Postman v2 collection via JSON:
+Setting `dry_run` to `true` previews the changes without applying them.
+
+#### Postman
+
+* Resolves collection/environment variables and `{{placeholders}}` in URLs, headers, params, and bodies.
+* Inherits folder/collection auth into requests and converts it to request headers or query params.
+* Maps folder structure to `group_name` and captures pre-request scripts in the API metadata.
+* Supports multipart file uploads and form/urlencoded bodies.
 
 ```bash
 curl -X POST http://localhost/api/v1/projects/<project-id>/import/postman \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
-  -d '{"collection": {"info": {"name": "Demo", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"}, "item": []}}'
+  -d '{
+        "collection": {"info": {"name": "Demo", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"}, "item": []},
+        "options": {
+          "environment": {"userId": "42"},
+          "globals": {"baseUrl": "https://sandbox.example.com"},
+          "resolve_variables": true,
+          "inherit_auth": true
+        }
+      }'
 ```
 
-For form uploads, submit the `collection` file (JSON) using `multipart/form-data` with optional `dry_run=true`.
+You can also upload the collection file via `multipart/form-data` (fields: `file`, optional `options`, optional `dry_run`).
+
+#### Diff preview & resync
+
+Each import writes a summary of created/updated/skipped/removed APIs along with per-endpoint diffs. Use the workflow below to review and replay imports safely:
+
+```bash
+# Preview changes without applying them
+curl -X POST http://localhost/api/v1/projects/<project-id>/import/openapi \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com/openapi.json", "dry_run": true}'
+
+# Retrieve the detailed diff using the returned run_id
+curl -G http://localhost/api/v1/projects/<project-id>/import/preview \
+  -H "Authorization: Bearer <token>" \
+  --data-urlencode "id=<run_id>"
+
+# Re-sync the most recent source (or pass source_id) and optionally apply the diff
+curl -X POST http://localhost/api/v1/projects/<project-id>/import/resync \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"dry_run": false}'
+```
+
+`summary.items` lists every change with field-level diffs. Imports dedupe by `(project_id, method, normalized_path, version)` so repeated runs update the same API rows instead of creating duplicates.
+
+Importer error codes:
+
+* `IMP001` – invalid or unsupported specification.
+* `IMP002` – a referenced document could not be resolved.
+* `IMP003` – conflicting changes detected during upsert.
 
 ### AI Assistance
 

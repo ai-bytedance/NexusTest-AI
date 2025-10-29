@@ -12,6 +12,7 @@ from app.core.errors import ErrorCode, http_exception
 from app.db.session import get_db
 from app.models.api import Api
 from app.schemas.api import ApiCreate, ApiRead, ApiUpdate
+from app.services.importers.common import compute_hash, normalize_path
 
 router = APIRouter(prefix="/projects/{project_id}/apis", tags=["apis"])
 
@@ -53,13 +54,14 @@ def create_api(
     project_id = context.project.id
     method = payload.method.value
     path = payload.path
+    normalized_path = normalize_path(path)
     version = payload.version
 
     existing = db.execute(
         select(Api).where(
             Api.project_id == project_id,
             Api.method == method,
-            Api.path == path,
+            Api.normalized_path == normalized_path,
             Api.version == version,
             Api.is_deleted.is_(False),
         )
@@ -67,17 +69,33 @@ def create_api(
     if existing:
         raise http_exception(status.HTTP_409_CONFLICT, ErrorCode.CONFLICT, "API already exists for this method/path/version")
 
+    fingerprint = compute_hash(
+        {
+            "name": payload.name,
+            "group_name": payload.group_name,
+            "path": path,
+            "headers": payload.headers,
+            "params": payload.params,
+            "body": payload.body,
+            "mock_example": payload.mock_example,
+            "metadata": payload.metadata,
+        }
+    )
+
     api = Api(
         project_id=project_id,
         name=payload.name,
         method=method,
         path=path,
+        normalized_path=normalized_path,
         version=version,
         group_name=payload.group_name,
         headers=payload.headers,
         params=payload.params,
         body=payload.body,
         mock_example=payload.mock_example,
+        metadata=payload.metadata,
+        fingerprint=fingerprint,
     )
     db.add(api)
     db.commit()
@@ -106,23 +124,22 @@ def update_api(
     api = _get_api(db, context.project.id, api_id)
     updates = payload.model_dump(exclude_unset=True)
 
-    method = updates.get("method")
-    path = updates.get("path")
-    version = updates.get("version")
-
-    if method is not None:
-        updates["method"] = method.value
-    if path is None:
-        path = api.path
-    if version is None:
-        version = api.version
-    if method is not None:
-        method_value = method.value
+    method_enum = updates.get("method")
+    if method_enum is not None:
+        updates["method"] = method_enum.value
+        method_value = method_enum.value
     else:
         method_value = api.method
 
+    path_value = updates.get("path", api.path)
+    version_value = updates.get("version", api.version)
+    normalized_path = normalize_path(path_value)
+
+    if "metadata" in updates and updates["metadata"] is None:
+        updates["metadata"] = {}
+
     if (
-        method is not None
+        method_enum is not None
         or "path" in updates
         or "version" in updates
     ):
@@ -130,8 +147,8 @@ def update_api(
             select(Api).where(
                 Api.project_id == api.project_id,
                 Api.method == method_value,
-                Api.path == path,
-                Api.version == version,
+                Api.normalized_path == normalized_path,
+                Api.version == version_value,
                 Api.id != api.id,
                 Api.is_deleted.is_(False),
             )
@@ -144,6 +161,20 @@ def update_api(
             setattr(api, field, value)
         elif hasattr(api, field):
             setattr(api, field, value)
+
+    api.normalized_path = normalized_path
+
+    fingerprint_payload = {
+        "name": api.name,
+        "group_name": api.group_name,
+        "path": api.path,
+        "headers": api.headers,
+        "params": api.params,
+        "body": api.body,
+        "mock_example": api.mock_example,
+        "metadata": api.metadata,
+    }
+    api.fingerprint = compute_hash(fingerprint_payload)
 
     db.add(api)
     db.commit()

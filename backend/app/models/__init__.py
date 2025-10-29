@@ -3,6 +3,13 @@ from app.models.api import Api
 from app.models.dataset import Dataset, DatasetType
 from app.models.environment import Environment
 from app.models.execution_plan import ExecutionPlan, ExecutionPlanType
+from app.models.import_source import (
+    ImportRun,
+    ImportRunStatus,
+    ImportSource,
+    ImportSourceType,
+    ImporterKind,
+)
 from app.models.notifier import Notifier, NotifierType
 from app.models.notifier_event import NotifierEvent, NotifierEventStatus, NotifierEventType
 from app.models.project import Project
@@ -20,6 +27,11 @@ __all__ = [
     "Environment",
     "ExecutionPlan",
     "ExecutionPlanType",
+    "ImportSource",
+    "ImportSourceType",
+    "ImportRun",
+    "ImportRunStatus",
+    "ImporterKind",
     "Notifier",
     "NotifierType",
     "NotifierEvent",

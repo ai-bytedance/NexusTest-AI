@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from app.models.dataset import Dataset
     from app.models.environment import Environment
     from app.models.execution_plan import ExecutionPlan
+    from app.models.import_source import ImportRun, ImportSource
     from app.models.notifier import Notifier
     from app.models.notifier_event import NotifierEvent
     from app.models.project_member import ProjectMember
@@ -77,6 +78,16 @@ class Project(BaseModel, Base):
     )
     notifier_events: Mapped[list["NotifierEvent"]] = relationship(
         "NotifierEvent",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+    import_sources: Mapped[list["ImportSource"]] = relationship(
+        "ImportSource",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+    import_runs: Mapped[list["ImportRun"]] = relationship(
+        "ImportRun",
         back_populates="project",
         cascade="all, delete-orphan",
     )

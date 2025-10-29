@@ -1,0 +1,180 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "Complex Service",
+    "version": "v1"
+  },
+  "servers": [
+    {
+      "url": "https://api.example.com/{stage}",
+      "description": "Primary",
+      "variables": {
+        "stage": {
+          "default": "v1",
+          "enum": ["v1", "v2"]
+        }
+      }
+    },
+    {
+      "url": "https://backup.example.com/v1",
+      "description": "Backup"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      },
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    },
+    "parameters": {
+      "UserIdParam": {
+        "name": "userId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "schemas": {
+      "Address": {
+        "type": "object",
+        "properties": {
+          "line1": {"type": "string"},
+          "city": {"type": "string"},
+          "country": {"type": "string", "default": "US"}
+        }
+      },
+      "UserBase": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {"type": "string", "example": "Ada"},
+          "email": {"type": "string", "format": "email"},
+          "address": {
+            "allOf": [
+              {"$ref": "#/components/schemas/Address"},
+              {
+                "properties": {
+                  "postcode": {"type": "string"}
+                }
+              }
+            ]
+          }
+        }
+      },
+      "CreateUserRequest": {
+        "allOf": [
+          {"$ref": "#/components/schemas/UserBase"},
+          {
+            "properties": {
+              "password": {"type": "string", "format": "password", "example": "s3cr3t"}
+            }
+          }
+        ]
+      },
+      "UserResponse": {
+        "allOf": [
+          {"$ref": "#/components/schemas/UserBase"},
+          {
+            "properties": {
+              "id": {"type": "string"},
+              "status": {"type": "string", "enum": ["active", "disabled"]}
+            }
+          }
+        ]
+      }
+    }
+  },
+  "paths": {
+    "/users": {
+      "x-path-meta": {
+        "domain": "people"
+      },
+      "post": {
+        "summary": "Create user",
+        "tags": ["users"],
+        "operationId": "createUser",
+        "x-operation-flag": true,
+        "security": [
+          {"BearerAuth": []}
+        ],
+        "parameters": [
+          {
+            "name": "trace-id",
+            "in": "header",
+            "schema": {"type": "string"},
+            "example": "abc-123"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/CreateUserRequest"}
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "avatar": {"type": "string", "format": "binary"},
+                  "payload": {"$ref": "#/components/schemas/CreateUserRequest"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/UserResponse"},
+                "example": {"id": "user-1", "name": "Ada"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{userId}": {
+      "get": {
+        "summary": "Get user",
+        "tags": ["users"],
+        "operationId": "getUser",
+        "security": [
+          {"ApiKeyAuth": []}
+        ],
+        "parameters": [
+          {"$ref": "#/components/parameters/UserIdParam"},
+          {
+            "name": "verbose",
+            "in": "query",
+            "schema": {"type": "boolean"},
+            "example": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/UserResponse"},
+                "example": {"id": "user-1", "name": "Ada", "status": "active"}
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    }
+  }
+}

@@ -27,6 +27,7 @@ class ApiBase(ORMModel):
     params: dict[str, Any] = Field(default_factory=dict)
     body: dict[str, Any] = Field(default_factory=dict)
     mock_example: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("path")
     @classmethod
@@ -50,6 +51,7 @@ class ApiUpdate(ORMModel):
     params: dict[str, Any] | None = None
     body: dict[str, Any] | None = None
     mock_example: dict[str, Any] | None = None
+    metadata: dict[str, Any] | None = None
 
     @field_validator("path")
     @classmethod
@@ -66,9 +68,12 @@ class ApiRead(IdentifierModel):
     name: str
     method: HTTPMethod
     path: str
+    normalized_path: str
     version: str
     group_name: str | None
     headers: dict[str, Any]
     params: dict[str, Any]
     body: dict[str, Any]
     mock_example: dict[str, Any]
+    metadata: dict[str, Any]
+    import_source_id: UUID | None

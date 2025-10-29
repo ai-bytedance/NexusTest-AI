@@ -25,6 +25,9 @@ class ErrorCode(str, Enum):
     AI_PROVIDER_UNAVAILABLE = "AI004"
     AI_PROVIDER_NOT_CONFIGURED = "AI005"
     AI_PROVIDER_NOT_IMPLEMENTED = "AI006"
+    IMPORT_INVALID_SPEC = "IMP001"
+    IMPORT_RESOLVE_FAILED = "IMP002"
+    IMPORT_CONFLICT_DETECTED = "IMP003"
 
 
 def create_error_detail(code: ErrorCode | str, message: str, data: Any | None = None) -> dict[str, Any | None]:
