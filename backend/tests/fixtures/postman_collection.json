@@ -1,0 +1,81 @@
+{
+  "info": {
+    "name": "User Suite",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "baseUrl", "value": "https://placeholder.example.com"},
+    {"key": "token", "value": "{{envToken}}"}
+  ],
+  "item": [
+    {
+      "name": "User APIs",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {"key": "token", "value": "{{token}}"}
+        ]
+      },
+      "item": [
+        {
+          "name": "Get user",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('includeFlag', 'details');",
+                  "pm.variables.set('correlationId', 'auto');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "X-Correlation-Id", "value": "{{correlationId}}"}
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}?include={{includeFlag}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}"],
+              "query": [
+                {"key": "include", "value": "{{includeFlag}}"}
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "sample",
+              "status": "OK",
+              "code": 200,
+              "body": "{\"id\":\"{{userId}}\",\"name\":\"Sample\"}"
+            }
+          ]
+        },
+        {
+          "name": "Create user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "multipart/form-data"}
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {"key": "name", "value": "Ada", "type": "text"},
+                {"key": "avatar", "type": "file", "src": ["./avatar.png"]}
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
