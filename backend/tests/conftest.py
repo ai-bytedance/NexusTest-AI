@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 from typing import Generator
 
+import fakeredis
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -56,6 +57,19 @@ def override_get_db() -> Generator[Session, None, None]:
 
 
 app.dependency_overrides[get_db] = override_get_db
+
+
+@pytest.fixture(autouse=True)
+def fake_redis_clients(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
+    from app.services.reports import progress as progress_service
+
+    server = fakeredis.FakeServer()
+    sync_client = fakeredis.FakeRedis(server=server, decode_responses=True)
+    async_client = fakeredis.FakeAsyncRedis(server=server, decode_responses=True)
+
+    monkeypatch.setattr(progress_service, "get_sync_redis", lambda: sync_client)
+    monkeypatch.setattr(progress_service, "get_async_redis", lambda: async_client)
+    yield
 
 
 @pytest.fixture()

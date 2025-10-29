@@ -12,6 +12,7 @@ from app.core.errors import ErrorCode, http_exception
 from app.db.session import get_db
 from app.models import ReportEntityType, ReportStatus, TestCase, TestReport, TestSuite
 from app.schemas.test_report import ExecutionTriggerResponse
+from app.services.reports.progress import publish_progress_event
 from app.tasks.execute_case import execute_test_case
 from app.tasks.execute_suite import execute_test_suite
 
@@ -91,6 +92,17 @@ def trigger_case_execution(
     db.commit()
     db.refresh(report)
 
+    publish_progress_event(
+        str(report.id),
+        "task_queued",
+        payload={
+            "task_id": async_result.id,
+            "entity_type": report.entity_type.value,
+            "entity_id": str(report.entity_id),
+            "project_id": str(report.project_id),
+        },
+    )
+
     payload = ExecutionTriggerResponse(task_id=async_result.id, report_id=report.id)
     return success_response(payload.model_dump())
 
@@ -117,6 +129,17 @@ def trigger_suite_execution(
     db.add(report)
     db.commit()
     db.refresh(report)
+
+    publish_progress_event(
+        str(report.id),
+        "task_queued",
+        payload={
+            "task_id": async_result.id,
+            "entity_type": report.entity_type.value,
+            "entity_id": str(report.entity_id),
+            "project_id": str(report.project_id),
+        },
+    )
 
     payload = ExecutionTriggerResponse(task_id=async_result.id, report_id=report.id)
     return success_response(payload.model_dump())

@@ -4,7 +4,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import ai, apis, auth, execution, health, importers, projects, reports, test_cases, test_suites
+from app.api.routes import ai, apis, auth, execution, health, importers, progress, projects, reports, test_cases, test_suites
 from app.core.config import get_settings
 from app.core.errors import ErrorCode, create_error_detail
 from app.logging import RequestIdMiddleware, configure_logging, get_logger
@@ -39,6 +39,7 @@ def create_app() -> FastAPI:
     app.include_router(execution.router, prefix="/api/v1")
     app.include_router(importers.router, prefix="/api/v1")
     app.include_router(reports.router, prefix="/api/v1")
+    app.include_router(progress.router)
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
