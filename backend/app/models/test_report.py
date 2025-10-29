@@ -34,6 +34,14 @@ class TestReport(BaseModel, Base):
 
     __table_args__ = (
         Index("ix_test_reports_entity", "entity_type", "entity_id"),
+        Index("ix_test_reports_parent_report_id", "parent_report_id"),
+        Index(
+            "ix_test_reports_entity_run_number",
+            "project_id",
+            "entity_type",
+            "entity_id",
+            "run_number",
+        ),
         Index("ix_test_reports_request_payload_gin", "request_payload", postgresql_using="gin"),
         Index("ix_test_reports_response_payload_gin", "response_payload", postgresql_using="gin"),
         Index("ix_test_reports_assertions_result_gin", "assertions_result", postgresql_using="gin"),
@@ -89,5 +97,39 @@ class TestReport(BaseModel, Base):
         server_default=text("'{}'::jsonb"),
     )
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    parent_report_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("test_reports.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    run_number: Mapped[int] = mapped_column(
+        "run_number",
+        nullable=False,
+        default=1,
+        server_default=text("1"),
+    )
+    retry_attempt: Mapped[int] = mapped_column(
+        "retry_attempt",
+        nullable=False,
+        default=0,
+        server_default=text("0"),
+    )
+    policy_snapshot: Mapped[dict[str, Any]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=dict,
+        server_default=text("'{}'::jsonb"),
+    )
 
+    parent_report: Mapped["TestReport" | None] = relationship(
+        "TestReport",
+        remote_side=[id],
+        back_populates="child_reports",
+    )
+    child_reports: Mapped[list["TestReport"]] = relationship(
+        "TestReport",
+        back_populates="parent_report",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
     project: Mapped["Project"] = relationship("Project", back_populates="test_reports")

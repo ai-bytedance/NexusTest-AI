@@ -17,6 +17,7 @@ def create_celery_app() -> Celery:
         task_queues=(
             Queue("cases", routing_key="cases"),
             Queue("suites", routing_key="suites"),
+            Queue("retries", routing_key="retries"),
         ),
         task_routes={
             "app.tasks.execute_case.execute_test_case": {"queue": "cases", "routing_key": "cases"},
@@ -28,6 +29,11 @@ def create_celery_app() -> Celery:
                 "schedule": settings.plan_refresh_seconds,
             }
         },
+        worker_concurrency=settings.celery_worker_concurrency,
+        worker_prefetch_multiplier=settings.celery_worker_prefetch_multiplier,
+        task_acks_late=settings.celery_task_acks_late,
+        task_reject_on_worker_lost=settings.celery_task_reject_on_worker_lost,
+        broker_transport_options={"visibility_timeout": settings.celery_visibility_timeout_seconds},
         timezone="UTC",
     )
     return celery_app

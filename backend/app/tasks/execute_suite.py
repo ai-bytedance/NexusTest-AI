@@ -5,6 +5,7 @@ import uuid
 from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 from sqlalchemy import select
@@ -17,8 +18,15 @@ from app.db.session import SessionLocal
 from app.logging import bind_log_context, get_logger, unbind_log_context
 from app.models import ReportEntityType, ReportStatus, TestCase, TestReport, TestSuite
 from app.observability import track_task
+from app.observability.metrics import (
+    record_circuit_breaker_event,
+    record_execution_retry,
+    record_rate_limit_throttle,
+)
 from app.services.assertions.engine import AssertionEngine
 from app.services.execution.context import ExecutionContext, render_value
+from app.services.execution.policy import ExecutionPolicySnapshot, snapshot_from_dict
+from app.services.execution.runtime import ExecutionPolicyRuntime
 from app.services.notify.dispatcher import queue_run_finished_notifications
 from app.services.reports.progress import publish_progress_event
 from app.services.runner.http_runner import HttpRunner, HttpRunnerError

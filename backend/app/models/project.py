@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from app.models.dataset import Dataset
     from app.models.environment import Environment
     from app.models.execution_plan import ExecutionPlan
+    from app.models.execution_policy import ExecutionPolicy
     from app.models.import_source import ImportRun, ImportSource
     from app.models.notifier import Notifier
     from app.models.notifier_event import NotifierEvent
@@ -42,6 +43,11 @@ class Project(BaseModel, Base):
         "created_by",
         ForeignKey("users.id", ondelete="RESTRICT"),
         nullable=False,
+        index=True,
+    )
+    default_policy_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("execution_policies.id", ondelete="SET NULL"),
+        nullable=True,
         index=True,
     )
 
@@ -83,6 +89,11 @@ class Project(BaseModel, Base):
         back_populates="project",
         cascade="all, delete-orphan",
     )
+    execution_policies: Mapped[list["ExecutionPolicy"]] = relationship(
+        "ExecutionPolicy",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
     notifiers: Mapped[list["Notifier"]] = relationship(
         "Notifier",
         back_populates="project",
@@ -107,4 +118,9 @@ class Project(BaseModel, Base):
         "ProjectTeamRole",
         back_populates="project",
         cascade="all, delete-orphan",
+    )
+    default_policy: Mapped["ExecutionPolicy" | None] = relationship(
+        "ExecutionPolicy",
+        foreign_keys=[default_policy_id],
+        post_update=True,
     )

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 import re
 import time
 from copy import deepcopy
@@ -53,6 +54,8 @@ class HttpRunner:
         client: httpx.Client | None = None,
         max_retries: int = 3,
         retry_backoff_factor: float = 0.5,
+        retry_backoff_max: float | None = None,
+        retry_jitter_ratio: float = 0.5,
         retry_statuses: Sequence[int] | None = None,
         retry_methods: Sequence[str] | None = None,
         redact_fields: Sequence[str] | None = None,
@@ -62,7 +65,12 @@ class HttpRunner:
         self._max_response_size_bytes = max_response_size_bytes
         self._client = client
         self._max_retries = max(1, int(max_retries))
-        self._retry_backoff_factor = max(0.1, float(retry_backoff_factor))
+        self._retry_backoff_base = max(0.1, float(retry_backoff_factor))
+        self._retry_backoff_max = min(
+            _MAX_RETRY_DELAY_SECONDS,
+            float(retry_backoff_max) if retry_backoff_max else _MAX_RETRY_DELAY_SECONDS,
+        )
+        self._retry_jitter_ratio = max(0.0, min(float(retry_jitter_ratio), 1.0))
         self._retry_statuses = {int(status) for status in (retry_statuses or [429, 500, 502, 503, 504])}
         default_methods = retry_methods or ["GET", "HEAD", "OPTIONS", "PUT", "DELETE", "POST", "PATCH"]
         self._retry_methods = {method.upper() for method in default_methods if method}
@@ -310,8 +318,12 @@ class HttpRunner:
         return method.upper() in self._retry_methods
 
     def _backoff_delay(self, attempt: int) -> float:
-        delay = self._retry_backoff_factor * (2 ** (attempt - 1))
-        return min(delay, _MAX_RETRY_DELAY_SECONDS)
+        base = self._retry_backoff_base * (2 ** (attempt - 1))
+        base = min(base, self._retry_backoff_max)
+        if base <= 0:
+            return 0.0
+        jitter = random.uniform(0.0, base * self._retry_jitter_ratio) if self._retry_jitter_ratio > 0 else 0.0
+        return min(base + jitter, _MAX_RETRY_DELAY_SECONDS)
 
 
 def _normalize_mapping(value: Any) -> dict[str, Any]:
