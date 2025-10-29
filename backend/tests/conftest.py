@@ -21,6 +21,8 @@ os.environ.setdefault("TOKEN_CLOCK_SKEW_SECONDS", "0")
 os.environ.setdefault("APP_VERSION", "test-version")
 os.environ.setdefault("GIT_COMMIT_SHA", "test-sha")
 os.environ.setdefault("BUILD_TIME", "2024-01-01T00:00:00Z")
+os.environ.setdefault("GITHUB_CLIENT_ID", "test-client-id")
+os.environ.setdefault("GITHUB_CLIENT_SECRET", "test-client-secret")
 
 from app.core.config import get_settings
 
