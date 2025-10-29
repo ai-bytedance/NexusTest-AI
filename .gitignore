@@ -36,3 +36,7 @@ htmlcov/
 .tox/
 .pytest_cache/
 .mypy_cache/
+
+# CLI artifacts
+nt_*.json
+comment.md
