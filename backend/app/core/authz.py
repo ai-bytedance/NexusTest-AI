@@ -10,7 +10,7 @@ from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
 
 from app.core.errors import ErrorCode, http_exception
-from app.core.security import decode_access_token
+from app.core.security import InvalidTokenError, decode_access_token
 from app.db.session import get_db
 from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
@@ -37,10 +37,10 @@ def get_current_user(token: Optional[str] = Depends(oauth2_scheme), db: Session 
 
     try:
         payload = decode_access_token(token)
-    except ValueError:
+    except InvalidTokenError:
         raise http_exception(
             status.HTTP_401_UNAUTHORIZED,
-            ErrorCode.NOT_AUTHENTICATED,
+            ErrorCode.AUTH_TOKEN_INVALID,
             "Invalid authentication token",
             headers={"WWW-Authenticate": "Bearer"},
         ) from None
@@ -49,7 +49,7 @@ def get_current_user(token: Optional[str] = Depends(oauth2_scheme), db: Session 
     if not subject:
         raise http_exception(
             status.HTTP_401_UNAUTHORIZED,
-            ErrorCode.NOT_AUTHENTICATED,
+            ErrorCode.AUTH_TOKEN_INVALID,
             "Invalid authentication token",
             headers={"WWW-Authenticate": "Bearer"},
         )
@@ -59,7 +59,7 @@ def get_current_user(token: Optional[str] = Depends(oauth2_scheme), db: Session 
     except ValueError:
         raise http_exception(
             status.HTTP_401_UNAUTHORIZED,
-            ErrorCode.NOT_AUTHENTICATED,
+            ErrorCode.AUTH_TOKEN_INVALID,
             "Invalid authentication token",
             headers={"WWW-Authenticate": "Bearer"},
         ) from None
@@ -68,7 +68,7 @@ def get_current_user(token: Optional[str] = Depends(oauth2_scheme), db: Session 
     if not user or user.is_deleted:
         raise http_exception(
             status.HTTP_401_UNAUTHORIZED,
-            ErrorCode.NOT_AUTHENTICATED,
+            ErrorCode.AUTH_TOKEN_INVALID,
             "Authentication credentials are no longer valid",
             headers={"WWW-Authenticate": "Bearer"},
         )

@@ -1,5 +1,7 @@
 # API Automation Platform Skeleton
 
+![CI](https://github.com/your-org/api-automation-platform/actions/workflows/ci.yml/badge.svg)
+
 This repository contains the initial backend-first skeleton for the API automation platform. It provides a FastAPI-based backend, Docker Compose stack, and placeholders for future frontend and infrastructure work.
 
 ## Project Structure
@@ -46,8 +48,11 @@ frontend/           # Placeholder for future frontend implementation
 
 ## Configuration
 
-The backend reads its configuration from environment variables (see `.env.example`). Key toggles for reporting include:
+The backend reads its configuration from environment variables (see `.env.example`). Key toggles include:
 
+- `ACCESS_TOKEN_EXPIRE_MINUTES` (default `60`): lifetime of issued access tokens.
+- `TOKEN_CLOCK_SKEW_SECONDS` (default `0`): allowable leeway when validating JWT expiry to handle clock drift between services.
+- `APP_VERSION`, `GIT_COMMIT_SHA`, and `BUILD_TIME`: surfaced via the `/api/v1/version` endpoint for build metadata.
 - `MAX_RESPONSE_SIZE_BYTES` (default `512000`): upper bound for response payloads sent back to the UI. Anything larger is replaced with a truncation note.
 - `REDACT_FIELDS` (comma-separated list): case-insensitive field names to mask with `***` inside request/response payloads (defaults to `authorization,password,token,secret`).
 
@@ -62,6 +67,18 @@ All business endpoints live under `/api/v1` and return a standard envelope:
   "data": {}
 }
 ```
+
+### Authentication
+
+Authentication endpoints under `/api/auth` follow the same `{code, message, data}` envelope. Common error codes include:
+
+| Code   | Description                    |
+|--------|--------------------------------|
+| AUTH001 | Invalid credentials            |
+| AUTH002 | Email already registered       |
+| AUTH003 | Authentication token invalid   |
+
+Token lifetimes are governed by `ACCESS_TOKEN_EXPIRE_MINUTES` and `TOKEN_CLOCK_SKEW_SECONDS`.
 
 ### Projects and RBAC
 
@@ -243,6 +260,15 @@ curl -G http://localhost/api/v1/metrics/reports/summary \
 
 The reporting endpoints always respond with the `{code, message, data}` envelope. When exports are requested, the `data` object carries the file metadata and content (Markdown text today; PDF returns a `501` error with code `R002` until a generator is configured).
 
+## Gateway & Security
+
+The edge nginx proxy defined in `infra/nginx/nginx.conf` now:
+
+- Limits authenticated and general API traffic to 10 requests/second with a burst tolerance of 20 (`/api` and `/api/auth`).
+- Caps request bodies at 10 MB and tightens client/proxy timeouts to reduce slowloris-style attacks.
+- Adds security headers (`X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`, `Referrer-Policy`, `Content-Security-Policy`) alongside gzip tuning.
+- Serves static assets under `/static/` with caching directives while keeping the `/ws` WebSocket proxy untouched.
+
 ## Makefile Helpers
 
 ```bash
@@ -250,16 +276,22 @@ make up        # start the compose stack
 make down      # stop the stack
 make logs      # tail logs from the stack
 make shell     # enter the running API container
+make lint      # run pre-commit checks across the repo
+make format    # apply black + isort formatting to backend/
+make test      # execute pytest against the backend test suite
+make ci        # run lint + test targets (useful locally before pushing)
 ```
 
 ## Tooling
 
-Install [ruff](https://github.com/astral-sh/ruff) and [black](https://github.com/psf/black) locally to lint and format the backend codebase:
+Install [pre-commit](https://pre-commit.com), [ruff](https://github.com/astral-sh/ruff), and [black](https://github.com/psf/black) locally to match the automated checks:
 
 ```bash
-pip install --upgrade ruff black
-ruff check backend/app
-black backend/app
+pip install --upgrade pre-commit ruff black isort
+pre-commit install
+ruff check backend
+black backend
+isort --profile black backend
 ```
 
 ## Next Steps
