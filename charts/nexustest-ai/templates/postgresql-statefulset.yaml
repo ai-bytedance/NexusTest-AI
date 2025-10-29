@@ -1,0 +1,139 @@
+{{- if .Values.postgresql.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "nexustest-ai.postgresqlName" . }}
+  labels:
+    {{- include "nexustest-ai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgresql
+spec:
+  serviceName: {{ include "nexustest-ai.postgresqlName" . }}
+  replicas: {{ .Values.postgresql.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: {{ include "nexustest-ai.name" . }}
+      app.kubernetes.io/component: postgresql
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/name: {{ include "nexustest-ai.name" . }}
+        app.kubernetes.io/component: postgresql
+        {{- with .Values.postgresql.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.postgresql.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "nexustest-ai.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . | quote }}
+        {{- end }}
+      {{- end }}
+      {{- $podSecurityContext := dict -}}
+      {{- if .Values.global.podSecurityContext }}
+      {{- $podSecurityContext = merge $podSecurityContext (deepCopy .Values.global.podSecurityContext) -}}
+      {{- end }}
+      {{- if .Values.postgresql.podSecurityContext }}
+      {{- $podSecurityContext = merge $podSecurityContext (deepCopy .Values.postgresql.podSecurityContext) -}}
+      {{- end }}
+      {{- if $podSecurityContext }}
+      securityContext:
+        {{- toYaml $podSecurityContext | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: postgresql
+          image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
+          imagePullPolicy: {{ .Values.postgresql.image.pullPolicy }}
+          ports:
+            - name: postgresql
+              containerPort: {{ .Values.postgresql.service.port }}
+              protocol: TCP
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ printf "%s-credentials" (include "nexustest-ai.postgresqlName" .) }}
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ printf "%s-credentials" (include "nexustest-ai.postgresqlName" .) }}
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: {{ printf "%s-credentials" (include "nexustest-ai.postgresqlName" .) }}
+                  key: POSTGRES_DB
+          volumeMounts:
+            - name: postgresql-data
+              mountPath: /var/lib/postgresql/data
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - pg_isready -U "$POSTGRES_USER"
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - pg_isready -U "$POSTGRES_USER"
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          {{- if .Values.postgresql.resources }}
+          resources:
+            {{- toYaml .Values.postgresql.resources | nindent 12 }}
+          {{- end }}
+          {{- $securityContext := dict -}}
+          {{- if .Values.global.securityContext }}
+          {{- $securityContext = merge $securityContext (deepCopy .Values.global.securityContext) -}}
+          {{- end }}
+          {{- if .Values.postgresql.securityContext }}
+          {{- $securityContext = merge $securityContext (deepCopy .Values.postgresql.securityContext) -}}
+          {{- end }}
+          {{- if $securityContext }}
+          securityContext:
+            {{- toYaml $securityContext | nindent 12 }}
+          {{- end }}
+      {{- with .Values.postgresql.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.postgresql.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.postgresql.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.postgresql.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  volumeClaimTemplates:
+    - metadata:
+        name: postgresql-data
+      spec:
+        accessModes:
+          {{- toYaml .Values.postgresql.persistence.accessModes | nindent 10 }}
+        resources:
+          requests:
+            storage: {{ .Values.postgresql.persistence.size }}
+        {{- if .Values.postgresql.persistence.storageClass }}
+        storageClassName: {{ .Values.postgresql.persistence.storageClass }}
+        {{- end }}
+{{- end }}

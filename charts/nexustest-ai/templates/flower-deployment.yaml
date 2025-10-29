@@ -1,0 +1,140 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "nexustest-ai.flowerName" . }}
+  labels:
+    {{- include "nexustest-ai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: flower
+spec:
+  replicas: {{ .Values.flower.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: {{ include "nexustest-ai.name" . }}
+      app.kubernetes.io/component: flower
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/name: {{ include "nexustest-ai.name" . }}
+        app.kubernetes.io/component: flower
+        {{- with .Values.flower.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.flower.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "nexustest-ai.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . | quote }}
+        {{- end }}
+      {{- end }}
+      {{- $podSecurityContext := dict -}}
+      {{- if .Values.global.podSecurityContext }}
+      {{- $podSecurityContext = merge $podSecurityContext (deepCopy .Values.global.podSecurityContext) -}}
+      {{- end }}
+      {{- if .Values.flower.podSecurityContext }}
+      {{- $podSecurityContext = merge $podSecurityContext (deepCopy .Values.flower.podSecurityContext) -}}
+      {{- end }}
+      {{- if $podSecurityContext }}
+      securityContext:
+        {{- toYaml $podSecurityContext | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: flower
+          {{- $image := merge (deepCopy .Values.image) (deepCopy (default dict .Values.flower.image)) -}}
+          {{- $repository := $image.repository -}}
+          {{- $tag := default .Values.image.tag $image.tag -}}
+          {{- $pullPolicy := default .Values.image.pullPolicy $image.pullPolicy -}}
+          {{- if and $repository $tag }}
+          image: "{{ $repository }}:{{ $tag }}"
+          {{- else if $repository }}
+          image: "{{ $repository }}"
+          {{- end }}
+          {{- if $pullPolicy }}
+          imagePullPolicy: {{ $pullPolicy }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.flower.service.port }}
+              protocol: TCP
+          {{- $command := default (list "/bin/sh" "-c") .Values.flower.command -}}
+          {{- if $command }}
+          command:
+            {{- toYaml $command | nindent 12 }}
+          {{- end }}
+          {{- $defaultArgs := list (printf "flower --app=app.core.celery:celery_app --port=%d --url-prefix=flower --address=0.0.0.0" .Values.flower.service.port) -}}
+          {{- $args := default $defaultArgs .Values.flower.args -}}
+          args:
+            {{- toYaml $args | nindent 12 }}
+          envFrom:
+            {{- if or .Values.config.create .Values.config.existingConfigMap }}
+            - configMapRef:
+                name: {{ include "nexustest-ai.configMapName" . }}
+            {{- end }}
+            {{- if or .Values.secrets.create .Values.secrets.existingSecret }}
+            - secretRef:
+                name: {{ include "nexustest-ai.secretName" . }}
+            {{- end }}
+            {{- with .Values.flower.extraEnvFrom }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          env:
+            {{- with .Values.flower.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- $securityContext := dict -}}
+          {{- if .Values.global.securityContext }}
+          {{- $securityContext = merge $securityContext (deepCopy .Values.global.securityContext) -}}
+          {{- end }}
+          {{- if .Values.flower.securityContext }}
+          {{- $securityContext = merge $securityContext (deepCopy .Values.flower.securityContext) -}}
+          {{- end }}
+          {{- if $securityContext }}
+          securityContext:
+            {{- toYaml $securityContext | nindent 12 }}
+          {{- end }}
+          {{- if .Values.flower.resources }}
+          resources:
+            {{- toYaml .Values.flower.resources | nindent 12 }}
+          {{- end }}
+          {{- if .Values.flower.probes.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.flower.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.flower.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.flower.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.flower.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.flower.probes.liveness.failureThreshold }}
+          {{- end }}
+          {{- if .Values.flower.probes.readiness.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.flower.probes.readiness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.flower.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.flower.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.flower.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.flower.probes.readiness.failureThreshold }}
+          {{- end }}
+      {{- with .Values.flower.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.flower.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.flower.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.flower.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

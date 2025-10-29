@@ -1,0 +1,49 @@
+{{- $smApi := default dict .Values.api.metrics.serviceMonitor -}}
+{{- $smGlobal := default dict .Values.serviceMonitor -}}
+{{- $smEnabled := and .Values.api.metrics.enabled (or (default false $smApi.enabled) (default false $smGlobal.enabled)) -}}
+{{- $labelMap := merge (deepCopy (default dict $smGlobal.labels)) (deepCopy (default dict $smApi.labels)) -}}
+{{- $annotations := merge (deepCopy (default dict $smGlobal.annotations)) (deepCopy (default dict $smApi.annotations)) -}}
+{{- if $smEnabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ printf "%s-api" (include "nexustest-ai.apiServiceName" .) }}
+  labels:
+    {{- include "nexustest-ai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+    {{- with $labelMap }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- $smNamespace := default (default "" $smGlobal.namespace) $smApi.namespace -}}
+  {{- if $smNamespace }}
+  namespace: {{ $smNamespace }}
+  {{- end }}
+  {{- if $annotations }}
+  annotations:
+    {{- toYaml $annotations | nindent 4 }}
+  {{- end }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: {{ include "nexustest-ai.name" . }}
+      app.kubernetes.io/component: api
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  endpoints:
+    - port: metrics
+      {{- $interval := default (default "30s" $smGlobal.interval) $smApi.interval -}}
+      {{- if $interval }}
+      interval: {{ $interval }}
+      {{- end }}
+      {{- $scrapeTimeout := default (default "" $smGlobal.scrapeTimeout) $smApi.scrapeTimeout -}}
+      {{- if $scrapeTimeout }}
+      scrapeTimeout: {{ $scrapeTimeout }}
+      {{- end }}
+      {{- if .Values.api.metrics.path }}
+      path: {{ .Values.api.metrics.path }}
+      {{- end }}
+      scheme: http
+      honorLabels: {{ default (default false $smGlobal.honorLabels) $smApi.honorLabels }}
+{{- end }}

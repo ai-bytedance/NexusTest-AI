@@ -1,0 +1,144 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "nexustest-ai.beatName" . }}
+  labels:
+    {{- include "nexustest-ai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: celery-beat
+spec:
+  replicas: {{ .Values.celeryBeat.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: {{ include "nexustest-ai.name" . }}
+      app.kubernetes.io/component: celery-beat
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/name: {{ include "nexustest-ai.name" . }}
+        app.kubernetes.io/component: celery-beat
+        {{- with .Values.celeryBeat.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.celeryBeat.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "nexustest-ai.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . | quote }}
+        {{- end }}
+      {{- end }}
+      {{- $podSecurityContext := dict -}}
+      {{- if .Values.global.podSecurityContext }}
+      {{- $podSecurityContext = merge $podSecurityContext (deepCopy .Values.global.podSecurityContext) -}}
+      {{- end }}
+      {{- if .Values.celeryBeat.podSecurityContext }}
+      {{- $podSecurityContext = merge $podSecurityContext (deepCopy .Values.celeryBeat.podSecurityContext) -}}
+      {{- end }}
+      {{- if $podSecurityContext }}
+      securityContext:
+        {{- toYaml $podSecurityContext | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: beat
+          {{- $image := merge (deepCopy .Values.image) (deepCopy (default dict .Values.celeryBeat.image)) -}}
+          {{- $repository := $image.repository -}}
+          {{- $tag := default .Values.image.tag $image.tag -}}
+          {{- $pullPolicy := default .Values.image.pullPolicy $image.pullPolicy -}}
+          {{- if and $repository $tag }}
+          image: "{{ $repository }}:{{ $tag }}"
+          {{- else if $repository }}
+          image: "{{ $repository }}"
+          {{- end }}
+          {{- if $pullPolicy }}
+          imagePullPolicy: {{ $pullPolicy }}
+          {{- end }}
+          {{- $command := default (list "/bin/sh" "-c") .Values.celeryBeat.command -}}
+          {{- if $command }}
+          command:
+            {{- toYaml $command | nindent 12 }}
+          {{- end }}
+          {{- $defaultArgs := list "celery -A app.core.celery:celery_app beat --loglevel=info" -}}
+          {{- $args := default $defaultArgs .Values.celeryBeat.args -}}
+          args:
+            {{- toYaml $args | nindent 12 }}
+          envFrom:
+            {{- if or .Values.config.create .Values.config.existingConfigMap }}
+            - configMapRef:
+                name: {{ include "nexustest-ai.configMapName" . }}
+            {{- end }}
+            {{- if or .Values.secrets.create .Values.secrets.existingSecret }}
+            - secretRef:
+                name: {{ include "nexustest-ai.secretName" . }}
+            {{- end }}
+            {{- with .Values.celeryBeat.extraEnvFrom }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          env:
+            {{- with .Values.celeryBeat.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- $securityContext := dict -}}
+          {{- if .Values.global.securityContext }}
+          {{- $securityContext = merge $securityContext (deepCopy .Values.global.securityContext) -}}
+          {{- end }}
+          {{- if .Values.celeryBeat.securityContext }}
+          {{- $securityContext = merge $securityContext (deepCopy .Values.celeryBeat.securityContext) -}}
+          {{- end }}
+          {{- if $securityContext }}
+          securityContext:
+            {{- toYaml $securityContext | nindent 12 }}
+          {{- end }}
+          {{- if .Values.celeryBeat.resources }}
+          resources:
+            {{- toYaml .Values.celeryBeat.resources | nindent 12 }}
+          {{- end }}
+          {{- if and .Values.celeryBeat.probes.liveness.enabled .Values.celeryBeat.probes.liveness.command }}
+          livenessProbe:
+            exec:
+              command:
+                {{- toYaml .Values.celeryBeat.probes.liveness.command | nindent 16 }}
+            initialDelaySeconds: {{ .Values.celeryBeat.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.celeryBeat.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.celeryBeat.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.celeryBeat.probes.liveness.failureThreshold }}
+          {{- end }}
+          {{- if and .Values.celeryBeat.probes.readiness.enabled .Values.celeryBeat.probes.readiness.command }}
+          readinessProbe:
+            exec:
+              command:
+                {{- toYaml .Values.celeryBeat.probes.readiness.command | nindent 16 }}
+            initialDelaySeconds: {{ .Values.celeryBeat.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.celeryBeat.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.celeryBeat.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.celeryBeat.probes.readiness.failureThreshold }}
+          {{- end }}
+          {{- if and .Values.celeryBeat.probes.startup.enabled .Values.celeryBeat.probes.startup.command }}
+          startupProbe:
+            exec:
+              command:
+                {{- toYaml .Values.celeryBeat.probes.startup.command | nindent 16 }}
+            failureThreshold: {{ .Values.celeryBeat.probes.startup.failureThreshold }}
+            periodSeconds: {{ .Values.celeryBeat.probes.startup.periodSeconds }}
+          {{- end }}
+      {{- with .Values.celeryBeat.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.celeryBeat.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.celeryBeat.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.celeryBeat.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
