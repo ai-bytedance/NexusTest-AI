@@ -1,4 +1,4 @@
-from . import ai, apis, auth, execution, health, importers, progress, projects, reports, test_cases, test_suites, version
+from . import ai, apis, auth, execution, health, importers, plans, progress, projects, reports, test_cases, test_suites, notifiers, version
 
 __all__ = [
     "ai",
@@ -7,10 +7,12 @@ __all__ = [
     "execution",
     "health",
     "importers",
+    "plans",
     "progress",
     "projects",
     "reports",
     "test_cases",
     "test_suites",
+    "notifiers",
     "version",
 ]

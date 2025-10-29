@@ -15,6 +15,7 @@ from app.logging import get_logger
 from app.models import ReportEntityType, ReportStatus, TestCase, TestReport
 from app.services.assertions.engine import AssertionEngine
 from app.services.execution.context import ExecutionContext
+from app.services.notify.dispatcher import queue_run_finished_notifications
 from app.services.reports.progress import publish_progress_event
 from app.services.runner.http_runner import HttpRunner, HttpRunnerError
 
@@ -108,8 +109,9 @@ def execute_test_case(self, report_id: str, case_id: str, project_id: str) -> No
                             "message": str(exc),
                         },
                     )
+                    queue_run_finished_notifications(session, report)
                     return
-                logger.warning(
+
                     "case_runner_retry",
                     attempt=attempts,
                     delay_seconds=delay,
@@ -127,6 +129,7 @@ def execute_test_case(self, report_id: str, case_id: str, project_id: str) -> No
                         "message": str(last_error),
                     },
                 )
+                queue_run_finished_notifications(session, report)
                 return
             raise RuntimeError("HTTP runner failed without exception")
 
@@ -171,6 +174,7 @@ def execute_test_case(self, report_id: str, case_id: str, project_id: str) -> No
                 "task_id": self.request.id,
             },
         )
+        queue_run_finished_notifications(session, report)
 
     except Exception as exc:  # pragma: no cover - unexpected safeguard
         session.rollback()
@@ -186,6 +190,7 @@ def execute_test_case(self, report_id: str, case_id: str, project_id: str) -> No
                     "message": str(exc),
                 },
             )
+            queue_run_finished_notifications(session, report)
         raise
     finally:
         session.close()

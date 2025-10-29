@@ -22,6 +22,13 @@ def create_celery_app() -> Celery:
             "app.tasks.execute_case.execute_test_case": {"queue": "cases", "routing_key": "cases"},
             "app.tasks.execute_suite.execute_test_suite": {"queue": "suites", "routing_key": "suites"},
         },
+        beat_schedule={
+            "refresh_execution_plans": {
+                "task": "app.tasks.scheduler.refresh_execution_plans",
+                "schedule": settings.plan_refresh_seconds,
+            }
+        },
+        timezone="UTC",
     )
     return celery_app
 

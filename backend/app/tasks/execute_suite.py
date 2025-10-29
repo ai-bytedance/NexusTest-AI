@@ -16,6 +16,7 @@ from app.logging import get_logger
 from app.models import ReportEntityType, ReportStatus, TestCase, TestReport, TestSuite
 from app.services.assertions.engine import AssertionEngine
 from app.services.execution.context import ExecutionContext, render_value
+from app.services.notify.dispatcher import queue_run_finished_notifications
 from app.services.reports.progress import publish_progress_event
 from app.services.runner.http_runner import HttpRunner, HttpRunnerError
 
@@ -295,6 +296,7 @@ def execute_test_suite(self, report_id: str, suite_id: str, project_id: str) -> 
             "finished",
             payload=finished_payload,
         )
+        queue_run_finished_notifications(session, report)
 
     except Exception as exc:  # pragma: no cover - unexpected safeguard
         session.rollback()
@@ -310,6 +312,7 @@ def execute_test_suite(self, report_id: str, suite_id: str, project_id: str) -> 
                     "message": str(exc),
                 },
             )
+            queue_run_finished_notifications(session, report)
         raise
     finally:
         session.close()

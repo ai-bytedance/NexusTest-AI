@@ -11,6 +11,9 @@ from app.db.base import Base, BaseModel
 if TYPE_CHECKING:
     from app.models.ai_task import AITask
     from app.models.api import Api
+    from app.models.execution_plan import ExecutionPlan
+    from app.models.notifier import Notifier
+    from app.models.notifier_event import NotifierEvent
     from app.models.project_member import ProjectMember
     from app.models.test_case import TestCase
     from app.models.test_report import TestReport
@@ -49,4 +52,19 @@ class Project(BaseModel, Base):
     )
     ai_tasks: Mapped[list["AITask"]] = relationship(
         "AITask", back_populates="project", cascade="all, delete-orphan"
+    )
+    execution_plans: Mapped[list["ExecutionPlan"]] = relationship(
+        "ExecutionPlan",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+    notifiers: Mapped[list["Notifier"]] = relationship(
+        "Notifier",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+    notifier_events: Mapped[list["NotifierEvent"]] = relationship(
+        "NotifierEvent",
+        back_populates="project",
+        cascade="all, delete-orphan",
     )
