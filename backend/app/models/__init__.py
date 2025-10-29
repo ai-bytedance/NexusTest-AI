@@ -16,12 +16,15 @@ from app.models.import_source import (
     ImportSourceType,
     ImporterKind,
 )
+from app.models.integration import Integration, IntegrationProvider
+from app.models.issue import Issue, IssueLinkSource, ReportIssueLink
 from app.models.notifier import Notifier, NotifierType
 from app.models.notifier_event import NotifierEvent, NotifierEventStatus, NotifierEventType
 from app.models.organization import Organization, OrganizationMembership, OrganizationRole
 from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
 from app.models.project_team_role import ProjectTeamRole
+from app.models.auto_ticket_rule import AutoTicketRule
 from app.models.team import Team
 from app.models.team_membership import TeamMembership, TeamRole
 from app.models.test_case import TestCase
@@ -47,6 +50,12 @@ __all__ = [
     "ExecutionPolicy",
     "ExecutionQueue",
     "ExecutionQueueKind",
+    "Integration",
+    "IntegrationProvider",
+    "Issue",
+    "IssueLinkSource",
+    "ReportIssueLink",
+    "AutoTicketRule",
     "ImportSource",
     "ImportSourceType",
     "ImportRun",

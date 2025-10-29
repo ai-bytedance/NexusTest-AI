@@ -15,6 +15,7 @@ from app.models.execution_routing import AgentSelectionPolicy
 if TYPE_CHECKING:
     from app.models.agent import Agent
     from app.models.execution_queue import ExecutionQueue
+    from app.models.issue import ReportIssueLink
     from app.models.project import Project
 
 
@@ -157,3 +158,8 @@ class TestReport(BaseModel, Base):
     project: Mapped["Project"] = relationship("Project", back_populates="test_reports")
     queue: Mapped["ExecutionQueue" | None] = relationship("ExecutionQueue", back_populates="reports")
     agent: Mapped["Agent" | None] = relationship("Agent", back_populates="reports")
+    issue_links: Mapped[list["ReportIssueLink"]] = relationship(
+        "ReportIssueLink",
+        back_populates="report",
+        cascade="all, delete-orphan",
+    )
