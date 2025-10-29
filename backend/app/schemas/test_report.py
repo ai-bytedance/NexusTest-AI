@@ -23,6 +23,10 @@ class TestReportRead(IdentifierModel):
     assertions_result: dict[str, Any]
     metrics: dict[str, Any]
     summary: str | None
+    parent_report_id: UUID | None
+    run_number: int
+    retry_attempt: int
+    policy_snapshot: dict[str, Any]
 
 
 class ReportSummarizeRequest(BaseModel):

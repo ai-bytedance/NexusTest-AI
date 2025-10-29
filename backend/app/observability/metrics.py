@@ -24,6 +24,9 @@ _TASK_LABELS = ("task", "queue", "project_id")
 _TASK_STATUS_LABELS = (*_TASK_LABELS, "status")
 _TASK_FAILURE_LABELS = (*_TASK_LABELS, "reason")
 _TASK_RETRY_LABELS = ("task", "queue", "reason")
+_EXECUTION_RETRY_LABELS = ("policy", "entity_type", "reason")
+_EXECUTION_THROTTLE_LABELS = ("policy", "host")
+_EXECUTION_CIRCUIT_LABELS = ("policy", "host", "event")
 _AI_TASK_LABELS = ("provider", "model", "status", "task_type", "project_id")
 _AI_TOKEN_LABELS = ("provider", "model", "token_type", "task_type", "project_id")
 
@@ -83,6 +86,24 @@ TASK_RETRIES = Counter(
     "celery_task_retries_total",
     "Celery task retries grouped by reason",
     _TASK_RETRY_LABELS,
+    namespace=_NAMESPACE,
+)
+EXECUTION_RETRIES = Counter(
+    "execution_retries_total",
+    "Execution retries initiated under policy control",
+    _EXECUTION_RETRY_LABELS,
+    namespace=_NAMESPACE,
+)
+EXECUTION_RATE_LIMIT_THROTTLES = Counter(
+    "execution_rate_limit_throttles_total",
+    "Number of rate limit throttles enforced per host",
+    _EXECUTION_THROTTLE_LABELS,
+    namespace=_NAMESPACE,
+)
+EXECUTION_CIRCUIT_EVENTS = Counter(
+    "execution_circuit_breaker_events_total",
+    "Circuit breaker events recorded per host",
+    _EXECUTION_CIRCUIT_LABELS,
     namespace=_NAMESPACE,
 )
 TASK_QUEUE_LENGTH = Gauge(
@@ -150,6 +171,24 @@ def _normalize_reason(reason: str | None) -> str:
         return "unknown"
     sanitized = reason.strip().lower().replace(" ", "_")
     return sanitized[:64] if sanitized else "unknown"
+
+
+def _normalize_policy_id(policy_id: str | None) -> str:
+    if not policy_id:
+        return "default"
+    candidate = str(policy_id).strip()
+    if not candidate:
+        return "default"
+    return candidate[:64]
+
+
+def _normalize_host(host: str | None) -> str:
+    if not host:
+        return "unknown"
+    sanitized = host.strip().lower()
+    if not sanitized:
+        return "unknown"
+    return sanitized[:120]
 
 
 def _extract_project_id(request: Request) -> str:
@@ -280,6 +319,35 @@ def record_task_retry(task_name: str, queue: str | None, reason: str | None) -> 
     ).inc()
 
 
+def record_execution_retry(policy_id: str | None, entity_type: str | None, reason: str | None) -> None:
+    if not _metrics_enabled():
+        return
+    EXECUTION_RETRIES.labels(
+        policy=_normalize_policy_id(policy_id),
+        entity_type=(entity_type or "unknown").strip().lower() or "unknown",
+        reason=_normalize_reason(reason or "retry"),
+    ).inc()
+
+
+def record_rate_limit_throttle(policy_id: str | None, host: str | None) -> None:
+    if not _metrics_enabled():
+        return
+    EXECUTION_RATE_LIMIT_THROTTLES.labels(
+        policy=_normalize_policy_id(policy_id),
+        host=_normalize_host(host),
+    ).inc()
+
+
+def record_circuit_breaker_event(policy_id: str | None, host: str | None, event: str | None) -> None:
+    if not _metrics_enabled():
+        return
+    EXECUTION_CIRCUIT_EVENTS.labels(
+        policy=_normalize_policy_id(policy_id),
+        host=_normalize_host(host),
+        event=_normalize_reason(event or "event"),
+    ).inc()
+
+
 def record_queue_length(queue: str, length: int) -> None:
     if not _metrics_enabled():
         return
@@ -343,6 +411,9 @@ __all__ = [
     "observe_ai_call",
     "record_queue_length",
     "record_task_retry",
+    "record_execution_retry",
+    "record_rate_limit_throttle",
+    "record_circuit_breaker_event",
     "REQUEST_COUNT",
     "REQUEST_LATENCY",
     "REQUEST_IN_PROGRESS",
@@ -350,6 +421,9 @@ __all__ = [
     "TASK_EXECUTIONS",
     "TASK_FAILURE_REASONS",
     "TASK_RETRIES",
+    "EXECUTION_RETRIES",
+    "EXECUTION_RATE_LIMIT_THROTTLES",
+    "EXECUTION_CIRCUIT_EVENTS",
     "TASK_QUEUE_LENGTH",
     "AI_TASK_COUNT",
     "AI_REQUEST_DURATION",

@@ -5,6 +5,7 @@ from app.models.audit_log import AuditLog
 from app.models.dataset import Dataset, DatasetType
 from app.models.environment import Environment
 from app.models.execution_plan import ExecutionPlan, ExecutionPlanType
+from app.models.execution_policy import ExecutionPolicy
 from app.models.import_source import (
     ImportRun,
     ImportRunStatus,
@@ -37,6 +38,7 @@ __all__ = [
     "Environment",
     "ExecutionPlan",
     "ExecutionPlanType",
+    "ExecutionPolicy",
     "ImportSource",
     "ImportSourceType",
     "ImportRun",
