@@ -84,6 +84,11 @@ class Settings(BaseSettings):
     doubao_model: str = "doubao-pro-4k"
     metrics_enabled: bool = False
     metrics_namespace: str = "nexustest"
+    metrics_host: str = "0.0.0.0"
+    metrics_port: int = 9464
+    celery_metrics_port: int = 9540
+    celery_metrics_poll_interval_seconds: int = 15
+    otel_trace_propagation_enabled: bool = False
     health_check_timeout_seconds: float = 2.0
     celery_worker_concurrency: int = 4
     celery_worker_prefetch_multiplier: int = 1
@@ -120,6 +125,7 @@ class Settings(BaseSettings):
         "plan_refresh_seconds",
         "notify_backoff_seconds",
         "celery_visibility_timeout_seconds",
+        "celery_metrics_poll_interval_seconds",
         "sso_state_ttl_seconds",
         mode="before",
     )
@@ -137,6 +143,8 @@ class Settings(BaseSettings):
         "ai_chat_rate_limit_per_minute",
         "ai_chat_message_max_bytes",
         "report_export_max_bytes",
+        "metrics_port",
+        "celery_metrics_port",
         mode="before",
     )
     @classmethod
@@ -308,6 +316,16 @@ class Settings(BaseSettings):
         if not namespace:
             raise ValueError("METRICS_NAMESPACE cannot be empty")
         return namespace
+
+    @field_validator("metrics_host", mode="before")
+    @classmethod
+    def normalize_metrics_host(cls, value: str | None) -> str:
+        if value is None:
+            return "0.0.0.0"
+        host = value.strip()
+        if not host:
+            raise ValueError("METRICS_HOST cannot be empty")
+        return host
 
 
 @lru_cache(maxsize=1)
