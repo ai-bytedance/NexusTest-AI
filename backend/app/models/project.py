@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, BaseModel
 
 if TYPE_CHECKING:
+    from app.models.ai_chat import AiChat
     from app.models.ai_task import AITask
     from app.models.api import Api
     from app.models.dataset import Dataset
@@ -65,6 +66,9 @@ class Project(BaseModel, Base):
     )
     ai_tasks: Mapped[list["AITask"]] = relationship(
         "AITask", back_populates="project", cascade="all, delete-orphan"
+    )
+    ai_chats: Mapped[list["AiChat"]] = relationship(
+        "AiChat", back_populates="project", cascade="all, delete-orphan"
     )
     execution_plans: Mapped[list["ExecutionPlan"]] = relationship(
         "ExecutionPlan",

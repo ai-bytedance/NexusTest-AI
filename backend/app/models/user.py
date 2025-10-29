@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, BaseModel
 
 if TYPE_CHECKING:
+    from app.models.ai_chat import AiChat, AiChatMessage
     from app.models.dataset import Dataset
     from app.models.environment import Environment
     from app.models.execution_plan import ExecutionPlan
@@ -37,6 +38,8 @@ class User(BaseModel, Base):
     )
 
     projects_created: Mapped[list["Project"]] = relationship("Project", back_populates="creator")
+    ai_chats_created: Mapped[list["AiChat"]] = relationship("AiChat", back_populates="creator")
+    ai_chat_messages: Mapped[list["AiChatMessage"]] = relationship("AiChatMessage", back_populates="author")
     memberships: Mapped[list["ProjectMember"]] = relationship(
         "ProjectMember",
         back_populates="user",
