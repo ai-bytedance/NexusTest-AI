@@ -17,6 +17,10 @@ if str(ROOT) not in sys.path:
 
 os.environ.setdefault("DATABASE_URL", "sqlite+pysqlite:///:memory:?cache=shared")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
+os.environ.setdefault("TOKEN_CLOCK_SKEW_SECONDS", "0")
+os.environ.setdefault("APP_VERSION", "test-version")
+os.environ.setdefault("GIT_COMMIT_SHA", "test-sha")
+os.environ.setdefault("BUILD_TIME", "2024-01-01T00:00:00Z")
 
 from app.core.config import get_settings
 

@@ -16,12 +16,13 @@ logger = get_logger()
 
 @router.post("/register", response_model=ResponseEnvelope, status_code=status.HTTP_201_CREATED)
 def register_user(user_in: UserCreate, db: Session = Depends(get_db)) -> dict:
-    existing_user = db.execute(select(User).where(User.email == user_in.email)).scalar_one_or_none()
+    normalized_email = user_in.email.lower()
+    existing_user = db.execute(select(User).where(User.email == normalized_email)).scalar_one_or_none()
     if existing_user:
-        raise http_exception(status.HTTP_409_CONFLICT, ErrorCode.CONFLICT, "Email already registered")
+        raise http_exception(status.HTTP_409_CONFLICT, ErrorCode.AUTH_EMAIL_EXISTS, "Email already registered")
 
     role = user_in.role or UserRole.MEMBER
-    user = User(email=user_in.email, hashed_password=hash_password(user_in.password), role=role)
+    user = User(email=normalized_email, hashed_password=hash_password(user_in.password), role=role)
 
     db.add(user)
     db.commit()
@@ -33,11 +34,12 @@ def register_user(user_in: UserCreate, db: Session = Depends(get_db)) -> dict:
 
 @router.post("/login", response_model=ResponseEnvelope)
 def login_user(payload: UserLogin, db: Session = Depends(get_db)) -> dict:
-    user = db.execute(select(User).where(User.email == payload.email)).scalar_one_or_none()
+    normalized_email = payload.email.lower()
+    user = db.execute(select(User).where(User.email == normalized_email)).scalar_one_or_none()
     if not user or not verify_password(payload.password, user.hashed_password):
         raise http_exception(
             status.HTTP_401_UNAUTHORIZED,
-            ErrorCode.NOT_AUTHENTICATED,
+            ErrorCode.AUTH_INVALID_CREDENTIALS,
             "Invalid credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
