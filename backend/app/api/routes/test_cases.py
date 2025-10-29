@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -14,7 +16,12 @@ from app.models.api import Api
 from app.models.dataset import Dataset
 from app.models.environment import Environment
 from app.models.test_case import TestCase
-from app.schemas.test_case import TestCaseCreate, TestCaseRead, TestCaseUpdate
+from app.schemas.test_case import (
+    TestCaseAssertionsUpdateRequest,
+    TestCaseCreate,
+    TestCaseRead,
+    TestCaseUpdate,
+)
 
 router = APIRouter(prefix="/projects/{project_id}/test-cases", tags=["test-cases"])
 
@@ -80,6 +87,18 @@ def _validate_dataset_belongs_to_project(
         raise http_exception(status.HTTP_400_BAD_REQUEST, ErrorCode.BAD_REQUEST, "Dataset not found in this project")
 
 
+def _serialise_assertions(assertions: Any | None) -> list[dict[str, Any]]:
+    if not assertions:
+        return []
+    serialised: list[dict[str, Any]] = []
+    for item in assertions:
+        if isinstance(item, BaseModel):
+            serialised.append(item.model_dump(mode="json", exclude_none=True))
+        elif isinstance(item, dict):
+            serialised.append(dict(item))
+    return serialised
+
+
 @router.get("", response_model=ResponseEnvelope)
 def list_test_cases(
     context: ProjectContext = Depends(require_project_member),
@@ -111,7 +130,7 @@ def create_test_case(
         name=payload.name,
         inputs=payload.inputs,
         expected=payload.expected,
-        assertions=payload.assertions,
+        assertions=_serialise_assertions(payload.assertions),
         environment_id=payload.environment_id,
         dataset_id=payload.dataset_id,
         param_mapping=payload.param_mapping or {},
@@ -151,12 +170,61 @@ def update_test_case(
         _validate_dataset_belongs_to_project(db, context.project.id, updates["dataset_id"])
     if "param_mapping" in updates and updates["param_mapping"] is None:
         updates["param_mapping"] = {}
+    if "assertions" in updates:
+        if updates["assertions"] is None:
+            updates["assertions"] = []
+        else:
+            updates["assertions"] = _serialise_assertions(updates["assertions"])
 
     for field, value in updates.items():
         setattr(test_case, field, value)
 
     if test_case.param_mapping is None:
         test_case.param_mapping = {}
+
+    db.add(test_case)
+    db.commit()
+    db.refresh(test_case)
+
+    return success_response(TestCaseRead.model_validate(test_case))
+
+
+@router.patch("/{test_case_id}/assertions", response_model=ResponseEnvelope)
+def update_test_case_assertions(
+    test_case_id: UUID,
+    payload: TestCaseAssertionsUpdateRequest,
+    context: ProjectContext = Depends(require_project_member),
+    db: Session = Depends(get_db),
+) -> dict:
+    test_case = _get_test_case(db, context.project.id, test_case_id)
+    raw_current = test_case.assertions or []
+    if isinstance(raw_current, list):
+        current = [dict(item) if isinstance(item, dict) else item for item in raw_current]
+    elif isinstance(raw_current, dict):
+        items = raw_current.get("items") if isinstance(raw_current, dict) else None
+        current = [dict(item) for item in items] if isinstance(items, list) else []
+    else:
+        current = []
+
+    if payload.operation == "replace":
+        test_case.assertions = _serialise_assertions([item.assertion for item in payload.items])
+    else:
+        updated = list(current)
+        for item in payload.items:
+            serialised_list = _serialise_assertions([item.assertion])
+            if not serialised_list:
+                raise http_exception(status.HTTP_400_BAD_REQUEST, ErrorCode.BAD_REQUEST, "Invalid assertion payload")
+            serialised = serialised_list[0]
+            index = item.index if item.index is not None else len(updated)
+            if index < 0:
+                raise http_exception(status.HTTP_400_BAD_REQUEST, ErrorCode.BAD_REQUEST, "Index must be non-negative")
+            if index < len(updated):
+                updated[index] = serialised
+            elif index == len(updated):
+                updated.append(serialised)
+            else:
+                raise http_exception(status.HTTP_400_BAD_REQUEST, ErrorCode.BAD_REQUEST, "Index out of range for patch")
+        test_case.assertions = updated
 
     db.add(test_case)
     db.commit()

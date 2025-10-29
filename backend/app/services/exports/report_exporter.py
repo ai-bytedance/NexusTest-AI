@@ -262,7 +262,10 @@ def _convert_assertion(assertion: Any, *, step_alias: str | None, case_id: Any) 
     message = assertion.get("message")
     expected = assertion.get("expected")
     actual = assertion.get("actual")
-    diff = None if passed else _generate_diff(expected, actual)
+    diff_text = assertion.get("diff")
+    diff_entries = assertion.get("diff_entries") if isinstance(assertion.get("diff_entries"), list) else None
+    if not passed and diff_text is None:
+        diff_text = _generate_diff(expected, actual)
 
     entry = {
         "name": str(name) if name is not None else "assertion",
@@ -273,7 +276,8 @@ def _convert_assertion(assertion: Any, *, step_alias: str | None, case_id: Any) 
         "actual": actual,
         "expected_display": _describe_value(expected),
         "actual_display": _describe_value(actual),
-        "diff": diff,
+        "diff": diff_text,
+        "diff_entries": diff_entries,
         "step": step_alias,
         "case_id": str(case_id) if case_id else None,
         "path": assertion.get("path"),

@@ -6,7 +6,9 @@ from typing import Any, Iterable
 
 from jsonpath_ng.exceptions import JsonPathParserError
 from jsonpath_ng.ext import parse as jsonpath_parse
+from pydantic import BaseModel
 
+from app.services.assertions.diff import JsonDiff, diff_json, format_diff
 from app.services.execution.context import ExecutionContext, render_value
 
 
@@ -19,6 +21,8 @@ class AssertionResult:
     expected: Any
     message: str | None = None
     path: str | None = None
+    diff_entries: list[JsonDiff] | None = None
+    diff_text: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         payload = {
@@ -32,6 +36,27 @@ class AssertionResult:
             payload["message"] = self.message
         if self.path is not None:
             payload["path"] = self.path
+
+        diff_entries = self.diff_entries
+        diff_text = self.diff_text
+
+        if not self.passed:
+            if diff_entries is None and isinstance(self.expected, (dict, list)) and isinstance(self.actual, (dict, list)):
+                try:
+                    diff_entries = diff_json(self.expected, self.actual)
+                except Exception:  # pragma: no cover - guardrail
+                    diff_entries = None
+            if diff_entries:
+                payload["diff_entries"] = [entry.to_dict() for entry in diff_entries]
+                diff_text = diff_text or format_diff(diff_entries)
+            if diff_text:
+                payload["diff"] = diff_text
+        else:
+            if diff_entries:
+                payload["diff_entries"] = [entry.to_dict() for entry in diff_entries]
+            if diff_text:
+                payload["diff"] = diff_text
+
         return payload
 
 
@@ -71,6 +96,16 @@ class AssertionEngine:
                 actual=None,
                 expected=None,
                 message="Assertion operator is required",
+            )
+
+        if definition.get("enabled") is False:
+            return AssertionResult(
+                name=name or f"assertion_{index}",
+                operator=operator,
+                passed=True,
+                actual=None,
+                expected=None,
+                message="Assertion disabled",
             )
 
         handler = getattr(self, f"_op_{operator}", None)
@@ -161,25 +196,129 @@ class AssertionEngine:
             message=None if passed else "Unexpected value present",
         )
 
+    def _op_regex(self, definition: dict[str, Any], context: ExecutionContext, index: int) -> AssertionResult:
+        return self._regex_assert(definition, context, index, operator_name="regex")
+
     def _op_regex_match(self, definition: dict[str, Any], context: ExecutionContext, index: int) -> AssertionResult:
+        return self._regex_assert(definition, context, index, operator_name="regex_match")
+
+    def _regex_assert(
+        self,
+        definition: dict[str, Any],
+        context: ExecutionContext,
+        index: int,
+        *,
+        operator_name: str,
+    ) -> AssertionResult:
         actual = render_value(definition.get("actual"), context)
         pattern = render_value(definition.get("expected"), context)
         passed = False
-        message = ""
+        message: str | None = None
         if isinstance(actual, str) and isinstance(pattern, str):
-            if re.search(pattern, actual):
-                passed = True
-            else:
-                message = "Pattern did not match"
+            try:
+                if re.search(pattern, actual):
+                    passed = True
+                else:
+                    message = "Pattern did not match"
+            except re.error as exc:
+                message = f"Invalid regex pattern: {exc}"
         else:
-            message = "Regex requires string actual and expected values"
+            message = "Regex assertions require string actual and pattern values"
         return AssertionResult(
             name=_name(definition, index),
-            operator="regex_match",
+            operator=operator_name,
             passed=passed,
             actual=actual,
             expected=pattern,
-            message=None if passed else message,
+            message=message if not passed else None,
+        )
+
+    def _op_length(self, definition: dict[str, Any], context: ExecutionContext, index: int) -> AssertionResult:
+        collection = render_value(definition.get("actual"), context)
+        expected_raw = render_value(definition.get("expected"), context)
+        try:
+            expected_length = _coerce_int(expected_raw)
+        except ValueError:
+            return AssertionResult(
+                name=_name(definition, index),
+                operator="length",
+                passed=False,
+                actual=None,
+                expected=expected_raw,
+                message="Length assertions require an integer expected value",
+            )
+        try:
+            actual_length = len(collection)  # type: ignore[arg-type]
+        except TypeError:
+            return AssertionResult(
+                name=_name(definition, index),
+                operator="length",
+                passed=False,
+                actual=None,
+                expected=expected_length,
+                message="Length assertions require a value with a measurable length",
+            )
+        passed = actual_length == expected_length
+        message = None if passed else f"Expected length {expected_length}, got {actual_length}"
+        return AssertionResult(
+            name=_name(definition, index),
+            operator="length",
+            passed=passed,
+            actual=actual_length,
+            expected=expected_length,
+            message=message,
+        )
+
+    def _op_gt(self, definition: dict[str, Any], context: ExecutionContext, index: int) -> AssertionResult:
+        actual_raw = render_value(definition.get("actual"), context)
+        expected_raw = render_value(definition.get("expected"), context)
+        try:
+            actual_value = _coerce_number(actual_raw)
+            expected_value = _coerce_number(expected_raw)
+        except ValueError:
+            return AssertionResult(
+                name=_name(definition, index),
+                operator="gt",
+                passed=False,
+                actual=actual_raw,
+                expected=expected_raw,
+                message="Greater than assertions require numeric values",
+            )
+        passed = float(actual_value) > float(expected_value)
+        message = None if passed else f"Expected {actual_value} to be greater than {expected_value}"
+        return AssertionResult(
+            name=_name(definition, index),
+            operator="gt",
+            passed=passed,
+            actual=actual_value,
+            expected=expected_value,
+            message=message,
+        )
+
+    def _op_lt(self, definition: dict[str, Any], context: ExecutionContext, index: int) -> AssertionResult:
+        actual_raw = render_value(definition.get("actual"), context)
+        expected_raw = render_value(definition.get("expected"), context)
+        try:
+            actual_value = _coerce_number(actual_raw)
+            expected_value = _coerce_number(expected_raw)
+        except ValueError:
+            return AssertionResult(
+                name=_name(definition, index),
+                operator="lt",
+                passed=False,
+                actual=actual_raw,
+                expected=expected_raw,
+                message="Less than assertions require numeric values",
+            )
+        passed = float(actual_value) < float(expected_value)
+        message = None if passed else f"Expected {actual_value} to be less than {expected_value}"
+        return AssertionResult(
+            name=_name(definition, index),
+            operator="lt",
+            passed=passed,
+            actual=actual_value,
+            expected=expected_value,
+            message=message,
         )
 
     def _op_jsonpath_equals(self, definition: dict[str, Any], context: ExecutionContext, index: int) -> AssertionResult:
@@ -233,17 +372,49 @@ class AssertionEngine:
 def _normalise_assertions(assertions: Iterable[dict[str, Any]] | dict[str, Any] | None) -> list[dict[str, Any]]:
     if assertions is None:
         return []
+
+    def _convert(item: Any) -> dict[str, Any] | None:
+        if isinstance(item, dict):
+            return dict(item)
+        if isinstance(item, BaseModel):
+            return item.model_dump(mode="python", exclude_none=True)
+        return None
+
+    normalised: list[dict[str, Any]] = []
     if isinstance(assertions, list):
-        return [definition for definition in assertions if isinstance(definition, dict)]
+        for definition in assertions:
+            payload = _convert(definition)
+            if not payload:
+                continue
+            if payload.get("enabled") is False:
+                continue
+            operator = payload.get("operator")
+            if isinstance(operator, str):
+                payload["operator"] = operator.strip().lower()
+            normalised.append(payload)
+        return normalised
+
     if isinstance(assertions, dict):
         items = assertions.get("items")
         if isinstance(items, list):
-            return [definition for definition in items if isinstance(definition, dict)]
-        return [
-            {"operator": str(operator), "expected": value}
-            for operator, value in assertions.items()
-            if operator != "items"
-        ]
+            for definition in items:
+                payload = _convert(definition)
+                if not payload:
+                    continue
+                if payload.get("enabled") is False:
+                    continue
+                operator = payload.get("operator")
+                if isinstance(operator, str):
+                    payload["operator"] = operator.strip().lower()
+                normalised.append(payload)
+            return normalised
+        for operator, value in assertions.items():
+            if operator == "items":
+                continue
+            payload = {"operator": str(operator).strip().lower(), "expected": value}
+            normalised.append(payload)
+        return normalised
+
     return []
 
 
@@ -284,3 +455,47 @@ def _single_or_list(values: list[Any]) -> Any:
     if len(values) == 1:
         return values[0]
     return values
+
+
+def _coerce_int(value: Any) -> int:
+    if isinstance(value, bool):
+        raise ValueError("Boolean values are not valid integers")
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        if value.is_integer():
+            return int(value)
+        raise ValueError("Value is not an integer")
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            raise ValueError("Empty string is not a valid integer")
+        try:
+            if "." in text or "e" in text.lower():
+                float_value = float(text)
+                if float_value.is_integer():
+                    return int(float_value)
+                raise ValueError("Value is not an integer")
+            return int(text)
+        except ValueError as exc:  # pragma: no cover - defensive
+            raise ValueError("Value is not an integer") from exc
+    raise ValueError("Unsupported type for integer conversion")
+
+
+def _coerce_number(value: Any) -> int | float:
+    if isinstance(value, bool):
+        raise ValueError("Boolean values are not valid numbers")
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value) if value.is_integer() else value
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            raise ValueError("Empty string is not a valid number")
+        try:
+            number = float(text)
+        except ValueError as exc:  # pragma: no cover - defensive
+            raise ValueError("Value is not numeric") from exc
+        return int(number) if number.is_integer() else number
+    raise ValueError("Unsupported type for numeric conversion")
