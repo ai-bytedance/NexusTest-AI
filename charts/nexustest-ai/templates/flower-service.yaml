@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "nexustest-ai.flowerName" . }}
+  labels:
+    {{- include "nexustest-ai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: flower
+  {{- with .Values.flower.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.flower.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.flower.service.port }}
+      targetPort: {{ .Values.flower.service.port }}
+      protocol: TCP
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/name: {{ include "nexustest-ai.name" . }}
+    app.kubernetes.io/component: flower

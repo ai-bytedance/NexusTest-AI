@@ -1,0 +1,133 @@
+{{- if .Values.nginx.enabled }}
+{{- $frontendCfg := .Values.nginx.config.upstreams.frontend | default dict -}}
+{{- $apiCfg := .Values.nginx.config.upstreams.api | default dict -}}
+{{- $flowerCfg := .Values.nginx.config.upstreams.flower | default dict -}}
+{{- $defaultFrontendService := include "nexustest-ai.fullname" . | printf "%s-frontend" -}}
+{{- $frontendService := default $defaultFrontendService $frontendCfg.serviceName -}}
+{{- $frontendScheme := default "http" $frontendCfg.scheme -}}
+{{- $frontendPort := default 3000 $frontendCfg.servicePort -}}
+{{- $apiService := default (include "nexustest-ai.apiServiceName" .) $apiCfg.serviceName -}}
+{{- $apiScheme := default "http" $apiCfg.scheme -}}
+{{- $apiPort := default .Values.api.service.port $apiCfg.servicePort -}}
+{{- $flowerService := default (include "nexustest-ai.flowerName" .) $flowerCfg.serviceName -}}
+{{- $flowerScheme := default "http" $flowerCfg.scheme -}}
+{{- $flowerPort := default .Values.flower.service.port $flowerCfg.servicePort -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-nginx" (include "nexustest-ai.fullname" .) }}
+  labels:
+    {{- include "nexustest-ai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: nginx
+  {{- with .Values.commonAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+data:
+  nginx.conf: |
+    worker_processes auto;
+    events {
+      worker_connections 1024;
+    }
+
+    http {
+      include       /etc/nginx/mime.types;
+      default_type  application/octet-stream;
+      sendfile        on;
+      keepalive_timeout  65;
+      client_max_body_size {{ .Values.nginx.config.clientMaxBodySize }};
+      proxy_read_timeout {{ .Values.nginx.config.proxyReadTimeout }};
+      proxy_send_timeout {{ .Values.nginx.config.proxySendTimeout }};
+{{- if .Values.nginx.config.gzip }}
+      gzip on;
+      gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+{{- else }}
+      gzip off;
+{{- end }}
+
+      log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+      access_log /var/log/nginx/access.log main;
+      error_log /var/log/nginx/error.log warn;
+
+      upstream api_upstream {
+{{- if $apiCfg.url }}
+        server {{ $apiCfg.url }};
+{{- else }}
+        server {{ printf "%s://%s:%v" $apiScheme $apiService $apiPort | trimPrefix "http://" | trimPrefix "https://" | trimSuffix "/" }};
+{{- end }}
+      }
+
+      upstream flower_upstream {
+{{- if $flowerCfg.url }}
+        server {{ $flowerCfg.url }};
+{{- else }}
+        server {{ printf "%s://%s:%v" $flowerScheme $flowerService $flowerPort | trimPrefix "http://" | trimPrefix "https://" | trimSuffix "/" }};
+{{- end }}
+      }
+
+{{- if $frontendCfg.enabled }}
+      upstream frontend_upstream {
+{{- if $frontendCfg.url }}
+        server {{ $frontendCfg.url }};
+{{- else }}
+        server {{ printf "%s://%s:%v" $frontendScheme $frontendService $frontendPort | trimPrefix "http://" | trimPrefix "https://" | trimSuffix "/" }};
+{{- end }}
+      }
+{{- end }}
+
+      server {
+        listen       80;
+        listen       [::]:80;
+        server_name  _;
+
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+
+{{- if $frontendCfg.enabled }}
+        location / {
+          proxy_pass {{ if $frontendCfg.url }}{{ $frontendCfg.url }}{{ else }}{{ printf "%s://%s:%v" $frontendScheme $frontendService $frontendPort }}{{ end }};
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection "upgrade";
+        }
+{{- else }}
+        location / {
+          return 404;
+        }
+{{- end }}
+
+        location /api/ {
+          proxy_pass {{ if $apiCfg.url }}{{ $apiCfg.url }}{{ else }}{{ printf "%s://%s:%v" $apiScheme $apiService $apiPort }}{{ end }};
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        location /flower/ {
+          proxy_pass {{ if $flowerCfg.url }}{{ $flowerCfg.url }}{{ else }}{{ printf "%s://%s:%v" $flowerScheme $flowerService $flowerPort }}{{ end }};
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        location /ws/ {
+          proxy_pass {{ if $apiCfg.url }}{{ $apiCfg.url }}{{ else }}{{ printf "%s://%s:%v" $apiScheme $apiService $apiPort }}{{ end }};
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection "Upgrade";
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+        }
+      }
+    }
+{{- end }}

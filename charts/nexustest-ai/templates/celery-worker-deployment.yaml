@@ -1,0 +1,178 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "nexustest-ai.workerName" . }}
+  labels:
+    {{- include "nexustest-ai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: celery-worker
+spec:
+  replicas: {{ .Values.celeryWorker.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: {{ include "nexustest-ai.name" . }}
+      app.kubernetes.io/component: celery-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/name: {{ include "nexustest-ai.name" . }}
+        app.kubernetes.io/component: celery-worker
+        {{- with .Values.celeryWorker.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.celeryWorker.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "nexustest-ai.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . | quote }}
+        {{- end }}
+      {{- end }}
+      {{- $podSecurityContext := dict -}}
+      {{- if .Values.global.podSecurityContext }}
+      {{- $podSecurityContext = merge $podSecurityContext (deepCopy .Values.global.podSecurityContext) -}}
+      {{- end }}
+      {{- if .Values.celeryWorker.podSecurityContext }}
+      {{- $podSecurityContext = merge $podSecurityContext (deepCopy .Values.celeryWorker.podSecurityContext) -}}
+      {{- end }}
+      {{- if $podSecurityContext }}
+      securityContext:
+        {{- toYaml $podSecurityContext | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: worker
+          {{- $image := merge (deepCopy .Values.image) (deepCopy (default dict .Values.celeryWorker.image)) -}}
+          {{- $repository := $image.repository -}}
+          {{- $tag := default .Values.image.tag $image.tag -}}
+          {{- $pullPolicy := default .Values.image.pullPolicy $image.pullPolicy -}}
+          {{- if and $repository $tag }}
+          image: "{{ $repository }}:{{ $tag }}"
+          {{- else if $repository }}
+          image: "{{ $repository }}"
+          {{- end }}
+          {{- if $pullPolicy }}
+          imagePullPolicy: {{ $pullPolicy }}
+          {{- end }}
+          {{- $command := default (list "/bin/sh" "-c") .Values.celeryWorker.command -}}
+          {{- if $command }}
+          command:
+            {{- toYaml $command | nindent 12 }}
+          {{- end }}
+          {{- $defaultArgs := list "celery -A app.core.celery:celery_app worker --loglevel=info -Q cases,suites" -}}
+          {{- $args := default $defaultArgs .Values.celeryWorker.args -}}
+          args:
+            {{- toYaml $args | nindent 12 }}
+          envFrom:
+            {{- if or .Values.config.create .Values.config.existingConfigMap }}
+            - configMapRef:
+                name: {{ include "nexustest-ai.configMapName" . }}
+            {{- end }}
+            {{- if or .Values.secrets.create .Values.secrets.existingSecret }}
+            - secretRef:
+                name: {{ include "nexustest-ai.secretName" . }}
+            {{- end }}
+            {{- with .Values.celeryWorker.extraEnvFrom }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          env:
+            {{- with .Values.celeryWorker.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- $securityContext := dict -}}
+          {{- if .Values.global.securityContext }}
+          {{- $securityContext = merge $securityContext (deepCopy .Values.global.securityContext) -}}
+          {{- end }}
+          {{- if .Values.celeryWorker.securityContext }}
+          {{- $securityContext = merge $securityContext (deepCopy .Values.celeryWorker.securityContext) -}}
+          {{- end }}
+          {{- if $securityContext }}
+          securityContext:
+            {{- toYaml $securityContext | nindent 12 }}
+          {{- end }}
+          {{- if .Values.celeryWorker.resources }}
+          resources:
+            {{- toYaml .Values.celeryWorker.resources | nindent 12 }}
+          {{- end }}
+          {{- if and .Values.celeryWorker.probes.liveness.enabled .Values.celeryWorker.probes.liveness.command }}
+          livenessProbe:
+            exec:
+              command:
+                {{- toYaml .Values.celeryWorker.probes.liveness.command | nindent 16 }}
+            initialDelaySeconds: {{ .Values.celeryWorker.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.celeryWorker.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.celeryWorker.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.celeryWorker.probes.liveness.failureThreshold }}
+          {{- end }}
+          {{- if and .Values.celeryWorker.probes.readiness.enabled .Values.celeryWorker.probes.readiness.command }}
+          readinessProbe:
+            exec:
+              command:
+                {{- toYaml .Values.celeryWorker.probes.readiness.command | nindent 16 }}
+            initialDelaySeconds: {{ .Values.celeryWorker.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.celeryWorker.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.celeryWorker.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.celeryWorker.probes.readiness.failureThreshold }}
+          {{- end }}
+          {{- if and .Values.celeryWorker.probes.startup.enabled .Values.celeryWorker.probes.startup.command }}
+          startupProbe:
+            exec:
+              command:
+                {{- toYaml .Values.celeryWorker.probes.startup.command | nindent 16 }}
+            failureThreshold: {{ .Values.celeryWorker.probes.startup.failureThreshold }}
+            periodSeconds: {{ .Values.celeryWorker.probes.startup.periodSeconds }}
+          {{- end }}
+        {{- if .Values.celeryWorker.metrics.enabled }}
+        - name: celery-metrics
+          image: "{{ .Values.celeryWorker.metrics.image.repository }}:{{ .Values.celeryWorker.metrics.image.tag }}"
+          imagePullPolicy: {{ default "IfNotPresent" .Values.celeryWorker.metrics.image.pullPolicy }}
+          {{- if .Values.celeryWorker.metrics.command }}
+          command:
+            {{- toYaml .Values.celeryWorker.metrics.command | nindent 12 }}
+          {{- end }}
+          {{- if .Values.celeryWorker.metrics.args }}
+          args:
+            {{- toYaml .Values.celeryWorker.metrics.args | nindent 12 }}
+          {{- end }}
+          envFrom:
+            {{- if or .Values.config.create .Values.config.existingConfigMap }}
+            - configMapRef:
+                name: {{ include "nexustest-ai.configMapName" . }}
+            {{- end }}
+            {{- if or .Values.secrets.create .Values.secrets.existingSecret }}
+            - secretRef:
+                name: {{ include "nexustest-ai.secretName" . }}
+            {{- end }}
+          {{- with .Values.celeryWorker.metrics.env }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.celeryWorker.metrics.ports }}
+          ports:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.celeryWorker.metrics.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        {{- end }}
+      {{- with .Values.celeryWorker.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.celeryWorker.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.celeryWorker.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.celeryWorker.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

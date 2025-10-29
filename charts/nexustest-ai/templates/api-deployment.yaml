@@ -1,0 +1,153 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "nexustest-ai.apiServiceName" . }}
+  labels:
+    {{- include "nexustest-ai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  replicas: {{ .Values.api.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: {{ include "nexustest-ai.name" . }}
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/name: {{ include "nexustest-ai.name" . }}
+        app.kubernetes.io/component: api
+        {{- with .Values.api.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.api.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "nexustest-ai.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . | quote }}
+        {{- end }}
+      {{- end }}
+      {{- $podSecurityContext := dict -}}
+      {{- if .Values.global.podSecurityContext }}
+      {{- $podSecurityContext = merge $podSecurityContext (deepCopy .Values.global.podSecurityContext) -}}
+      {{- end }}
+      {{- if .Values.api.podSecurityContext }}
+      {{- $podSecurityContext = merge $podSecurityContext (deepCopy .Values.api.podSecurityContext) -}}
+      {{- end }}
+      {{- if $podSecurityContext }}
+      securityContext:
+        {{- toYaml $podSecurityContext | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: api
+          {{- $image := merge (deepCopy .Values.image) (deepCopy (default dict .Values.api.image)) -}}
+          {{- $repository := $image.repository -}}
+          {{- $tag := default .Values.image.tag $image.tag -}}
+          {{- $pullPolicy := default .Values.image.pullPolicy $image.pullPolicy -}}
+          {{- if and $repository $tag }}
+          image: "{{ $repository }}:{{ $tag }}"
+          {{- else if $repository }}
+          image: "{{ $repository }}"
+          {{- end }}
+          {{- if $pullPolicy }}
+          imagePullPolicy: {{ $pullPolicy }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ default .Values.image.port .Values.api.service.targetPort }}
+              protocol: TCP
+          {{- if .Values.api.metrics.enabled }}
+            - name: metrics
+              containerPort: {{ .Values.api.metrics.port }}
+              protocol: TCP
+          {{- end }}
+          {{- $command := default (list "/bin/sh" "-c") .Values.api.command -}}
+          {{- if $command }}
+          command:
+            {{- toYaml $command | nindent 12 }}
+          {{- end }}
+          {{- $defaultArgs := list (printf "uvicorn app.main:app --host 0.0.0.0 --port %d --workers ${UVICORN_WORKERS:-%s}" (int (default .Values.image.port .Values.api.service.targetPort)) (toString (default "2" .Values.config.env.UVICORN_WORKERS))) }}
+          {{- $args := default $defaultArgs .Values.api.args -}}
+          args:
+            {{- toYaml $args | nindent 12 }}
+          envFrom:
+            {{- if or .Values.config.create .Values.config.existingConfigMap }}
+            - configMapRef:
+                name: {{ include "nexustest-ai.configMapName" . }}
+            {{- end }}
+            {{- if or .Values.secrets.create .Values.secrets.existingSecret }}
+            - secretRef:
+                name: {{ include "nexustest-ai.secretName" . }}
+            {{- end }}
+            {{- with .Values.api.extraEnvFrom }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          env:
+            {{- with .Values.api.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- $securityContext := dict -}}
+          {{- if .Values.global.securityContext }}
+          {{- $securityContext = merge $securityContext (deepCopy .Values.global.securityContext) -}}
+          {{- end }}
+          {{- if .Values.api.securityContext }}
+          {{- $securityContext = merge $securityContext (deepCopy .Values.api.securityContext) -}}
+          {{- end }}
+          {{- if $securityContext }}
+          securityContext:
+            {{- toYaml $securityContext | nindent 12 }}
+          {{- end }}
+          {{- if .Values.api.resources }}
+          resources:
+            {{- toYaml .Values.api.resources | nindent 12 }}
+          {{- end }}
+          {{- if .Values.api.probes.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.api.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.api.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.api.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.api.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.api.probes.liveness.failureThreshold }}
+          {{- end }}
+          {{- if .Values.api.probes.readiness.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.api.probes.readiness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.api.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.api.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.api.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.api.probes.readiness.failureThreshold }}
+          {{- end }}
+          {{- if .Values.api.probes.startup.enabled }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.api.probes.startup.path }}
+              port: http
+            failureThreshold: {{ .Values.api.probes.startup.failureThreshold }}
+            periodSeconds: {{ .Values.api.probes.startup.periodSeconds }}
+          {{- end }}
+      {{- with .Values.api.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.api.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.api.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.api.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

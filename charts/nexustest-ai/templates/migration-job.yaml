@@ -1,0 +1,79 @@
+{{- if .Values.migrationJob.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "nexustest-ai.migrationsJobName" . }}
+  labels:
+    {{- include "nexustest-ai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrations
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    {{- with .Values.migrationJob.annotations }}
+    {{- toYaml . | nindent 2 }}
+    {{- end }}
+spec:
+  backoffLimit: {{ .Values.migrationJob.backoffLimit }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/name: {{ include "nexustest-ai.name" . }}
+        app.kubernetes.io/component: migrations
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "nexustest-ai.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . | quote }}
+        {{- end }}
+      {{- end }}
+      {{- $podSecurityContext := dict -}}
+      {{- if .Values.global.podSecurityContext }}
+      {{- $podSecurityContext = merge $podSecurityContext (deepCopy .Values.global.podSecurityContext) -}}
+      {{- end }}
+      {{- if $podSecurityContext }}
+      securityContext:
+        {{- toYaml $podSecurityContext | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: migrate
+          {{- $image := merge (deepCopy .Values.image) (deepCopy (default dict .Values.api.image)) -}}
+          {{- $repository := $image.repository -}}
+          {{- $tag := default .Values.image.tag $image.tag -}}
+          {{- $pullPolicy := default .Values.image.pullPolicy $image.pullPolicy -}}
+          {{- if and $repository $tag }}
+          image: "{{ $repository }}:{{ $tag }}"
+          {{- else if $repository }}
+          image: "{{ $repository }}"
+          {{- end }}
+          {{- if $pullPolicy }}
+          imagePullPolicy: {{ $pullPolicy }}
+          {{- end }}
+          {{- $securityContext := dict -}}
+          {{- if .Values.global.securityContext }}
+          {{- $securityContext = merge $securityContext (deepCopy .Values.global.securityContext) -}}
+          {{- end }}
+          {{- if $securityContext }}
+          securityContext:
+            {{- toYaml $securityContext | nindent 12 }}
+          {{- end }}
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - alembic upgrade head
+          envFrom:
+            {{- if or .Values.config.create .Values.config.existingConfigMap }}
+            - configMapRef:
+                name: {{ include "nexustest-ai.configMapName" . }}
+            {{- end }}
+            {{- if or .Values.secrets.create .Values.secrets.existingSecret }}
+            - secretRef:
+                name: {{ include "nexustest-ai.secretName" . }}
+            {{- end }}
+  {{- if .Values.migrationJob.ttlSecondsAfterFinished }}
+  ttlSecondsAfterFinished: {{ .Values.migrationJob.ttlSecondsAfterFinished }}
+  {{- end }}
+{{- end }}

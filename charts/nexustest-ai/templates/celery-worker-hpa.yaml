@@ -1,0 +1,25 @@
+{{- if .Values.celeryWorker.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "nexustest-ai.workerName" . }}
+  labels:
+    {{- include "nexustest-ai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: celery-worker
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "nexustest-ai.workerName" . }}
+  minReplicas: {{ .Values.celeryWorker.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.celeryWorker.autoscaling.maxReplicas }}
+  metrics:
+    {{- $metrics := list -}}
+    {{- if .Values.celeryWorker.autoscaling.targetCPUUtilizationPercentage }}
+    {{- $metrics = append $metrics (dict "type" "Resource" "resource" (dict "name" "cpu" "target" (dict "type" "Utilization" "averageUtilization" .Values.celeryWorker.autoscaling.targetCPUUtilizationPercentage))) -}}
+    {{- end }}
+    {{- if .Values.celeryWorker.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- $metrics = append $metrics (dict "type" "Resource" "resource" (dict "name" "memory" "target" (dict "type" "Utilization" "averageUtilization" .Values.celeryWorker.autoscaling.targetMemoryUtilizationPercentage))) -}}
+    {{- end }}
+    {{- toYaml $metrics | nindent 4 }}
+{{- end }}

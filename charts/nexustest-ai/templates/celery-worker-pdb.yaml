@@ -1,0 +1,20 @@
+{{- if .Values.celeryWorker.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "nexustest-ai.workerName" . }}
+  labels:
+    {{- include "nexustest-ai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: celery-worker
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: {{ include "nexustest-ai.name" . }}
+      app.kubernetes.io/component: celery-worker
+  {{- if .Values.celeryWorker.pdb.minAvailable }}
+  minAvailable: {{ .Values.celeryWorker.pdb.minAvailable }}
+  {{- else if .Values.celeryWorker.pdb.maxUnavailable }}
+  maxUnavailable: {{ .Values.celeryWorker.pdb.maxUnavailable }}
+  {{- end }}
+{{- end }}

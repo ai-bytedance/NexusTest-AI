@@ -1,0 +1,42 @@
+{{- if and .Values.nginx.enabled .Values.nginx.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "nexustest-ai.nginxName" . }}
+  labels:
+    {{- include "nexustest-ai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ingress
+  {{- with .Values.nginx.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.nginx.ingress.className }}
+  ingressClassName: {{ .Values.nginx.ingress.className }}
+  {{- end }}
+  rules:
+    {{- range .Values.nginx.ingress.hosts }}
+    - host: {{ .host }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ default "Prefix" .pathType }}
+            backend:
+              service:
+                name: {{ include "nexustest-ai.nginxName" $ }}
+                port:
+                  number: {{ $.Values.nginx.service.port }}
+          {{- end }}
+    {{- end }}
+  {{- if .Values.nginx.ingress.tls }}
+  tls:
+    {{- range .Values.nginx.ingress.tls }}
+    - secretName: {{ .secretName }}
+      hosts:
+        {{- range .hosts }}
+        - {{ . }}
+        {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}

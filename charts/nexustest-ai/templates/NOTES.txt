@@ -1,0 +1,7 @@
+Thank you for deploying NexusTest AI.
+
+Useful commands:
+  - kubectl get pods -l app.kubernetes.io/instance={{ .Release.Name }}
+  - kubectl logs deployment/{{ include "nexustest-ai.apiServiceName" . }}
+
+If ingress is enabled, access the platform at the configured host.

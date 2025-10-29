@@ -1,0 +1,127 @@
+{{- if .Values.redis.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "nexustest-ai.redisName" . }}
+  labels:
+    {{- include "nexustest-ai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+spec:
+  serviceName: {{ include "nexustest-ai.redisName" . }}
+  replicas: {{ .Values.redis.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/name: {{ include "nexustest-ai.name" . }}
+      app.kubernetes.io/component: redis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/name: {{ include "nexustest-ai.name" . }}
+        app.kubernetes.io/component: redis
+        {{- with .Values.redis.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.redis.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "nexustest-ai.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . | quote }}
+        {{- end }}
+      {{- end }}
+      {{- $podSecurityContext := dict -}}
+      {{- if .Values.global.podSecurityContext }}
+      {{- $podSecurityContext = merge $podSecurityContext (deepCopy .Values.global.podSecurityContext) -}}
+      {{- end }}
+      {{- if .Values.redis.podSecurityContext }}
+      {{- $podSecurityContext = merge $podSecurityContext (deepCopy .Values.redis.podSecurityContext) -}}
+      {{- end }}
+      {{- if $podSecurityContext }}
+      securityContext:
+        {{- toYaml $podSecurityContext | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: redis
+          image: "{{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}"
+          imagePullPolicy: {{ .Values.redis.image.pullPolicy }}
+          ports:
+            - name: redis
+              containerPort: {{ .Values.redis.service.port }}
+              protocol: TCP
+          command:
+            - /bin/sh
+            - -c
+          {{- $redisCommand := "redis-server --appendonly no" -}}
+          {{- if .Values.redis.password }}
+          {{- $redisCommand = printf "%s --requirepass \"$REDIS_PASSWORD\"" $redisCommand -}}
+          {{- end }}
+          args:
+            - {{ $redisCommand }}
+          env:
+            {{- if .Values.redis.password }}
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ printf "%s-credentials" (include "nexustest-ai.redisName" .) }}
+                  key: REDIS_PASSWORD
+            {{- end }}
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+          {{- if .Values.redis.resources }}
+          resources:
+            {{- toYaml .Values.redis.resources | nindent 12 }}
+          {{- end }}
+          {{- $securityContext := dict -}}
+          {{- if .Values.global.securityContext }}
+          {{- $securityContext = merge $securityContext (deepCopy .Values.global.securityContext) -}}
+          {{- end }}
+          {{- if .Values.redis.securityContext }}
+          {{- $securityContext = merge $securityContext (deepCopy .Values.redis.securityContext) -}}
+          {{- end }}
+          {{- if $securityContext }}
+          securityContext:
+            {{- toYaml $securityContext | nindent 12 }}
+          {{- end }}
+      {{- if not .Values.redis.persistence.enabled }}
+      volumes:
+        - name: redis-data
+          emptyDir: {}
+      {{- end }}
+      {{- with .Values.redis.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.redis.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.redis.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.redis.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- if .Values.redis.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: redis-data
+      spec:
+        accessModes:
+          {{- toYaml .Values.redis.persistence.accessModes | nindent 10 }}
+        resources:
+          requests:
+            storage: {{ .Values.redis.persistence.size }}
+        {{- if .Values.redis.persistence.storageClass }}
+        storageClassName: {{ .Values.redis.persistence.storageClass }}
+        {{- end }}
+  {{- end }}
+{{- end }}

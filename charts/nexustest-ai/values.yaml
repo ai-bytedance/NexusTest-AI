@@ -1,0 +1,437 @@
+# Default values for nexustest-ai Helm chart.
+# This file can be used as a baseline and customised per environment.
+
+nameOverride: ""
+fullnameOverride: ""
+
+imagePullSecrets: []
+
+commonLabels: {}
+commonAnnotations: {}
+
+global:
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    capabilities:
+      drop:
+        - ALL
+
+config:
+  create: true
+  existingConfigMap: ""
+  env:
+    APP_ENV: production
+    PROVIDER: mock
+    UVICORN_WORKERS: "2"
+    CORS_ORIGINS: "*"
+    ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+    TOKEN_CLOCK_SKEW_SECONDS: "0"
+    PLAN_REFRESH_SECONDS: "30"
+    NOTIFY_MAX_RETRIES: "3"
+    NOTIFY_BACKOFF_SECONDS: "5"
+
+secrets:
+  create: true
+  existingSecret: ""
+  stringData:
+    SECRET_KEY: "replace-me"
+    SECRET_ENC_KEY: ""
+    DATABASE_URL: ""
+    REDIS_URL: ""
+    DEEPSEEK_API_KEY: ""
+    DEEPSEEK_BASE_URL: "https://api.deepseek.com"
+    OPENAI_API_KEY: ""
+    OPENAI_BASE_URL: ""
+    ANTHROPIC_API_KEY: ""
+    ANTHROPIC_BASE_URL: ""
+    GOOGLE_API_KEY: ""
+    GOOGLE_BASE_URL: ""
+    QWEN_API_KEY: ""
+    QWEN_BASE_URL: ""
+    ZHIPU_API_KEY: ""
+    ZHIPU_BASE_URL: ""
+    DOUBAO_API_KEY: ""
+    DOUBAO_BASE_URL: ""
+
+image:
+  repository: ghcr.io/example/nexustest-ai/backend
+  tag: latest
+  pullPolicy: IfNotPresent
+  port: 8000
+
+api:
+  replicaCount: 2
+  image: {}
+  command: []
+  args: []
+  env: []
+  extraEnv: []
+  extraEnvFrom: []
+  podAnnotations: {}
+  podLabels: {}
+  serviceAccount:
+    create: false
+    annotations: {}
+    name: ""
+  podSecurityContext: {}
+  securityContext: {}
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8000
+    annotations: {}
+  pdb:
+    enabled: true
+    minAvailable: null
+    maxUnavailable: 1
+  probes:
+    liveness:
+      enabled: true
+      path: /api/healthz
+      initialDelaySeconds: 20
+      periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readiness:
+      enabled: true
+      path: /api/readyz
+      initialDelaySeconds: 20
+      periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
+    startup:
+      enabled: true
+      path: /api/readyz
+      failureThreshold: 30
+      periodSeconds: 10
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  metrics:
+    enabled: false
+    port: 9464
+    path: /metrics
+    serviceMonitor:
+      enabled: false
+      namespace: ""
+      interval: 30s
+      scrapeTimeout: 10s
+      labels: {}
+      annotations: {}
+      honorLabels: false
+
+celeryWorker:
+  replicaCount: 2
+  image: {}
+  command: []
+  args: []
+  env: []
+  extraEnv: []
+  extraEnvFrom: []
+  podAnnotations: {}
+  podLabels: {}
+  podSecurityContext: {}
+  securityContext: {}
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+  probes:
+    liveness:
+      enabled: true
+      command:
+        - /bin/sh
+        - -c
+        - "celery -A app.core.celery:celery_app inspect ping -d celery@$(hostname)"
+      initialDelaySeconds: 30
+      periodSeconds: 30
+      timeoutSeconds: 10
+      failureThreshold: 3
+    readiness:
+      enabled: true
+      command:
+        - /bin/sh
+        - -c
+        - "celery -A app.core.celery:celery_app inspect ping"
+      initialDelaySeconds: 30
+      periodSeconds: 30
+      timeoutSeconds: 10
+      failureThreshold: 3
+    startup:
+      enabled: true
+      command:
+        - /bin/sh
+        - -c
+        - "celery -A app.core.celery:celery_app inspect ping"
+      failureThreshold: 60
+      periodSeconds: 10
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  pdb:
+    enabled: true
+    minAvailable: 1
+    maxUnavailable: null
+  metrics:
+    enabled: false
+    image:
+      repository: ovhcom/celery-exporter
+      tag: latest
+      pullPolicy: IfNotPresent
+    command: []
+    args: []
+    env: []
+    ports:
+      - name: metrics
+        containerPort: 9540
+        protocol: TCP
+    resources: {}
+
+celeryBeat:
+  replicaCount: 1
+  image: {}
+  command: []
+  args: []
+  env: []
+  extraEnv: []
+  extraEnvFrom: []
+  podAnnotations: {}
+  podLabels: {}
+  podSecurityContext: {}
+  securityContext: {}
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+  probes:
+    liveness:
+      enabled: true
+      command:
+        - /bin/sh
+        - -c
+        - "celery -A app.core.celery:celery_app inspect ping"
+      initialDelaySeconds: 60
+      periodSeconds: 60
+      timeoutSeconds: 10
+      failureThreshold: 3
+    readiness:
+      enabled: true
+      command:
+        - /bin/sh
+        - -c
+        - "celery -A app.core.celery:celery_app inspect ping"
+      initialDelaySeconds: 30
+      periodSeconds: 60
+      timeoutSeconds: 10
+      failureThreshold: 3
+    startup:
+      enabled: true
+      command:
+        - /bin/sh
+        - -c
+        - "celery -A app.core.celery:celery_app inspect ping"
+      failureThreshold: 60
+      periodSeconds: 10
+
+flower:
+  replicaCount: 1
+  image: {}
+  command: []
+  args: []
+  env: []
+  extraEnv: []
+  extraEnvFrom: []
+  podAnnotations: {}
+  podLabels: {}
+  podSecurityContext: {}
+  securityContext: {}
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+  service:
+    type: ClusterIP
+    port: 5555
+    annotations: {}
+  probes:
+    liveness:
+      enabled: true
+      path: /
+      initialDelaySeconds: 20
+      periodSeconds: 20
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readiness:
+      enabled: true
+      path: /
+      initialDelaySeconds: 20
+      periodSeconds: 20
+      timeoutSeconds: 5
+      failureThreshold: 3
+
+nginx:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: nginx
+    tag: 1.25-alpine
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+    annotations: {}
+    loadBalancerIP: ""
+  podAnnotations: {}
+  podLabels: {}
+  podSecurityContext: {}
+  securityContext: {}
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+  config:
+    gzip: true
+    clientMaxBodySize: 100m
+    proxyReadTimeout: 600s
+    proxySendTimeout: 600s
+    upstreams:
+      frontend:
+        enabled: true
+        serviceName: ""
+        servicePort: 3000
+        scheme: http
+        url: ""
+      api:
+        serviceName: ""
+        servicePort: 8000
+        scheme: http
+        url: ""
+      flower:
+        serviceName: ""
+        servicePort: 5555
+        scheme: http
+        url: ""
+  ingress:
+    enabled: true
+    className: ""
+    annotations: {}
+    hosts:
+      - host: nexustest-ai.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: nexustest-ai-tls
+        hosts:
+          - nexustest-ai.local
+
+redis:
+  enabled: true
+  externalUrl: ""
+  image:
+    repository: redis
+    tag: 7.2-alpine
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  podAnnotations: {}
+  podLabels: {}
+  podSecurityContext: {}
+  securityContext: {}
+  service:
+    port: 6379
+    annotations: {}
+  persistence:
+    enabled: false
+    accessModes:
+      - ReadWriteOnce
+    size: 1Gi
+    storageClass: ""
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+  password: ""
+
+postgresql:
+  enabled: true
+  externalUrl: ""
+  image:
+    repository: postgres
+    tag: 15-alpine
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  podAnnotations: {}
+  podLabels: {}
+  podSecurityContext: {}
+  securityContext: {}
+  auth:
+    username: app
+    password: app
+    database: app
+  service:
+    port: 5432
+    annotations: {}
+  persistence:
+    enabled: true
+    accessModes:
+      - ReadWriteOnce
+    size: 10Gi
+    storageClass: ""
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+
+migrationJob:
+  enabled: true
+  backoffLimit: 3
+  annotations: {}
+  ttlSecondsAfterFinished: 180
+
+serviceMonitor:
+  enabled: false
+  namespace: ""
+  interval: 30s
+  scrapeTimeout: 10s
+  labels: {}
+  annotations: {}
+  honorLabels: false
+
+serviceAccount:
+  create: false
+  annotations: {}
+  name: ""
+
+rbac:
+  create: false
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
