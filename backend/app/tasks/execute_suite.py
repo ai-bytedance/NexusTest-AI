@@ -6,14 +6,17 @@ from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any
 
+import httpx
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.celery import celery_app
 from app.core.config import get_settings
+from app.core.http import get_http_client
 from app.db.session import SessionLocal
 from app.logging import get_logger
 from app.models import ReportEntityType, ReportStatus, TestCase, TestReport, TestSuite
+from app.observability import track_task
 from app.services.assertions.engine import AssertionEngine
 from app.services.execution.context import ExecutionContext, render_value
 from app.services.notify.dispatcher import queue_run_finished_notifications
@@ -30,7 +33,24 @@ assertion_engine = AssertionEngine()
 
 def get_http_runner() -> HttpRunner:
     settings = get_settings()
-    return HttpRunner(settings.request_timeout_seconds, settings.max_response_size_bytes)
+    timeout = httpx.Timeout(
+        connect=settings.httpx_connect_timeout,
+        read=settings.httpx_read_timeout,
+        write=settings.httpx_write_timeout,
+        pool=settings.httpx_pool_timeout,
+    )
+    return HttpRunner(
+        settings.request_timeout_seconds,
+        settings.max_response_size_bytes,
+        timeout=timeout,
+        client=get_http_client(),
+        max_retries=settings.httpx_retry_attempts,
+        retry_backoff_factor=settings.httpx_retry_backoff_factor,
+        retry_statuses=settings.httpx_retry_statuses,
+        retry_methods=settings.httpx_retry_methods,
+        redact_fields=settings.redact_fields,
+        redaction_placeholder=settings.redaction_placeholder,
+    )
 
 
 @celery_app.task(name="app.tasks.execute_suite.execute_test_suite", bind=True, queue="suites")
@@ -41,6 +61,9 @@ def execute_test_suite(self, report_id: str, suite_id: str, project_id: str) -> 
     suite_uuid = uuid.UUID(suite_id)
     project_uuid = uuid.UUID(project_id)
 
+    cm = track_task("execute_test_suite")
+    exc_info: tuple[Any, Any, Any] = (None, None, None)
+    cm.__enter__()
     try:
         report = _get_report(session, report_uuid, project_uuid, ReportEntityType.SUITE, suite_uuid)
         suite = _get_suite(session, suite_uuid, project_uuid)

@@ -20,11 +20,14 @@ from app.api.routes import (
     test_cases,
     test_suites,
     notifiers,
+    metrics,
     version,
 )
 from app.core.config import get_settings
 from app.core.errors import ErrorCode, create_error_detail
+from app.core.http import close_http_client
 from app.logging import RequestIdMiddleware, configure_logging, get_logger
+from app.observability.metrics import MetricsMiddleware
 
 load_dotenv()
 configure_logging()
@@ -37,6 +40,8 @@ def create_app() -> FastAPI:
     app = FastAPI(title="API Automation Platform", version="0.1.0")
 
     app.add_middleware(RequestIdMiddleware)
+    if settings.metrics_enabled:
+        app.add_middleware(MetricsMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -62,6 +67,8 @@ def create_app() -> FastAPI:
     app.include_router(reports.router, prefix="/api/v1")
     app.include_router(version.router, prefix="/api/v1")
     app.include_router(progress.router)
+    if settings.metrics_enabled:
+        app.include_router(metrics.router)
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
@@ -90,6 +97,11 @@ def create_app() -> FastAPI:
     @app.on_event("startup")
     async def on_startup() -> None:
         logger.info("application_started", environment=settings.app_env)
+
+    @app.on_event("shutdown")
+    async def on_shutdown() -> None:
+        close_http_client()
+        logger.info("application_stopped", environment=settings.app_env)
 
     return app
 
