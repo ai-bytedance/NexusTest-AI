@@ -16,4 +16,5 @@ flower==2.0.1
 email-validator==2.0.0.post2
 httpx==0.25.1
 jsonpath-ng==1.6.0
+croniter==1.4.1
 python-multipart==0.0.6

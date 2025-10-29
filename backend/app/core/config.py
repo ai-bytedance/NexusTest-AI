@@ -18,6 +18,11 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     request_timeout_seconds: int = 30
     max_response_size_bytes: int = 512_000
+    plan_refresh_seconds: int = 30
+    notify_max_retries: int = 3
+    notify_backoff_seconds: int = 5
+    feishu_signing_secret: str | None = None
+    slack_default_channel: str | None = None
     redact_fields: List[str] = ["authorization", "password", "token", "secret"]
     deepseek_api_key: str | None = None
     deepseek_base_url: str = "https://api.deepseek.com"
@@ -57,6 +62,22 @@ class Settings(BaseSettings):
         int_value = int(value) if isinstance(value, str) else value
         if int_value < 0:
             raise ValueError("TOKEN_CLOCK_SKEW_SECONDS must be zero or a positive integer")
+        return int_value
+
+    @field_validator("plan_refresh_seconds", "notify_backoff_seconds", mode="before")
+    @classmethod
+    def validate_positive_seconds(cls, value: int | str) -> int:
+        int_value = int(value) if isinstance(value, str) else value
+        if int_value <= 0:
+            raise ValueError("Value must be greater than zero")
+        return int_value
+
+    @field_validator("notify_max_retries", mode="before")
+    @classmethod
+    def validate_notify_retries(cls, value: int | str) -> int:
+        int_value = int(value) if isinstance(value, str) else value
+        if int_value < 0:
+            raise ValueError("NOTIFY_MAX_RETRIES must be zero or a positive integer")
         return int_value
 
     @field_validator("cors_origins", mode="before")

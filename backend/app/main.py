@@ -11,11 +11,13 @@ from app.api.routes import (
     execution,
     health,
     importers,
+    plans,
     progress,
     projects,
     reports,
     test_cases,
     test_suites,
+    notifiers,
     version,
 )
 from app.core.config import get_settings
@@ -50,6 +52,8 @@ def create_app() -> FastAPI:
     app.include_router(test_cases.router, prefix="/api/v1")
     app.include_router(test_suites.router, prefix="/api/v1")
     app.include_router(execution.router, prefix="/api/v1")
+    app.include_router(plans.router, prefix="/api/v1")
+    app.include_router(notifiers.router, prefix="/api/v1")
     app.include_router(importers.router, prefix="/api/v1")
     app.include_router(reports.router, prefix="/api/v1")
     app.include_router(version.router, prefix="/api/v1")
