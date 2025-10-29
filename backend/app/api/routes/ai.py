@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.response import ResponseEnvelope, success_response
@@ -21,8 +21,8 @@ from app.schemas.ai import (
     SummarizeReportRequest,
 )
 from app.schemas.test_report import TestReportRead
-from app.services.ai import AIProvider, get_ai_provider
-from app.services.ai.base import AIProviderError
+from app.services.ai import get_ai_provider
+from app.services.ai.base import AIProviderError, ProviderResponse
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 _logger = get_logger().bind(component="ai_routes")
@@ -53,10 +53,19 @@ def _create_task(
     return task
 
 
-def _resolve_success(db: Session, task: AITask, output_payload: dict[str, Any]) -> AITask:
+def _resolve_success(db: Session, task: AITask, result: ProviderResponse) -> AITask:
     task.status = TaskStatus.SUCCESS
-    task.output_payload = output_payload
+    task.output_payload = result.payload
     task.error_message = None
+    task.model = result.model
+    if result.usage:
+        task.prompt_tokens = result.usage.prompt_tokens
+        task.completion_tokens = result.usage.completion_tokens
+        task.total_tokens = result.usage.total_tokens
+    else:
+        task.prompt_tokens = None
+        task.completion_tokens = None
+        task.total_tokens = None
     db.add(task)
     db.commit()
     db.refresh(task)
@@ -66,6 +75,10 @@ def _resolve_success(db: Session, task: AITask, output_payload: dict[str, Any]) 
 def _resolve_failure(db: Session, task: AITask, message: str) -> None:
     task.status = TaskStatus.FAILED
     task.error_message = message
+    task.model = None
+    task.prompt_tokens = None
+    task.completion_tokens = None
+    task.total_tokens = None
     db.add(task)
     db.commit()
 
@@ -95,10 +108,11 @@ def _serialize_report(report: TestReport) -> dict[str, Any]:
 @router.post("/generate-cases", response_model=ResponseEnvelope)
 def generate_cases(
     payload: GenerateCasesRequest,
+    provider_key: str | None = Query(default=None, alias="provider"),
     db: Session = Depends(get_db),
-    provider: AIProvider = Depends(get_ai_provider),
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
+    provider = get_ai_provider(provider_key)
     _ensure_project_context(db, current_user, payload.project_id)
     input_payload = payload.model_dump(mode="json")
     task = _create_task(
@@ -123,17 +137,18 @@ def generate_cases(
         ) from exc
 
     _resolve_success(db, task, result)
-    payload_with_task = {"task_id": str(task.id), **result}
+    payload_with_task = {"task_id": str(task.id), **result.payload}
     return success_response(payload_with_task)
 
 
 @router.post("/generate-assertions", response_model=ResponseEnvelope)
 def generate_assertions(
     payload: GenerateAssertionsRequest,
+    provider_key: str | None = Query(default=None, alias="provider"),
     db: Session = Depends(get_db),
-    provider: AIProvider = Depends(get_ai_provider),
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
+    provider = get_ai_provider(provider_key)
     _ensure_project_context(db, current_user, payload.project_id)
     input_payload = payload.model_dump(mode="json")
     task = _create_task(
@@ -158,17 +173,18 @@ def generate_assertions(
         ) from exc
 
     _resolve_success(db, task, result)
-    payload_with_task = {"task_id": str(task.id), **result}
+    payload_with_task = {"task_id": str(task.id), **result.payload}
     return success_response(payload_with_task)
 
 
 @router.post("/mock-data", response_model=ResponseEnvelope)
 def generate_mock_data(
     payload: GenerateMockDataRequest,
+    provider_key: str | None = Query(default=None, alias="provider"),
     db: Session = Depends(get_db),
-    provider: AIProvider = Depends(get_ai_provider),
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
+    provider = get_ai_provider(provider_key)
     _ensure_project_context(db, current_user, payload.project_id)
     input_payload = payload.model_dump(mode="json")
     task = _create_task(
@@ -193,17 +209,18 @@ def generate_mock_data(
         ) from exc
 
     _resolve_success(db, task, result)
-    payload_with_task = {"task_id": str(task.id), **result}
+    payload_with_task = {"task_id": str(task.id), **result.payload}
     return success_response(payload_with_task)
 
 
 @router.post("/summarize-report", response_model=ResponseEnvelope)
 def summarize_report(
     payload: SummarizeReportRequest,
+    provider_key: str | None = Query(default=None, alias="provider"),
     db: Session = Depends(get_db),
-    provider: AIProvider = Depends(get_ai_provider),
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
+    provider = get_ai_provider(provider_key)
     _ensure_project_context(db, current_user, payload.project_id)
 
     report_payload: dict[str, Any]
@@ -233,7 +250,7 @@ def summarize_report(
     )
 
     try:
-        markdown = provider.summarize_report(report_payload)
+        result = provider.summarize_report(report_payload)
     except AIProviderError as exc:
         _handle_provider_failure(task, exc, db)
         raise http_exception(exc.status_code, exc.code, exc.message, data=exc.data) from exc
@@ -246,7 +263,6 @@ def summarize_report(
             data={"task_id": str(task.id)},
         ) from exc
 
-    output_payload = {"markdown": markdown}
-    _resolve_success(db, task, output_payload)
-    payload_with_task = {"task_id": str(task.id), **output_payload}
+    _resolve_success(db, task, result)
+    payload_with_task = {"task_id": str(task.id), **result.payload}
     return success_response(payload_with_task)
