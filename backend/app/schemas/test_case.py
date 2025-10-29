@@ -5,6 +5,7 @@ from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
 
+from app.models.execution_routing import AgentSelectionPolicy
 from app.schemas.assertions import AssertionDefinition
 from app.schemas.common import IdentifierModel, ORMModel
 
@@ -21,6 +22,9 @@ class TestCaseCreate(TestCaseBase):
     api_id: UUID
     environment_id: UUID | None = None
     dataset_id: UUID | None = None
+    queue_id: UUID | None = None
+    agent_selection_policy: AgentSelectionPolicy = AgentSelectionPolicy.ROUND_ROBIN
+    agent_tags: list[str] = Field(default_factory=list)
     param_mapping: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -32,6 +36,9 @@ class TestCaseUpdate(ORMModel):
     enabled: bool | None = None
     environment_id: UUID | None = None
     dataset_id: UUID | None = None
+    queue_id: UUID | None = None
+    agent_selection_policy: AgentSelectionPolicy | None = None
+    agent_tags: list[str] | None = None
     param_mapping: dict[str, Any] | None = None
 
 
@@ -44,6 +51,9 @@ class TestCaseRead(IdentifierModel):
     assertions: list[dict[str, Any]]
     environment_id: UUID | None
     dataset_id: UUID | None
+    queue_id: UUID | None
+    agent_selection_policy: AgentSelectionPolicy
+    agent_tags: list[str]
     param_mapping: dict[str, Any]
     enabled: bool
     created_by: UUID
