@@ -3,13 +3,14 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import ForeignKey, Index, String, UniqueConstraint, text
+from sqlalchemy import ForeignKey, Index, Integer, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, BaseModel
 
 if TYPE_CHECKING:
+    from app.models.api_archive import ApiArchive
     from app.models.import_source import ImportSource
     from app.models.project import Project
     from app.models.test_case import TestCase
@@ -32,6 +33,7 @@ class Api(BaseModel, Base):
         Index("ix_apis_mock_example_gin", "mock_example", postgresql_using="gin"),
         Index("ix_apis_import_source_id", "import_source_id"),
         Index("ix_apis_fingerprint", "fingerprint"),
+        Index("ix_apis_previous_revision_id", "previous_revision_id"),
     )
 
     project_id: Mapped[uuid.UUID] = mapped_column(
@@ -71,6 +73,13 @@ class Api(BaseModel, Base):
         nullable=False,
         server_default=text("'{}'::jsonb"),
     )
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default=text("1"))
+    previous_revision_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("api_archives.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
     source_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
     import_source_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -83,4 +92,13 @@ class Api(BaseModel, Base):
     import_source: Mapped["ImportSource" | None] = relationship("ImportSource", back_populates="apis")
     test_cases: Mapped[list["TestCase"]] = relationship(
         "TestCase", back_populates="api", cascade="all, delete-orphan"
+    )
+    previous_revision: Mapped["ApiArchive" | None] = relationship(
+        "ApiArchive",
+        foreign_keys=[previous_revision_id],
+    )
+    archives: Mapped[list["ApiArchive"]] = relationship(
+        "ApiArchive",
+        back_populates="api",
+        cascade="all, delete-orphan",
     )

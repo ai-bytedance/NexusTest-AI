@@ -2,6 +2,7 @@ from app.models.agent import Agent, AgentStatus
 from app.models.ai_chat import AiChat, AiChatMessage
 from app.models.ai_task import AITask, TaskStatus, TaskType
 from app.models.api import Api
+from app.models.api_archive import ApiArchive, ApiArchiveChangeType
 from app.models.audit_log import AuditLog
 from app.models.dataset import Dataset, DatasetType
 from app.models.environment import Environment
@@ -10,6 +11,8 @@ from app.models.execution_policy import ExecutionPolicy
 from app.models.execution_queue import ExecutionQueue, ExecutionQueueKind
 from app.models.execution_routing import AgentSelectionPolicy
 from app.models.import_source import (
+    ImportApproval,
+    ImportApprovalDecision,
     ImportRun,
     ImportRunStatus,
     ImportSource,
@@ -41,6 +44,8 @@ __all__ = [
     "AiChatMessage",
     "AITask",
     "Api",
+    "ApiArchive",
+    "ApiArchiveChangeType",
     "AuditLog",
     "Dataset",
     "DatasetType",
@@ -60,6 +65,8 @@ __all__ = [
     "ImportSourceType",
     "ImportRun",
     "ImportRunStatus",
+    "ImportApproval",
+    "ImportApprovalDecision",
     "ImporterKind",
     "Notifier",
     "NotifierType",

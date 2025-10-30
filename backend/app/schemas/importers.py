@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field, HttpUrl, model_validator
 
-from app.models.import_source import ImporterKind
+from app.models.import_source import ImportApprovalDecision, ImportRunStatus, ImporterKind
 from app.schemas.common import ORMModel
 
 
@@ -24,6 +25,7 @@ class ImportChange(ORMModel):
     normalized_path: str
     version: str
     name: str
+    api_id: UUID | None = None
     summary: str | None = None
     diff: dict[str, Any] = Field(default_factory=dict)
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -104,3 +106,57 @@ class ImportResyncRequest(BaseModel):
 
 class ImportPreviewResponse(ORMModel):
     summary: ImportSummary
+
+
+class OpenAPIImportPrepareRequest(OpenAPIImportRequest):
+    importer: Literal[ImporterKind.OPENAPI] = Field(default=ImporterKind.OPENAPI)
+    source_id: UUID | None = None
+
+
+class PostmanImportPrepareRequest(PostmanImportRequest):
+    importer: Literal[ImporterKind.POSTMAN] = Field(default=ImporterKind.POSTMAN)
+    source_id: UUID | None = None
+
+
+ImportPrepareRequest = Annotated[
+    OpenAPIImportPrepareRequest | PostmanImportPrepareRequest,
+    Field(discriminator="importer"),
+]
+
+
+class ImportApproveRequest(BaseModel):
+    comment: str | None = None
+
+
+class ImportRollbackRequest(BaseModel):
+    comment: str | None = None
+
+
+class ImportApprovalRecord(ORMModel):
+    id: UUID
+    approver_id: UUID
+    decision: ImportApprovalDecision
+    comment: str | None = None
+    created_at: datetime
+
+
+class ImportRunInfo(ORMModel):
+    id: UUID
+    project_id: UUID
+    source_id: UUID | None
+    importer: ImporterKind
+    status: ImportRunStatus
+    dry_run: bool
+    summary: ImportSummary
+    created_at: datetime
+    created_by: UUID
+    applied_at: datetime | None = None
+    applied_by_id: UUID | None = None
+    rolled_back_at: datetime | None = None
+    rolled_back_by_id: UUID | None = None
+
+
+class ImportRunDetail(ImportRunInfo):
+    diff: list[ImportChange] = Field(default_factory=list)
+    context: dict[str, Any] = Field(default_factory=dict)
+    approvals: list[ImportApprovalRecord] = Field(default_factory=list)
