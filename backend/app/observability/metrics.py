@@ -3,7 +3,8 @@ from __future__ import annotations
 import time
 import uuid
 from contextlib import contextmanager
-from typing import Any
+from datetime import datetime
+from typing import Any, Iterable
 
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
 from sqlalchemy import event
@@ -32,6 +33,9 @@ _CLUSTER_LABELS = ("project_id",)
 _FLAKY_LABELS = ("project_id", "entity_type")
 _AI_TASK_LABELS = ("provider", "model", "status", "task_type", "project_id")
 _AI_TOKEN_LABELS = ("provider", "model", "token_type", "task_type", "project_id")
+_BACKUP_STORAGE_LABELS = ("storage",)
+_BACKUP_DURATION_LABELS = ("storage", "status")
+_BACKUP_FAILURE_LABELS = ("storage", "reason")
 
 REQUEST_COUNT = Counter(
     "http_requests_total",
@@ -156,6 +160,31 @@ AI_TOKEN_USAGE = Counter(
     "ai_tokens_used_total",
     "Tokens consumed by AI requests partitioned by token type",
     _AI_TOKEN_LABELS,
+    namespace=_NAMESPACE,
+)
+BACKUP_LAST_SUCCESS = Gauge(
+    "backup_last_success_timestamp",
+    "UNIX timestamp of the last successful backup",
+    _BACKUP_STORAGE_LABELS,
+    namespace=_NAMESPACE,
+)
+BACKUP_LAST_SIZE_BYTES = Gauge(
+    "backup_last_size_bytes",
+    "Size in bytes for the most recent successful backup",
+    _BACKUP_STORAGE_LABELS,
+    namespace=_NAMESPACE,
+)
+BACKUP_DURATION = Histogram(
+    "backup_duration_seconds",
+    "Duration of backup operations",
+    _BACKUP_DURATION_LABELS,
+    namespace=_NAMESPACE,
+    buckets=(30, 60, 120, 300, 600, 900, 1800, 3600),
+)
+BACKUP_FAILURES = Counter(
+    "backup_failures_total",
+    "Count of failed backup operations",
+    _BACKUP_FAILURE_LABELS,
     namespace=_NAMESPACE,
 )
 
@@ -418,6 +447,34 @@ def record_queue_length(queue: str, length: int) -> None:
     TASK_QUEUE_LENGTH.labels(queue=_normalize_queue(queue)).set(max(length, 0))
 
 
+def record_backup_result(
+    *,
+    storages: Iterable[str],
+    status: str,
+    duration_seconds: float | None,
+    size_bytes: int | None,
+    finished_at: datetime | None,
+    failure_reason: str | None = None,
+) -> None:
+    if not _metrics_enabled():
+        return
+
+    safe_duration = max(duration_seconds or 0.0, 0.0)
+    status_label = (status or "unknown").strip().lower() or "unknown"
+    normalized_failure = _normalize_reason(failure_reason or status_label)
+
+    for storage in storages:
+        storage_label = (storage or "unknown").strip().lower() or "unknown"
+        BACKUP_DURATION.labels(storage=storage_label, status=status_label).observe(safe_duration)
+        if status_label == "success":
+            if size_bytes is not None:
+                BACKUP_LAST_SIZE_BYTES.labels(storage=storage_label).set(max(size_bytes, 0))
+            if finished_at is not None:
+                BACKUP_LAST_SUCCESS.labels(storage=storage_label).set(max(finished_at.timestamp(), 0.0))
+        elif status_label == "failed":
+            BACKUP_FAILURES.labels(storage=storage_label, reason=normalized_failure).inc()
+
+
 def observe_ai_call(
     *,
     provider: str,
@@ -474,6 +531,7 @@ __all__ = [
     "track_external_http_call",
     "observe_ai_call",
     "record_queue_length",
+    "record_backup_result",
     "record_task_retry",
     "record_execution_retry",
     "record_rate_limit_throttle",
@@ -496,4 +554,8 @@ __all__ = [
     "AI_TOKEN_USAGE",
     "CLUSTER_CREATED",
     "FLAKY_MARKED",
+    "BACKUP_LAST_SUCCESS",
+    "BACKUP_LAST_SIZE_BYTES",
+    "BACKUP_DURATION",
+    "BACKUP_FAILURES",
 ]

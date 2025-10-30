@@ -97,6 +97,31 @@ class Settings(BaseSettings):
     celery_visibility_timeout_seconds: int = 3600
     celery_task_acks_late: bool = True
     celery_task_reject_on_worker_lost: bool = True
+    backup_base_dir: str = "./storage/backups"
+    backup_keep_daily: int = 7
+    backup_keep_weekly: int = 4
+    backup_keep_monthly: int = 12
+    backup_s3_bucket: str | None = None
+    backup_s3_prefix: str = ""
+    backup_s3_region: str | None = None
+    backup_s3_endpoint_url: str | None = None
+    backup_s3_access_key: str | None = None
+    backup_s3_secret_key: str | None = None
+    backup_s3_use_ssl: bool = True
+    backup_encrypt: bool = False
+    backup_gpg_recipient: str | None = None
+    backup_gpg_public_key_path: str | None = None
+    backup_verify_every_n_days: int = 7
+    backup_verify_target_url: str | None = None
+    backup_job_cron: str = "0 2 * * *"
+    retention_job_cron: str = "0 3 * * *"
+    report_retention_days: int = 30
+    ai_task_retention_days: int = 30
+    audit_log_retention_days: int = 90
+    report_archive_dir: str | None = None
+    report_archive_s3_bucket: str | None = None
+    report_archive_s3_prefix: str = ""
+    report_archive_min_bytes: int = 262144
     app_version: str = "0.1.0"
     git_commit_sha: str = "unknown"
     build_time: str = ""
@@ -149,6 +174,14 @@ class Settings(BaseSettings):
         "celery_metrics_port",
         "analytics_window",
         "cluster_min_count",
+        "backup_keep_daily",
+        "backup_keep_weekly",
+        "backup_keep_monthly",
+        "backup_verify_every_n_days",
+        "report_retention_days",
+        "ai_task_retention_days",
+        "audit_log_retention_days",
+        "report_archive_min_bytes",
         mode="before",
     )
     @classmethod
@@ -330,6 +363,35 @@ class Settings(BaseSettings):
         if not host:
             raise ValueError("METRICS_HOST cannot be empty")
         return host
+
+    @field_validator("backup_base_dir", mode="before")
+    @classmethod
+    def normalize_backup_base_dir(cls, value: str | None) -> str:
+        base_dir = str(value or "").strip()
+        if not base_dir:
+            raise ValueError("BACKUP_BASE_DIR cannot be empty")
+        return base_dir
+
+    @field_validator("report_archive_dir", mode="before")
+    @classmethod
+    def normalize_report_archive_dir(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = str(value).strip()
+        return normalized or None
+
+    @field_validator("backup_s3_prefix", "report_archive_s3_prefix", mode="before")
+    @classmethod
+    def normalize_storage_prefix(cls, value: str | None) -> str:
+        if value is None:
+            return ""
+        prefix = str(value).strip().replace("\\", "/")
+        prefix = prefix.lstrip("/")
+        if not prefix:
+            return ""
+        if not prefix.endswith("/"):
+            prefix = f"{prefix}/"
+        return prefix
 
 
 @lru_cache(maxsize=1)
