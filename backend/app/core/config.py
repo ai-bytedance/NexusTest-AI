@@ -99,6 +99,11 @@ class Settings(BaseSettings):
     metrics_port: int = 9464
     celery_metrics_port: int = 9540
     celery_metrics_poll_interval_seconds: int = 15
+    agent_health_check_seconds: int = 60
+    agent_heartbeat_rate_limit_per_minute: int = 60
+    agent_offline_threshold_seconds: int = 120
+    agent_backlog_threshold: int = 25
+    agent_latency_threshold_ms: int = 1000
     otel_trace_propagation_enabled: bool = False
     health_check_timeout_seconds: float = 2.0
     celery_worker_concurrency: int = 4
@@ -162,6 +167,8 @@ class Settings(BaseSettings):
         "notify_backoff_seconds",
         "celery_visibility_timeout_seconds",
         "celery_metrics_poll_interval_seconds",
+        "agent_health_check_seconds",
+        "agent_offline_threshold_seconds",
         "sso_state_ttl_seconds",
         mode="before",
     )
@@ -190,6 +197,9 @@ class Settings(BaseSettings):
         "report_retention_days",
         "ai_task_retention_days",
         "audit_log_retention_days",
+        "agent_backlog_threshold",
+        "agent_latency_threshold_ms",
+        "agent_heartbeat_rate_limit_per_minute",
         "report_archive_min_bytes",
         "smtp_port",
         mode="before",

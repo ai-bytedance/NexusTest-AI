@@ -1,4 +1,12 @@
-from app.models.agent import Agent, AgentStatus
+from app.models.agent import (
+    Agent,
+    AgentAlertKind,
+    AgentAlertState,
+    AgentAlertThreshold,
+    AgentHeartbeat,
+    AgentQueueMembership,
+    AgentStatus,
+)
 from app.models.ai_chat import AiChat, AiChatMessage
 from app.models.ai_task import AITask, TaskStatus, TaskType
 from app.models.analytics_fail_cluster import AnalyticsFailCluster, AnalyticsFailClusterStatus
@@ -44,6 +52,11 @@ from app.models.user_identity import IdentityProvider, UserIdentity
 __all__ = [
     "Agent",
     "AgentStatus",
+    "AgentHeartbeat",
+    "AgentQueueMembership",
+    "AgentAlertKind",
+    "AgentAlertThreshold",
+    "AgentAlertState",
     "AgentSelectionPolicy",
     "AiChat",
     "AiChatMessage",
