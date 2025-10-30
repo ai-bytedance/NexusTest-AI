@@ -18,6 +18,7 @@ import {
 } from "@/api/cases";
 import type { ApiDefinition, TestCase } from "@/types/api";
 import { formatDateTime } from "@/utils/format";
+import ProjectNavigation from "@/components/ProjectNavigation";
 
 interface CaseFormValues {
   name: string;
@@ -241,6 +242,7 @@ export default function ProjectTestCasesPage() {
 
   return (
     <Space direction="vertical" style={{ width: "100%" }} size="large">
+      <ProjectNavigation />
       <Space style={{ justifyContent: "space-between", width: "100%" }} align="center">
         <Typography.Title level={4} style={{ margin: 0 }}>
           {t("cases:title")}

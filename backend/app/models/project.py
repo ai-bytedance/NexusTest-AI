@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from app.models.test_report import TestReport
     from app.models.test_suite import TestSuite
     from app.models.user import User
+    from app.models.webhook import WebhookSubscription
 
 
 class Project(BaseModel, Base):
@@ -197,4 +198,9 @@ class Project(BaseModel, Base):
         "RateLimitPolicy",
         foreign_keys=[default_rate_limit_policy_id],
         post_update=True,
+    )
+    webhook_subscriptions: Mapped[list["WebhookSubscription"]] = relationship(
+        "WebhookSubscription",
+        back_populates="project",
+        cascade="all, delete-orphan",
     )

@@ -22,6 +22,7 @@ import { useProjects } from "@/hooks/useProjects";
 import type { ApiDefinition, HttpMethod } from "@/types/api";
 import { formatDateTime } from "@/utils/format";
 import { useUnsavedChangesPrompt } from "@/hooks/useUnsavedChangesPrompt";
+import ProjectNavigation from "@/components/ProjectNavigation";
 
 interface ApiFormValues {
   name: string;
@@ -262,6 +263,7 @@ export default function ProjectApisPage() {
 
   return (
     <Space direction="vertical" style={{ width: "100%" }} size="large">
+      <ProjectNavigation />
       <Space style={{ justifyContent: "space-between", width: "100%" }} align="center">
         <Typography.Title level={4} style={{ margin: 0 }}>
           {t("apis:title")}

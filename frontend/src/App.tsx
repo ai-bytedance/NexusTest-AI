@@ -10,6 +10,7 @@ const ProjectsPage = lazy(() => import("@/pages/ProjectsPage"));
 const ProjectApisPage = lazy(() => import("@/pages/ProjectApisPage"));
 const ProjectTestCasesPage = lazy(() => import("@/pages/ProjectTestCasesPage"));
 const ProjectTestSuitesPage = lazy(() => import("@/pages/ProjectTestSuitesPage"));
+const ProjectWebhooksPage = lazy(() => import("@/pages/ProjectWebhooksPage"));
 const AiAssistantPage = lazy(() => import("@/pages/AiAssistantPage"));
 const ReportsPage = lazy(() => import("@/pages/ReportsPage"));
 const ReportDetailPage = lazy(() => import("@/pages/ReportDetailPage"));
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="projects/:projectId/apis" element={<ProjectApisPage />} />
         <Route path="projects/:projectId/test-cases" element={<ProjectTestCasesPage />} />
         <Route path="projects/:projectId/test-suites" element={<ProjectTestSuitesPage />} />
+        <Route path="projects/:projectId/webhooks" element={<ProjectWebhooksPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="reports/:reportId" element={<ReportDetailPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
