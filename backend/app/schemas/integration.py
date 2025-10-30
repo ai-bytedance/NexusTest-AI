@@ -52,10 +52,23 @@ class IntegrationConnectionStatus(ORMModel):
     details: dict[str, Any] | None = None
 
 
+class IntegrationWebhookSettings(ORMModel):
+    enabled: bool | None = None
+    secret: str | None = None
+    url: str | None = None
+    tolerance_seconds: int | None = Field(default=None, ge=30, le=3600)
+
+
+class IntegrationWebhookSettingsUpdate(ORMModel):
+    webhook: IntegrationWebhookSettings | None = None
+
+
 __all__ = [
     "IntegrationBase",
     "IntegrationCreate",
     "IntegrationUpdate",
     "IntegrationRead",
     "IntegrationConnectionStatus",
+    "IntegrationWebhookSettings",
+    "IntegrationWebhookSettingsUpdate",
 ]

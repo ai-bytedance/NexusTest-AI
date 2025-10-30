@@ -12,6 +12,7 @@ from app.db.base import Base, BaseModel
 
 if TYPE_CHECKING:
     from app.models.auto_ticket_rule import AutoTicketRule
+    from app.models.integration_webhook import IntegrationWebhook
     from app.models.issue import Issue
     from app.models.project import Project
     from app.models.user import User
@@ -63,6 +64,11 @@ class Integration(BaseModel, Base):
     )
     issues: Mapped[list["Issue"]] = relationship(
         "Issue",
+        back_populates="integration",
+        cascade="all, delete-orphan",
+    )
+    webhooks: Mapped[list["IntegrationWebhook"]] = relationship(
+        "IntegrationWebhook",
         back_populates="integration",
         cascade="all, delete-orphan",
     )

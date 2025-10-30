@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from app.models.execution_queue import ExecutionQueue
     from app.models.import_source import ImportRun, ImportSource
     from app.models.integration import Integration
+    from app.models.integration_webhook import IntegrationWebhook
     from app.models.issue import Issue
     from app.models.notifier import Notifier
     from app.models.notifier_event import NotifierEvent
@@ -131,6 +132,11 @@ class Project(BaseModel, Base):
     )
     issues: Mapped[list["Issue"]] = relationship(
         "Issue",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+    integration_webhooks: Mapped[list["IntegrationWebhook"]] = relationship(
+        "IntegrationWebhook",
         back_populates="project",
         cascade="all, delete-orphan",
     )
