@@ -15,7 +15,7 @@ from app.db.session import get_db
 from app.logging import bind_log_context
 from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
-from app.models.user import User
+from app.models.user import User, UserRole
 
 
 @dataclass
@@ -134,3 +134,13 @@ def require_project_admin(context: ProjectContext = Depends(get_project_context)
             "Project admin privileges are required",
         )
     return context
+
+
+def require_system_admin(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role != UserRole.ADMIN:
+        raise http_exception(
+            status.HTTP_403_FORBIDDEN,
+            ErrorCode.NO_PERMISSION,
+            "Administrator privileges are required",
+        )
+    return current_user

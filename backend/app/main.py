@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.routes import (
+    admin_backups,
     ai,
     analytics,
     apis,
@@ -77,6 +78,8 @@ def create_app() -> FastAPI:
     app.include_router(progress.router)
     if settings.metrics_enabled:
         app.include_router(metrics.router)
+
+    app.include_router(admin_backups.router, prefix="/api/v1")
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:

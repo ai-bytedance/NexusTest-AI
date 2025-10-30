@@ -5,6 +5,7 @@ from app.models.analytics_fail_cluster import AnalyticsFailCluster, AnalyticsFai
 from app.models.api import Api
 from app.models.api_archive import ApiArchive, ApiArchiveChangeType
 from app.models.audit_log import AuditLog
+from app.models.backup_run import BackupRun, BackupStatus
 from app.models.dataset import Dataset, DatasetType
 from app.models.environment import Environment
 from app.models.execution_plan import ExecutionPlan, ExecutionPlanType
@@ -51,9 +52,10 @@ __all__ = [
     "ApiArchive",
     "ApiArchiveChangeType",
     "AuditLog",
+    "BackupRun",
+    "BackupStatus",
     "Dataset",
     "DatasetType",
-    "Environment",
     "ExecutionPlan",
     "ExecutionPlanType",
     "ExecutionPolicy",
