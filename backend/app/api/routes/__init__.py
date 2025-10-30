@@ -1,4 +1,5 @@
-from . import (
+from app.api.routes import (
+    admin_backups,
     ai,
     analytics,
     apis,
@@ -10,17 +11,22 @@ from . import (
     health,
     importers,
     integrations,
+    metrics,
+    notifiers,
     plans,
     progress,
     projects,
+    rate_limits,
     reports,
     test_cases,
     test_suites,
-    notifiers,
+    tokens,
+    utils,
     version,
 )
 
 __all__ = [
+    "admin_backups",
     "ai",
     "analytics",
     "apis",
@@ -32,12 +38,16 @@ __all__ = [
     "health",
     "importers",
     "integrations",
+    "metrics",
+    "notifiers",
     "plans",
     "progress",
     "projects",
+    "rate_limits",
     "reports",
     "test_cases",
     "test_suites",
-    "notifiers",
+    "tokens",
+    "utils",
     "version",
 ]

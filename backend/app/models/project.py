@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from app.models.auto_ticket_rule import AutoTicketRule
     from app.models.project_member import ProjectMember
     from app.models.project_team_role import ProjectTeamRole
+    from app.models.rate_limit_policy import RateLimitPolicy
     from app.models.test_case import TestCase
     from app.models.test_report import TestReport
     from app.models.test_suite import TestSuite
@@ -58,6 +59,11 @@ class Project(BaseModel, Base):
     )
     default_queue_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("execution_queues.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    default_rate_limit_policy_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("rate_limit_policies.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )
@@ -115,6 +121,11 @@ class Project(BaseModel, Base):
         back_populates="project",
         cascade="all, delete-orphan",
     )
+    rate_limit_policies: Mapped[list["RateLimitPolicy"]] = relationship(
+        "RateLimitPolicy",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
     notifiers: Mapped[list["Notifier"]] = relationship(
         "Notifier",
         back_populates="project",
@@ -168,5 +179,10 @@ class Project(BaseModel, Base):
     default_queue: Mapped["ExecutionQueue" | None] = relationship(
         "ExecutionQueue",
         foreign_keys=[default_queue_id],
+        post_update=True,
+    )
+    default_rate_limit_policy: Mapped["RateLimitPolicy" | None] = relationship(
+        "RateLimitPolicy",
+        foreign_keys=[default_rate_limit_policy_id],
         post_update=True,
     )

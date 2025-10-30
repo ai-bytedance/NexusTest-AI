@@ -11,6 +11,7 @@ from app.db.base import Base, BaseModel
 
 if TYPE_CHECKING:
     from app.models.ai_chat import AiChat, AiChatMessage
+    from app.models.api_token import ApiToken
     from app.models.dataset import Dataset
     from app.models.environment import Environment
     from app.models.execution_plan import ExecutionPlan
@@ -56,6 +57,11 @@ class User(BaseModel, Base):
     ai_chat_messages: Mapped[list["AiChatMessage"]] = relationship("AiChatMessage", back_populates="author")
     memberships: Mapped[list["ProjectMember"]] = relationship(
         "ProjectMember",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    api_tokens: Mapped[list["ApiToken"]] = relationship(
+        "ApiToken",
         back_populates="user",
         cascade="all, delete-orphan",
     )
