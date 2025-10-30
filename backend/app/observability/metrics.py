@@ -27,6 +27,7 @@ _TASK_RETRY_LABELS = ("task", "queue", "reason")
 _EXECUTION_RETRY_LABELS = ("policy", "entity_type", "reason")
 _EXECUTION_THROTTLE_LABELS = ("policy", "host")
 _EXECUTION_CIRCUIT_LABELS = ("policy", "host", "event")
+_NOTIFICATION_LABELS = ("provider",)
 _AI_TASK_LABELS = ("provider", "model", "status", "task_type", "project_id")
 _AI_TOKEN_LABELS = ("provider", "model", "token_type", "task_type", "project_id")
 
@@ -62,6 +63,18 @@ EXTERNAL_HTTP_DURATION = Histogram(
     _EXTERNAL_HTTP_LABELS,
     namespace=_NAMESPACE,
     buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30),
+)
+NOTIFICATION_SENT = Counter(
+    "notification_sent_total",
+    "Count of successfully delivered notifications",
+    _NOTIFICATION_LABELS,
+    namespace=_NAMESPACE,
+)
+NOTIFICATION_FAILED = Counter(
+    "notification_failed_total",
+    "Count of notifications that permanently failed",
+    _NOTIFICATION_LABELS,
+    namespace=_NAMESPACE,
 )
 TASK_DURATION = Histogram(
     "celery_task_duration_seconds",
@@ -173,6 +186,15 @@ def _normalize_reason(reason: str | None) -> str:
     return sanitized[:64] if sanitized else "unknown"
 
 
+def _normalize_provider(provider: str | None) -> str:
+    if not provider:
+        return "unknown"
+    sanitized = provider.strip().lower()
+    if not sanitized:
+        return "unknown"
+    return sanitized[:64]
+
+
 def _normalize_policy_id(policy_id: str | None) -> str:
     if not policy_id:
         return "default"
@@ -254,6 +276,18 @@ def track_external_http_call(target: str, method: str, status_code: int, project
         "project_id": _normalize_project_id(project_id),
     }
     EXTERNAL_HTTP_DURATION.labels(**labels).observe(max(duration, 0.0))
+
+
+def record_notification_sent(provider: str | None) -> None:
+    if not _metrics_enabled():
+        return
+    NOTIFICATION_SENT.labels(provider=_normalize_provider(provider)).inc()
+
+
+def record_notification_failed(provider: str | None) -> None:
+    if not _metrics_enabled():
+        return
+    NOTIFICATION_FAILED.labels(provider=_normalize_provider(provider)).inc()
 
 
 def instrument_engine(engine: Engine) -> None:

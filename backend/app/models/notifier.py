@@ -20,6 +20,8 @@ class NotifierType(str, enum.Enum):
     WEBHOOK = "webhook"
     FEISHU = "feishu"
     SLACK = "slack"
+    WECOM = "wecom"
+    DINGTALK = "dingtalk"
 
 
 class Notifier(BaseModel, Base):

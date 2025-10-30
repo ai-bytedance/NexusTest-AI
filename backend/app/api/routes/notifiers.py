@@ -1,19 +1,27 @@
 from __future__ import annotations
 
-from typing import List
+from typing import Any, List
 from uuid import UUID
+from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.response import ResponseEnvelope, success_response
 from app.core.authz import ProjectContext, require_project_admin, require_project_member
 from app.core.errors import ErrorCode, http_exception
 from app.db.session import get_db
-from app.models import Notifier, NotifierEventType
-from app.schemas.notifier import NotifierCreate, NotifierRead, NotifierTestRequest, NotifierUpdate
+from app.models import Notifier, NotifierEvent, NotifierEventStatus, NotifierEventType
+from app.schemas.notifier import (
+    NotifierCreate,
+    NotifierEventRead,
+    NotifierRead,
+    NotifierTestRequest,
+    NotifierUpdate,
+)
 from app.services.notify.base import NotifierSendError, get_provider
+from app.tasks.notifications import dispatch_notifier_event
 
 router = APIRouter(prefix="/projects/{project_id}/notifiers", tags=["notifications"])
 
@@ -47,8 +55,64 @@ def _get_notifier(db: Session, project_id: UUID, notifier_id: UUID) -> Notifier:
     return notifier
 
 
-def _serialize_notifier(notifier: Notifier) -> NotifierRead:
-    return NotifierRead.model_validate(notifier)
+_SENSITIVE_KEYS = {"secret", "signing_secret"}
+
+
+def _mask_url(value: Any) -> Any:
+    if not value:
+        return value
+    candidate = str(value)
+    try:
+        parsed = urlparse(candidate)
+    except ValueError:  # pragma: no cover - defensive
+        return "***"
+    host = parsed.netloc or ""
+    scheme = parsed.scheme or "https"
+    if not host:
+        return "***"
+    return f"{scheme}://{host}/***"
+
+
+def _mask_config(config: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(config, dict):
+        return {}
+    masked: dict[str, Any] = {}
+    for key, value in config.items():
+        if key in _SENSITIVE_KEYS:
+            masked[f"{key}_set"] = bool(value)
+            masked[key] = "***" if value else None
+        elif key in {"url", "webhook"}:
+            masked[key] = _mask_url(value)
+        else:
+            masked[key] = value
+    return masked
+
+
+def _serialize_notifier(notifier: Notifier) -> dict[str, Any]:
+    payload = NotifierRead.model_validate(notifier).model_dump()
+    payload["config"] = _mask_config(payload.get("config"))
+    return payload
+
+
+def _get_notifier_event(db: Session, notifier: Notifier, event_id: UUID) -> NotifierEvent:
+    stmt = (
+        select(NotifierEvent)
+        .where(
+            NotifierEvent.id == event_id,
+            NotifierEvent.notifier_id == notifier.id,
+            NotifierEvent.project_id == notifier.project_id,
+            NotifierEvent.is_deleted.is_(False),
+        )
+        .limit(1)
+    )
+    event = db.execute(stmt).scalar_one_or_none()
+    if event is None:
+        raise http_exception(
+            status.HTTP_404_NOT_FOUND,
+            ErrorCode.NOT_FOUND,
+            "Delivery log entry not found",
+        )
+    return event
 
 
 @router.post("", response_model=ResponseEnvelope, status_code=status.HTTP_201_CREATED)
@@ -72,7 +136,7 @@ def create_notifier(
     db.refresh(notifier)
 
     response = _serialize_notifier(notifier)
-    return success_response(response.model_dump())
+    return success_response(response)
 
 
 @router.get("", response_model=ResponseEnvelope)
@@ -89,7 +153,7 @@ def list_notifiers(
         .order_by(Notifier.created_at.desc())
     )
     notifiers = db.execute(stmt).scalars().all()
-    data: List[dict] = [_serialize_notifier(item).model_dump() for item in notifiers]
+    data: List[dict[str, Any]] = [_serialize_notifier(item) for item in notifiers]
     return success_response(data)
 
 
@@ -118,7 +182,7 @@ def update_notifier(
     db.refresh(notifier)
 
     response = _serialize_notifier(notifier)
-    return success_response(response.model_dump())
+    return success_response(response)
 
 
 @router.delete("/{notifier_id}", response_model=ResponseEnvelope)
@@ -152,6 +216,10 @@ def send_test_notification(
         "project_id": str(context.project.id),
         "project_name": context.project.name,
         "message": message,
+        "text": message,
+        "markdown": f"**{context.project.name}**\n\n{message}",
+        "locale": "en",
+        "status": "test",
         "event": NotifierEventType.RUN_FINISHED.value,
     }
 
@@ -163,10 +231,54 @@ def send_test_notification(
     return success_response({"sent": True})
 
 
+@router.get("/{notifier_id}/logs", response_model=ResponseEnvelope)
+def list_notifier_logs(
+    notifier_id: UUID,
+    status_filter: NotifierEventStatus | None = Query(None, alias="status"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    context: ProjectContext = Depends(require_project_member),
+    db: Session = Depends(get_db),
+) -> dict:
+    notifier = _get_notifier(db, context.project.id, notifier_id)
+    conditions = [
+        NotifierEvent.project_id == notifier.project_id,
+        NotifierEvent.notifier_id == notifier.id,
+        NotifierEvent.is_deleted.is_(False),
+    ]
+    if status_filter is not None:
+        conditions.append(NotifierEvent.status == status_filter)
+
+    total_stmt = select(func.count()).select_from(NotifierEvent).where(*conditions)
+    total = db.execute(total_stmt).scalar_one()
+
+    stmt = (
+        select(NotifierEvent)
+        .where(*conditions)
+        .order_by(NotifierEvent.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    events = db.execute(stmt).scalars().all()
+    items = [NotifierEventRead.model_validate(event).model_dump() for event in events]
+
+    return success_response(
+        {
+            "items": items,
+            "pagination": {
+                "total": total,
+                "limit": limit,
+                "offset": offset,
+            },
+        }
+    )
+
+
 __all__ = [
     "create_notifier",
     "list_notifiers",
     "update_notifier",
     "delete_notifier",
     "send_test_notification",
+    "list_notifier_logs",
 ]
