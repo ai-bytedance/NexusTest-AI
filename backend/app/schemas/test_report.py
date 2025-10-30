@@ -23,6 +23,10 @@ class TestReportRead(IdentifierModel):
     response_payload: dict[str, Any]
     assertions_result: dict[str, Any]
     metrics: dict[str, Any]
+    failure_signature: str | None
+    failure_excerpt: str | None
+    is_flaky: bool
+    flakiness_score: float | None
     summary: str | None
     parent_report_id: UUID | None
     run_number: int

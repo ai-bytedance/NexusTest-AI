@@ -1,6 +1,7 @@
 from app.models.agent import Agent, AgentStatus
 from app.models.ai_chat import AiChat, AiChatMessage
 from app.models.ai_task import AITask, TaskStatus, TaskType
+from app.models.analytics_fail_cluster import AnalyticsFailCluster, AnalyticsFailClusterStatus
 from app.models.api import Api
 from app.models.api_archive import ApiArchive, ApiArchiveChangeType
 from app.models.audit_log import AuditLog
@@ -43,6 +44,8 @@ __all__ = [
     "AiChat",
     "AiChatMessage",
     "AITask",
+    "AnalyticsFailCluster",
+    "AnalyticsFailClusterStatus",
     "Api",
     "ApiArchive",
     "ApiArchiveChangeType",

@@ -55,6 +55,8 @@ class Settings(BaseSettings):
     httpx_retry_statuses: List[int] = [429, 500, 502, 503, 504]
     httpx_retry_methods: List[str] = ["GET", "HEAD", "OPTIONS", "PUT", "DELETE", "POST", "PATCH"]
     plan_refresh_seconds: int = 30
+    analytics_window: int = 50
+    cluster_min_count: int = 2
     notify_max_retries: int = 3
     notify_backoff_seconds: int = 5
     feishu_signing_secret: str | None = None
@@ -145,6 +147,8 @@ class Settings(BaseSettings):
         "report_export_max_bytes",
         "metrics_port",
         "celery_metrics_port",
+        "analytics_window",
+        "cluster_min_count",
         mode="before",
     )
     @classmethod

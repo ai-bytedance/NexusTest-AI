@@ -28,6 +28,8 @@ _EXECUTION_RETRY_LABELS = ("policy", "entity_type", "reason")
 _EXECUTION_THROTTLE_LABELS = ("policy", "host")
 _EXECUTION_CIRCUIT_LABELS = ("policy", "host", "event")
 _NOTIFICATION_LABELS = ("provider",)
+_CLUSTER_LABELS = ("project_id",)
+_FLAKY_LABELS = ("project_id", "entity_type")
 _AI_TASK_LABELS = ("provider", "model", "status", "task_type", "project_id")
 _AI_TOKEN_LABELS = ("provider", "model", "token_type", "task_type", "project_id")
 
@@ -74,6 +76,18 @@ NOTIFICATION_FAILED = Counter(
     "notification_failed_total",
     "Count of notifications that permanently failed",
     _NOTIFICATION_LABELS,
+    namespace=_NAMESPACE,
+)
+CLUSTER_CREATED = Counter(
+    "cluster_created_total",
+    "Number of failure analytics clusters created",
+    _CLUSTER_LABELS,
+    namespace=_NAMESPACE,
+)
+FLAKY_MARKED = Counter(
+    "flaky_marked_total",
+    "Number of reports marked as flaky",
+    _FLAKY_LABELS,
     namespace=_NAMESPACE,
 )
 TASK_DURATION = Histogram(
@@ -290,6 +304,22 @@ def record_notification_failed(provider: str | None) -> None:
     NOTIFICATION_FAILED.labels(provider=_normalize_provider(provider)).inc()
 
 
+def record_cluster_created(project_id: str | None) -> None:
+    if not _metrics_enabled():
+        return
+    CLUSTER_CREATED.labels(project_id=_normalize_project_id(project_id)).inc()
+
+
+def record_flaky_marked(project_id: str | None, entity_type: str | None) -> None:
+    if not _metrics_enabled():
+        return
+    entity_value = (entity_type or "unknown").strip().lower() or "unknown"
+    FLAKY_MARKED.labels(
+        project_id=_normalize_project_id(project_id),
+        entity_type=entity_value,
+    ).inc()
+
+
 def instrument_engine(engine: Engine) -> None:
     if getattr(engine, "_metrics_instrumented", False):
         return
@@ -448,6 +478,8 @@ __all__ = [
     "record_execution_retry",
     "record_rate_limit_throttle",
     "record_circuit_breaker_event",
+    "record_cluster_created",
+    "record_flaky_marked",
     "REQUEST_COUNT",
     "REQUEST_LATENCY",
     "REQUEST_IN_PROGRESS",
@@ -462,4 +494,6 @@ __all__ = [
     "AI_TASK_COUNT",
     "AI_REQUEST_DURATION",
     "AI_TOKEN_USAGE",
+    "CLUSTER_CREATED",
+    "FLAKY_MARKED",
 ]
