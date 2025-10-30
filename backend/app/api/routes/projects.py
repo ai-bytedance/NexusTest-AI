@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List
+from typing import Any, List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
@@ -33,6 +33,61 @@ from app.schemas.project import (
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 
+def _normalize_email_list(raw: Any) -> list[str]:
+    if raw is None:
+        return []
+    candidates: list[str] = []
+    if isinstance(raw, str):
+        candidates = [item.strip() for item in raw.split(",")]
+    elif isinstance(raw, (list, tuple, set)):
+        for item in raw:
+            if isinstance(item, str):
+                candidates.append(item.strip())
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        email = candidate.lower()
+        if not email or email in seen:
+            continue
+        seen.add(email)
+        normalized.append(email)
+    return normalized
+
+
+def _normalize_notification_settings(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {"email": {"defaults": {"to": [], "cc": [], "bcc": []}}}
+
+    email_settings = value.get("email") if isinstance(value.get("email"), dict) else {}
+    defaults_raw = email_settings.get("defaults") if isinstance(email_settings, dict) else {}
+    if not isinstance(defaults_raw, dict):
+        defaults_raw = {}
+
+    defaults = {
+        "to": _normalize_email_list(defaults_raw.get("to")),
+        "cc": _normalize_email_list(defaults_raw.get("cc")),
+        "bcc": _normalize_email_list(defaults_raw.get("bcc")),
+    }
+
+    dynamic_raw = email_settings.get("dynamic") if isinstance(email_settings, dict) else {}
+    dynamic_flags = {
+        "owners": bool(dynamic_raw.get("owners")) if isinstance(dynamic_raw, dict) else False,
+        "admins": bool(dynamic_raw.get("admins")) if isinstance(dynamic_raw, dict) else False,
+        "members": bool(dynamic_raw.get("members")) if isinstance(dynamic_raw, dict) else False,
+    }
+
+    reply_to_raw = email_settings.get("reply_to") if isinstance(email_settings, dict) else None
+    reply_to = reply_to_raw.strip().lower() if isinstance(reply_to_raw, str) and reply_to_raw.strip() else None
+
+    email_result: dict[str, Any] = {"defaults": defaults}
+    if any(dynamic_flags.values()):
+        email_result["dynamic"] = dynamic_flags
+    if reply_to:
+        email_result["reply_to"] = reply_to
+
+    return {"email": email_result}
+
+
 def _load_project_with_members(db: Session, project_id: UUID) -> Project:
     stmt = (
         select(Project)
@@ -60,8 +115,18 @@ def _serialize_member(member: ProjectMember) -> ProjectMemberRead:
 
 
 def _serialize_project(project: Project, include_members: bool = False) -> ProjectRead | ProjectWithMembers:
+    settings_payload = _normalize_notification_settings(project.notification_settings)
     if not include_members:
-        return ProjectRead.model_validate(project)
+        return ProjectRead(
+            id=project.id,
+            created_at=project.created_at,
+            updated_at=project.updated_at,
+            name=project.name,
+            key=project.key,
+            description=project.description,
+            created_by=project.created_by,
+            notification_settings=settings_payload,
+        )
 
     active_members = [member for member in project.members if not member.is_deleted]
     members_payload: List[ProjectMemberRead] = [_serialize_member(member) for member in active_members]
@@ -73,6 +138,7 @@ def _serialize_project(project: Project, include_members: bool = False) -> Proje
         key=project.key,
         description=project.description,
         created_by=project.created_by,
+        notification_settings=settings_payload,
         members=members_payload,
     )
 
@@ -168,11 +234,14 @@ def update_project(
     if "description" in updates:
         project.description = updates["description"]
 
+    if "notification_settings" in updates:
+        project.notification_settings = _normalize_notification_settings(updates["notification_settings"])
+
     db.add(project)
     db.commit()
     db.refresh(project)
 
-    response = ProjectRead.model_validate(project)
+    response = _serialize_project(project)
     return success_response(response)
 
 

@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
 class NotifierType(str, enum.Enum):
     WEBHOOK = "webhook"
+    EMAIL = "email"
     FEISHU = "feishu"
     SLACK = "slack"
     WECOM = "wecom"

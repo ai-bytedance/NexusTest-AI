@@ -18,6 +18,11 @@ if TYPE_CHECKING:
 
 class NotifierEventType(str, enum.Enum):
     RUN_FINISHED = "run_finished"
+    IMPORT_DIFF_READY = "import_diff_ready"
+    IMPORT_APPLIED = "import_applied"
+    IMPORT_FAILED = "import_failed"
+    ISSUE_CREATED = "issue_created"
+    ISSUE_CLOSED = "issue_closed"
 
 
 class NotifierEventStatus(str, enum.Enum):

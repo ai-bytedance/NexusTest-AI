@@ -27,6 +27,10 @@ def get_provider(notifier: Notifier) -> NotifierProvider:
         from app.services.notify.webhook import WebhookProvider
 
         return WebhookProvider(notifier)
+    if notifier.type == NotifierType.EMAIL:
+        from app.services.notify.email import EmailProvider
+
+        return EmailProvider(notifier)
     if notifier.type == NotifierType.FEISHU:
         from app.services.notify.feishu import FeishuProvider
 

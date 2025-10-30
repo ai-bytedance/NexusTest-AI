@@ -59,6 +59,15 @@ class Settings(BaseSettings):
     cluster_min_count: int = 2
     notify_max_retries: int = 3
     notify_backoff_seconds: int = 5
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    smtp_from: str | None = None
+    smtp_from_name: str | None = None
+    smtp_tls: bool = True
+    sendgrid_api_key: str | None = None
+    mailgun_api_key: str | None = None
     feishu_signing_secret: str | None = None
     slack_default_channel: str | None = None
     redact_fields: List[str] = ["authorization", "password", "token", "secret"]
@@ -182,6 +191,7 @@ class Settings(BaseSettings):
         "ai_task_retention_days",
         "audit_log_retention_days",
         "report_archive_min_bytes",
+        "smtp_port",
         mode="before",
     )
     @classmethod
