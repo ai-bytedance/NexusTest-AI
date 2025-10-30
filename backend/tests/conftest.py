@@ -68,13 +68,16 @@ app.dependency_overrides[get_db] = override_get_db
 @pytest.fixture(autouse=True)
 def fake_redis_clients(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
     from app.services.reports import progress as progress_service
+    from app.services.rate_limit import engine as rate_limit_engine
 
     server = fakeredis.FakeServer()
     sync_client = fakeredis.FakeRedis(server=server, decode_responses=True)
     async_client = fakeredis.FakeAsyncRedis(server=server, decode_responses=True)
+    sync_client.flushall()
 
     monkeypatch.setattr(progress_service, "get_sync_redis", lambda: sync_client)
     monkeypatch.setattr(progress_service, "get_async_redis", lambda: async_client)
+    monkeypatch.setattr(rate_limit_engine, "_redis_client", lambda: sync_client)
     yield
 
 

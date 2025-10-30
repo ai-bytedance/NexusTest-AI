@@ -4,6 +4,7 @@ from app.models.ai_task import AITask, TaskStatus, TaskType
 from app.models.analytics_fail_cluster import AnalyticsFailCluster, AnalyticsFailClusterStatus
 from app.models.api import Api
 from app.models.api_archive import ApiArchive, ApiArchiveChangeType
+from app.models.api_token import ApiToken
 from app.models.audit_log import AuditLog
 from app.models.backup_run import BackupRun, BackupStatus
 from app.models.dataset import Dataset, DatasetType
@@ -30,6 +31,7 @@ from app.models.organization import Organization, OrganizationMembership, Organi
 from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
 from app.models.project_team_role import ProjectTeamRole
+from app.models.rate_limit_policy import RateLimitPolicy
 from app.models.auto_ticket_rule import AutoTicketRule
 from app.models.team import Team
 from app.models.team_membership import TeamMembership, TeamRole
@@ -51,6 +53,7 @@ __all__ = [
     "Api",
     "ApiArchive",
     "ApiArchiveChangeType",
+    "ApiToken",
     "AuditLog",
     "BackupRun",
     "BackupStatus",
@@ -89,6 +92,7 @@ __all__ = [
     "ProjectMember",
     "ProjectRole",
     "ProjectTeamRole",
+    "RateLimitPolicy",
     "ReportEntityType",
     "ReportStatus",
     "TaskStatus",

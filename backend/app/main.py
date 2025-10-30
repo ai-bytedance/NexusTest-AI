@@ -17,13 +17,15 @@ from app.api.routes import (
     health,
     importers,
     integrations,
+    notifiers,
     plans,
     progress,
     projects,
+    rate_limits,
     reports,
     test_cases,
     test_suites,
-    notifiers,
+    tokens,
     metrics,
     utils,
     version,
@@ -71,6 +73,8 @@ def create_app() -> FastAPI:
     app.include_router(notifiers.router, prefix="/api/v1")
     app.include_router(importers.router, prefix="/api/v1")
     app.include_router(integrations.router, prefix="/api/v1")
+    app.include_router(rate_limits.router, prefix="/api/v1")
+    app.include_router(tokens.router, prefix="/api/v1")
     app.include_router(reports.router, prefix="/api/v1")
     app.include_router(exports.router, prefix="/api/v1")
     app.include_router(utils.router, prefix="/api/v1")
