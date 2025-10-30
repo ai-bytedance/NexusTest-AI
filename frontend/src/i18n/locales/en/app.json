@@ -1,0 +1,13 @@
+{
+  "title": "Automation Console",
+  "welcome": "Welcome, {{email}}",
+  "logout": "Logout",
+  "projectSelector": "Select Project",
+  "languageLabel": "Language",
+  "language": {
+    "zh": "中文",
+    "en": "English"
+  },
+  "helpLink": "Help Center",
+  "docs": "Documentation"
+}

@@ -11,7 +11,7 @@ interface ProjectSelectorProps {
 }
 
 export function ProjectSelector({ value, onChange, style, allowClear = false }: ProjectSelectorProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation("app");
   const { projects, selectedProjectId, setSelectedProject, loading, refresh } = useProjects({
     autoLoad: false,
   });
@@ -38,7 +38,7 @@ export function ProjectSelector({ value, onChange, style, allowClear = false }: 
       showSearch
       allowClear={allowClear}
       value={currentValue}
-      placeholder={t("app.projectSelector")}
+      placeholder={t("projectSelector")}
       options={options}
       onChange={(newValue) => handleChange(newValue ?? null)}
       loading={loading}

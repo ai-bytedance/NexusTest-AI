@@ -1,0 +1,17 @@
+{
+  "title": "测试套件列表",
+  "create": "新建测试套件",
+  "edit": "编辑测试套件",
+  "name": "套件名称",
+  "description": "描述",
+  "steps": "执行步骤",
+  "variables": "变量",
+  "run": "执行套件",
+  "empty": "当前暂无测试套件。",
+  "deleteConfirm": "确认删除该测试套件？",
+  "templates": {
+    "variables": {
+      "basic": "默认变量配置"
+    }
+  }
+}

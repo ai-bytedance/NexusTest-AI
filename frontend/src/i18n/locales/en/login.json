@@ -1,0 +1,8 @@
+{
+  "title": "Login",
+  "email": "Email",
+  "password": "Password",
+  "submit": "Sign In",
+  "remember": "Remember me",
+  "success": "Logged in successfully"
+}

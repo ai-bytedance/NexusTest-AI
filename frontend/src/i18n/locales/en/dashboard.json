@@ -1,0 +1,10 @@
+{
+  "title": "14-day Trend",
+  "empty": "Please select a project to view trends",
+  "totalExecutions": "Total Executions",
+  "passRate": "Pass Rate",
+  "passed": "Passed",
+  "failed": "Failed",
+  "error": "Error",
+  "successRate": "Success Rate"
+}

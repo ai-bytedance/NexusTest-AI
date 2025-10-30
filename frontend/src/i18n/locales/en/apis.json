@@ -1,0 +1,42 @@
+{
+  "title": "APIs",
+  "create": "Create API",
+  "edit": "Edit API",
+  "importOpenAPI": "Import OpenAPI",
+  "importPostman": "Import Postman",
+  "name": "Name",
+  "method": "Method",
+  "path": "Path",
+  "version": "Version",
+  "group": "Group",
+  "headers": "Headers",
+  "params": "Params",
+  "body": "Body",
+  "mock": "Mock",
+  "headersHint": "Key/value pairs sent as request headers.",
+  "paramsHint": "Query string parameters appended to the URL.",
+  "bodyHint": "JSON payload sent in the request body.",
+  "mockHint": "Sample mock response for quick assertions.",
+  "empty": "No APIs for this project yet.",
+  "deleteConfirm": "Delete this API definition?",
+  "schema": {
+    "headers": "Headers schema",
+    "params": "Params schema",
+    "body": "Request body schema",
+    "mock": "Mock schema"
+  },
+  "templates": {
+    "headers": {
+      "basic": "Basic authorization header"
+    },
+    "params": {
+      "pagination": "Pagination params"
+    },
+    "body": {
+      "json": "JSON payload"
+    },
+    "mock": {
+      "success": "Success response"
+    }
+  }
+}

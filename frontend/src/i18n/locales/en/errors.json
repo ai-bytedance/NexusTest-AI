@@ -1,0 +1,8 @@
+{
+  "unauthorized": "Your session has expired. Please sign in again.",
+  "forbidden": "You do not have permission to perform this action.",
+  "notFound": "The requested resource was not found.",
+  "validationFailed": "Some fields need your attention.",
+  "network": "Network error. Please try again later.",
+  "unknown": "Unexpected error."
+}

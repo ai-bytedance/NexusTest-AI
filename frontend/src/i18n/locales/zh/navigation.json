@@ -1,0 +1,8 @@
+{
+  "dashboard": "仪表盘",
+  "projects": "项目管理",
+  "apis": "接口管理",
+  "testCases": "测试用例",
+  "testSuites": "测试套件",
+  "reports": "报告中心"
+}

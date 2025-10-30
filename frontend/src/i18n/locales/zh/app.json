@@ -1,0 +1,13 @@
+{
+  "title": "自动化测试控制台",
+  "welcome": "欢迎，{{email}}",
+  "logout": "退出登录",
+  "projectSelector": "选择项目",
+  "languageLabel": "语言",
+  "language": {
+    "zh": "中文",
+    "en": "English"
+  },
+  "helpLink": "帮助中心",
+  "docs": "文档"
+}

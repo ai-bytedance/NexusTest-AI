@@ -1,0 +1,13 @@
+{
+  "toolbar": {
+    "format": "格式化",
+    "minify": "压缩",
+    "copy": "复制",
+    "schema": "Schema",
+    "sample": "示例"
+  },
+  "validation": {
+    "invalidJson": "JSON 格式错误",
+    "schemaMismatch": "内容不符合 Schema 定义"
+  }
+}
