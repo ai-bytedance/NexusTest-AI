@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import ForeignKey, String, Text
+from sqlalchemy import ForeignKey, String, Text, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, BaseModel
@@ -66,6 +67,12 @@ class Project(BaseModel, Base):
         ForeignKey("rate_limit_policies.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
+    )
+    notification_settings: Mapped[dict[str, Any]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=dict,
+        server_default=text("'{}'::jsonb"),
     )
 
     organization: Mapped["Organization" | None] = relationship("Organization", back_populates="projects")

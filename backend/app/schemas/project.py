@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import List
+from typing import Any, List
 from uuid import UUID
 
 from pydantic import EmailStr, Field, field_validator
@@ -34,6 +34,7 @@ class ProjectUpdate(ORMModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     key: str | None = Field(default=None, min_length=3, max_length=32)
     description: str | None = Field(default=None, max_length=5000)
+    notification_settings: dict[str, Any] | None = None
 
     @field_validator("key")
     @classmethod
@@ -51,6 +52,7 @@ class ProjectRead(IdentifierModel):
     key: str
     description: str | None
     created_by: UUID
+    notification_settings: dict[str, Any]
 
 
 class ProjectMemberUser(ORMModel):
