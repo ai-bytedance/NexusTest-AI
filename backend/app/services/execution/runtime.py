@@ -224,7 +224,7 @@ class ExecutionPolicyRuntime:
         threshold = self.snapshot.circuit_breaker_threshold
         if threshold <= 0:
             return None
-        cooldown = self.snapshot.retry_backoff.cooldown_seconds
+        cooldown = float(self.snapshot.circuit_breaker_window_seconds)
         key = self.snapshot.key
         with self._circuit_lock:
             registry = self._circuit_registries.get(key)

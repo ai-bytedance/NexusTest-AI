@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from app.models.api import Api
     from app.models.dataset import Dataset
     from app.models.environment import Environment
+    from app.models.execution_policy import ExecutionPolicy
     from app.models.execution_queue import ExecutionQueue
     from app.models.project import Project
     from app.models.user import User
@@ -66,6 +67,12 @@ class TestCase(BaseModel, Base):
         nullable=True,
         index=True,
     )
+    policy_id: Mapped[uuid.UUID | None] = mapped_column(
+        "policy_id",
+        ForeignKey("execution_policies.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     agent_selection_policy: Mapped[AgentSelectionPolicy] = mapped_column(
         Enum(AgentSelectionPolicy, name="agent_selection_policy_enum", native_enum=True),
         nullable=False,
@@ -100,4 +107,5 @@ class TestCase(BaseModel, Base):
     environment: Mapped["Environment | None"] = relationship("Environment", back_populates="test_cases")
     dataset: Mapped["Dataset | None"] = relationship("Dataset", back_populates="test_cases")
     queue: Mapped["ExecutionQueue" | None] = relationship("ExecutionQueue", back_populates="test_cases")
+    policy: Mapped["ExecutionPolicy" | None] = relationship("ExecutionPolicy")
     creator: Mapped["User"] = relationship("User", back_populates="test_cases_created")
