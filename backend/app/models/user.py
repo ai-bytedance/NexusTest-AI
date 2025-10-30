@@ -14,9 +14,12 @@ if TYPE_CHECKING:
     from app.models.dataset import Dataset
     from app.models.environment import Environment
     from app.models.execution_plan import ExecutionPlan
+    from app.models.integration import Integration
+    from app.models.issue import Issue, ReportIssueLink
     from app.models.notifier import Notifier
     from app.models.project import Project
     from app.models.project_member import ProjectMember
+    from app.models.auto_ticket_rule import AutoTicketRule
     from app.models.test_case import TestCase
     from app.models.test_suite import TestSuite
     from app.models.organization import OrganizationMembership
@@ -72,6 +75,22 @@ class User(BaseModel, Base):
     )
     notifiers_created: Mapped[list["Notifier"]] = relationship(
         "Notifier",
+        back_populates="creator",
+    )
+    integrations_created: Mapped[list["Integration"]] = relationship(
+        "Integration",
+        back_populates="creator",
+    )
+    issues_created: Mapped[list["Issue"]] = relationship(
+        "Issue",
+        back_populates="creator",
+    )
+    issue_links_created: Mapped[list["ReportIssueLink"]] = relationship(
+        "ReportIssueLink",
+        back_populates="linker",
+    )
+    auto_ticket_rules_created: Mapped[list["AutoTicketRule"]] = relationship(
+        "AutoTicketRule",
         back_populates="creator",
     )
     organization_memberships: Mapped[list["OrganizationMembership"]] = relationship(

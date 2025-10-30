@@ -19,9 +19,12 @@ if TYPE_CHECKING:
     from app.models.execution_policy import ExecutionPolicy
     from app.models.execution_queue import ExecutionQueue
     from app.models.import_source import ImportRun, ImportSource
+    from app.models.integration import Integration
+    from app.models.issue import Issue
     from app.models.notifier import Notifier
     from app.models.notifier_event import NotifierEvent
     from app.models.organization import Organization
+    from app.models.auto_ticket_rule import AutoTicketRule
     from app.models.project_member import ProjectMember
     from app.models.project_team_role import ProjectTeamRole
     from app.models.test_case import TestCase
@@ -118,6 +121,21 @@ class Project(BaseModel, Base):
     )
     notifier_events: Mapped[list["NotifierEvent"]] = relationship(
         "NotifierEvent",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+    integrations: Mapped[list["Integration"]] = relationship(
+        "Integration",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+    issues: Mapped[list["Issue"]] = relationship(
+        "Issue",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+    auto_ticket_rules: Mapped[list["AutoTicketRule"]] = relationship(
+        "AutoTicketRule",
         back_populates="project",
         cascade="all, delete-orphan",
     )
