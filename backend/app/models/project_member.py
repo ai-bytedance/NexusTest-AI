@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import enum
 import uuid
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Enum, ForeignKey, UniqueConstraint, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, BaseModel
@@ -40,6 +41,12 @@ class ProjectMember(BaseModel, Base):
         nullable=False,
         default=ProjectRole.MEMBER,
         server_default=text("'member'::project_role_enum"),
+    )
+    settings: Mapped[dict[str, Any]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=dict,
+        server_default=text("'{}'::jsonb"),
     )
 
     project: Mapped["Project"] = relationship("Project", back_populates="members")

@@ -23,6 +23,7 @@ class TestCaseCreate(TestCaseBase):
     environment_id: UUID | None = None
     dataset_id: UUID | None = None
     queue_id: UUID | None = None
+    policy_id: UUID | None = None
     agent_selection_policy: AgentSelectionPolicy = AgentSelectionPolicy.ROUND_ROBIN
     agent_tags: list[str] = Field(default_factory=list)
     param_mapping: dict[str, Any] = Field(default_factory=dict)
@@ -37,6 +38,7 @@ class TestCaseUpdate(ORMModel):
     environment_id: UUID | None = None
     dataset_id: UUID | None = None
     queue_id: UUID | None = None
+    policy_id: UUID | None = None
     agent_selection_policy: AgentSelectionPolicy | None = None
     agent_tags: list[str] | None = None
     param_mapping: dict[str, Any] | None = None
@@ -52,6 +54,7 @@ class TestCaseRead(IdentifierModel):
     environment_id: UUID | None
     dataset_id: UUID | None
     queue_id: UUID | None
+    policy_id: UUID | None
     agent_selection_policy: AgentSelectionPolicy
     agent_tags: list[str]
     param_mapping: dict[str, Any]

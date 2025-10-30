@@ -10,6 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, BaseModel
 
 if TYPE_CHECKING:
+    from app.models.execution_policy import ExecutionPolicy
     from app.models.execution_queue import ExecutionQueue
     from app.models.project import Project
     from app.models.test_case import TestCase
@@ -45,6 +46,11 @@ class Environment(BaseModel, Base):
         nullable=True,
         index=True,
     )
+    default_policy_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("execution_policies.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     created_by: Mapped[uuid.UUID] = mapped_column(
         "created_by",
         ForeignKey("users.id", ondelete="RESTRICT"),
@@ -63,6 +69,11 @@ class Environment(BaseModel, Base):
     default_queue: Mapped["ExecutionQueue" | None] = relationship(
         "ExecutionQueue",
         foreign_keys=[default_queue_id],
+        post_update=True,
+    )
+    default_policy: Mapped["ExecutionPolicy" | None] = relationship(
+        "ExecutionPolicy",
+        foreign_keys=[default_policy_id],
         post_update=True,
     )
 

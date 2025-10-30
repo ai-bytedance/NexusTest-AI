@@ -12,6 +12,7 @@ from app.db.base import Base, BaseModel
 
 if TYPE_CHECKING:
     from app.models.environment import Environment
+    from app.models.execution_policy import ExecutionPolicy
     from app.models.project import Project
     from app.models.test_case import TestCase
     from app.models.test_report import TestReport
@@ -77,6 +78,7 @@ class ExecutionQueue(BaseModel, Base):
     test_cases: Mapped[list["TestCase"]] = relationship("TestCase", back_populates="queue")
     test_suites: Mapped[list["TestSuite"]] = relationship("TestSuite", back_populates="queue")
     reports: Mapped[list["TestReport"]] = relationship("TestReport", back_populates="queue")
+    policies: Mapped[list["ExecutionPolicy"]] = relationship("ExecutionPolicy", back_populates="queue")
 
 
 __all__ = [
