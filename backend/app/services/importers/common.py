@@ -54,6 +54,7 @@ class ImportCandidate:
             "mock_example": self.mock_example,
             "metadata": self.metadata,
             "source_key": self.source_key,
+            "fingerprint": self.fingerprint,
         }
 
 

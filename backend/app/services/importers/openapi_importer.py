@@ -16,6 +16,7 @@ from app.schemas.api import HTTPMethod
 from app.schemas.importers import ImportSummary, OpenAPIImportOptions
 from app.services.importers.common import ImportCandidate, compute_hash, normalize_method, normalize_path
 from app.services.importers.manager import ImportManager, SourceDescriptor
+from app.services.importers.workflow import SourceDescriptor as WorkflowSourceDescriptor
 
 logger = logging.getLogger(__name__)
 
@@ -169,6 +170,36 @@ class OpenAPISpecResolver:
             if current is None:
                 raise KeyError(pointer)
         return current
+
+
+def build_openapi_descriptor(
+    document: dict[str, Any],
+    *,
+    options: OpenAPIImportOptions | None = None,
+    source_type: ImportSourceType,
+    location: str | None,
+    base_url: str | None = None,
+    existing_source: ImportSource | None = None,
+) -> tuple[list[ImportCandidate], WorkflowSourceDescriptor]:
+    normalized_options = options or OpenAPIImportOptions()
+    resolver = OpenAPISpecResolver(
+        document,
+        base_url=base_url,
+        resolve_remote=normalized_options.resolve_remote_refs,
+    )
+    parser = OpenAPIParser(document, options=normalized_options, resolver=resolver, base_url=base_url)
+    candidates, metadata = parser.parse()
+    descriptor = WorkflowSourceDescriptor(
+        source_type=source_type,
+        location=location,
+        options=normalized_options.model_dump(mode="json", exclude_none=True),
+        payload_snapshot=document,
+        metadata=metadata,
+        payload_hash=compute_hash(document),
+        base_url=base_url,
+        existing=existing_source,
+    )
+    return candidates, descriptor
 
 
 def merge_objects(base: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:

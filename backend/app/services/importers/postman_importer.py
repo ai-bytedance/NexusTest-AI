@@ -17,6 +17,7 @@ from app.schemas.api import HTTPMethod
 from app.schemas.importers import ImportSummary, PostmanImportOptions
 from app.services.importers.common import ImportCandidate, compute_hash, normalize_method, normalize_path
 from app.services.importers.manager import ImportManager, SourceDescriptor
+from app.services.importers.workflow import SourceDescriptor as WorkflowSourceDescriptor
 
 logger = logging.getLogger(__name__)
 
@@ -414,6 +415,29 @@ class PostmanParser:
         if not self.options.resolve_variables:
             return folder_stack[-1]
         return " / ".join(folder_stack)
+
+
+def build_postman_descriptor(
+    collection: dict[str, Any],
+    *,
+    options: PostmanImportOptions | None = None,
+    source_type: ImportSourceType,
+    location: str | None,
+    existing_source: ImportSource | None = None,
+) -> tuple[list[ImportCandidate], WorkflowSourceDescriptor]:
+    normalized_options = options or PostmanImportOptions()
+    parser = PostmanParser(collection, options=normalized_options)
+    candidates, metadata = parser.parse()
+    descriptor = WorkflowSourceDescriptor(
+        source_type=source_type,
+        location=location,
+        options=normalized_options.model_dump(mode="json", exclude_none=True),
+        payload_snapshot=collection,
+        metadata=metadata,
+        payload_hash=compute_hash(collection),
+        existing=existing_source,
+    )
+    return candidates, descriptor
 
 
 def import_postman_collection(
