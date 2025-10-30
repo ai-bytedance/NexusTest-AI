@@ -1,0 +1,18 @@
+{
+  "title": "Projects",
+  "create": "Create Project",
+  "edit": "Edit Project",
+  "members": "Members",
+  "name": "Name",
+  "key": "Key",
+  "description": "Description",
+  "createdAt": "Created At",
+  "actions": "Actions",
+  "manageMembers": "Manage Members",
+  "addMember": "Add Member",
+  "memberEmail": "Member Email",
+  "memberRole": "Role",
+  "removeConfirm": "Remove this member?",
+  "noProjects": "No projects yet. Create one first.",
+  "refresh": "Refresh"
+}

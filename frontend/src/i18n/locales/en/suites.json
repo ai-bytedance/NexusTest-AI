@@ -1,0 +1,17 @@
+{
+  "title": "Test Suites",
+  "create": "Create Suite",
+  "edit": "Edit Suite",
+  "name": "Name",
+  "description": "Description",
+  "steps": "Steps",
+  "variables": "Variables",
+  "run": "Run Suite",
+  "empty": "No suites defined yet.",
+  "deleteConfirm": "Delete this suite?",
+  "templates": {
+    "variables": {
+      "basic": "Default variables"
+    }
+  }
+}

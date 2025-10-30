@@ -1,0 +1,10 @@
+{
+  "title": "近14天执行趋势",
+  "empty": "请选择一个项目以查看趋势数据",
+  "totalExecutions": "执行总数",
+  "passRate": "通过率",
+  "passed": "通过",
+  "failed": "失败",
+  "error": "异常",
+  "successRate": "成功率"
+}

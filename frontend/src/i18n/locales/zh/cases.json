@@ -1,0 +1,26 @@
+{
+  "title": "测试用例列表",
+  "create": "新建测试用例",
+  "edit": "编辑测试用例",
+  "name": "用例名称",
+  "api": "关联接口",
+  "inputs": "输入",
+  "expected": "期望结果",
+  "assertions": "断言配置",
+  "enabled": "启用",
+  "run": "执行用例",
+  "empty": "当前暂无测试用例。",
+  "deleteConfirm": "确认删除该测试用例？",
+  "inputsHint": "执行用例时传入的变量。",
+  "expectedHint": "预期的响应快照。",
+  "assertionsHint": "需要满足的断言规则。",
+  "templates": {
+    "inputs": {
+      "basic": "基础输入"
+    },
+    "assertions": {
+      "status": "状态码断言",
+      "jsonPath": "JSON Path 断言"
+    }
+  }
+}

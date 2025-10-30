@@ -1,21 +1,25 @@
-import { Layout, Menu, Space, Typography, Button, theme } from "antd";
+import { Layout, Menu, Space, Typography, Button, theme, Tooltip } from "antd";
 import {
   AreaChartOutlined,
   ClusterOutlined,
   FileSearchOutlined,
   LogoutOutlined,
+  QuestionCircleOutlined,
 } from "@ant-design/icons";
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/stores/auth";
 import { useProjects } from "@/hooks/useProjects";
 import ProjectSelector from "@/components/ProjectSelector";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { FullscreenLoader } from "@/components/states/FullscreenLoader";
 
 const { Header, Content, Sider } = Layout;
+const HELP_URL = "https://docs.example.com/ui-i18n";
 
 export function AppLayout() {
-  const { t } = useTranslation();
+  const { t } = useTranslation(["app", "navigation", "projects", "common"]);
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams();
@@ -26,7 +30,14 @@ export function AppLayout() {
     clearAuth: state.clearAuth,
   }));
 
-  const pathKey = (() => {
+  useEffect(() => {
+    const projectId = params.projectId || params.id;
+    if (projectId) {
+      setSelectedProject(projectId);
+    }
+  }, [params.projectId, params.id, setSelectedProject]);
+
+  const pathKey = useMemo(() => {
     if (location.pathname.startsWith("/projects")) {
       return "/projects";
     }
@@ -34,14 +45,7 @@ export function AppLayout() {
       return "/reports";
     }
     return "/";
-  })();
-
-  useEffect(() => {
-    const projectId = params.projectId || params.id;
-    if (projectId) {
-      setSelectedProject(projectId);
-    }
-  }, [params.projectId, params.id, setSelectedProject]);
+  }, [location.pathname]);
 
   const handleLogout = () => {
     clearAuth();
@@ -62,16 +66,16 @@ export function AppLayout() {
             fontWeight: 600,
           }}
         >
-          {t("app.title")}
+          {t("app:title")}
         </div>
         <Menu
           theme="dark"
           mode="inline"
           selectedKeys={[pathKey]}
           items={[
-            { key: "/", icon: <AreaChartOutlined />, label: t("navigation.dashboard") },
-            { key: "/projects", icon: <ClusterOutlined />, label: t("navigation.projects") },
-            { key: "/reports", icon: <FileSearchOutlined />, label: t("navigation.reports") },
+            { key: "/", icon: <AreaChartOutlined />, label: t("navigation:dashboard") },
+            { key: "/projects", icon: <ClusterOutlined />, label: t("navigation:projects") },
+            { key: "/reports", icon: <FileSearchOutlined />, label: t("navigation:reports") },
           ]}
           onClick={({ key }) => navigate(key)}
         />
@@ -87,18 +91,30 @@ export function AppLayout() {
             gap: 16,
           }}
         >
-          <Space size={16}>
+          <Space size={16} wrap>
             <ProjectSelector value={selectedProjectId} />
             <Typography.Text type="secondary">
               {projects.length > 0
-                ? `${projects.length} ${t("navigation.projects")}`
-                : t("projects.noProjects")}
+                ? `${projects.length} ${t("navigation:projects")}`
+                : t("projects:noProjects")}
             </Typography.Text>
           </Space>
-          <Space size={16}>
-            {userEmail && <Typography.Text>{t("app.welcome", { email: userEmail })}</Typography.Text>}
+          <Space size={16} align="center">
+            <LanguageSwitcher />
+            <Tooltip title={t("app:docs")}
+              placement="bottom"
+            >
+              <Button
+                type="text"
+                icon={<QuestionCircleOutlined />}
+                href={HELP_URL}
+                target="_blank"
+                rel="noreferrer"
+              />
+            </Tooltip>
+            {userEmail && <Typography.Text>{t("app:welcome", { email: userEmail })}</Typography.Text>}
             <Button icon={<LogoutOutlined />} onClick={handleLogout} type="primary" danger>
-              {t("app.logout")}
+              {t("app:logout")}
             </Button>
           </Space>
         </Header>
@@ -111,7 +127,7 @@ export function AppLayout() {
               padding: 24,
             }}
           >
-            <Suspense fallback={<div style={{ textAlign: "center", padding: 48 }}>Loading...</div>}>
+            <Suspense fallback={<FullscreenLoader />}>
               <Outlet />
             </Suspense>
           </div>

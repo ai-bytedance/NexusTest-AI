@@ -1,0 +1,26 @@
+{
+  "title": "Test Cases",
+  "create": "Create Case",
+  "edit": "Edit Case",
+  "name": "Name",
+  "api": "API",
+  "inputs": "Inputs",
+  "expected": "Expected",
+  "assertions": "Assertions",
+  "enabled": "Enabled",
+  "run": "Run Case",
+  "empty": "No test cases defined yet.",
+  "deleteConfirm": "Delete this test case?",
+  "inputsHint": "Input variables passed to the test.",
+  "expectedHint": "Expected response snapshot.",
+  "assertionsHint": "Assertion templates that must pass.",
+  "templates": {
+    "inputs": {
+      "basic": "Basic input payload"
+    },
+    "assertions": {
+      "status": "HTTP status assertion",
+      "jsonPath": "JSON path assertion"
+    }
+  }
+}

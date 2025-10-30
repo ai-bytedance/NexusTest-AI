@@ -1,0 +1,8 @@
+{
+  "unauthorized": "登录状态已过期，请重新登录。",
+  "forbidden": "您没有执行此操作的权限。",
+  "notFound": "未找到请求的资源。",
+  "validationFailed": "请检查表单中提示的字段。",
+  "network": "网络异常，请稍后重试。",
+  "unknown": "发生未知错误。"
+}

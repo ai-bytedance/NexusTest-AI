@@ -1,0 +1,42 @@
+{
+  "title": "接口列表",
+  "create": "新建接口",
+  "edit": "编辑接口",
+  "importOpenAPI": "导入 OpenAPI",
+  "importPostman": "导入 Postman",
+  "name": "接口名称",
+  "method": "请求方法",
+  "path": "请求路径",
+  "version": "版本",
+  "group": "分组",
+  "headers": "请求头",
+  "params": "查询参数",
+  "body": "请求体",
+  "mock": "Mock 示例",
+  "headersHint": "以键值对形式发送的请求头。",
+  "paramsHint": "附加到 URL 的查询参数。",
+  "bodyHint": "请求体中发送的 JSON 载荷。",
+  "mockHint": "用于断言的示例响应。",
+  "empty": "当前项目暂无接口。",
+  "deleteConfirm": "确认删除该接口定义？",
+  "schema": {
+    "headers": "请求头 Schema",
+    "params": "查询参数 Schema",
+    "body": "请求体 Schema",
+    "mock": "Mock Schema"
+  },
+  "templates": {
+    "headers": {
+      "basic": "基础认证头"
+    },
+    "params": {
+      "pagination": "分页参数"
+    },
+    "body": {
+      "json": "JSON 请求示例"
+    },
+    "mock": {
+      "success": "成功响应示例"
+    }
+  }
+}

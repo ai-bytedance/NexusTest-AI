@@ -1,0 +1,13 @@
+{
+  "toolbar": {
+    "format": "Format",
+    "minify": "Minify",
+    "copy": "Copy",
+    "schema": "Schema",
+    "sample": "Sample"
+  },
+  "validation": {
+    "invalidJson": "Invalid JSON",
+    "schemaMismatch": "The content does not match the schema"
+  }
+}
