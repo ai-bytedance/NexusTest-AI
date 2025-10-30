@@ -22,8 +22,11 @@ class NotifierEventType(str, enum.Enum):
 
 class NotifierEventStatus(str, enum.Enum):
     PENDING = "pending"
+    DELIVERING = "delivering"
+    RETRYING = "retrying"
     SUCCESS = "success"
     FAILED = "failed"
+    DEAD_LETTER = "dead_letter"
 
 
 class NotifierEvent(BaseModel, Base):
@@ -62,6 +65,7 @@ class NotifierEvent(BaseModel, Base):
     )
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default=text("0"))
+    last_attempted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     notifier: Mapped["Notifier"] = relationship("Notifier", back_populates="events")

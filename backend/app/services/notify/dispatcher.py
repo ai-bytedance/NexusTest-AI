@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import select
@@ -8,9 +9,8 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.logging import get_logger
 from app.models import ExecutionPlan, Notifier, NotifierEvent, NotifierEventStatus, NotifierEventType, Project, TestCase, TestSuite
-from app.models.notifier import NotifierType
 from app.models.test_report import ReportEntityType, TestReport
-from app.services.notify.templates import render_run_finished_message
+from app.services.notify.templates import NotificationTemplate, render_run_finished_template
 from app.services.reports.formatter import format_report_summary
 
 logger = get_logger()
@@ -27,6 +27,85 @@ def _load_notifiers(session: Session, project_id: uuid.UUID) -> list[Notifier]:
         .options(selectinload(Notifier.project))
     )
     return session.execute(stmt).scalars().unique().all()
+
+
+def _normalize_status_filters(raw: Any) -> set[str]:
+    statuses: set[str] = set()
+    if raw is None:
+        return statuses
+    if isinstance(raw, str):
+        candidates = raw.split(",")
+    elif isinstance(raw, (list, tuple, set)):
+        candidates = raw
+    else:
+        return statuses
+    for item in candidates:
+        if not isinstance(item, str):
+            continue
+        value = item.strip().lower()
+        if value:
+            statuses.add(value)
+    return statuses
+
+
+def _coerce_fraction(value: Any) -> float | None:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    if numeric < 0:
+        numeric = 0.0
+    if numeric > 1:
+        numeric = numeric / 100.0
+    if numeric > 1:
+        numeric = 1.0
+    return max(min(numeric, 1.0), 0.0)
+
+
+
+def _extract_pass_rate(payload: dict[str, Any]) -> float | None:
+    summary = payload.get("summary") if isinstance(payload.get("summary"), dict) else {}
+    candidates = (
+        payload.get("pass_rate"),
+        summary.get("pass_rate") if isinstance(summary, dict) else None,
+    )
+    for candidate in candidates:
+        fraction = _coerce_fraction(candidate)
+        if fraction is not None:
+            return fraction
+    return None
+
+
+def _should_send_notification(notifier: Notifier, payload: dict[str, Any]) -> tuple[bool, str | None]:
+    config = notifier.config if isinstance(notifier.config, dict) else {}
+    triggers = config.get("triggers") if isinstance(config.get("triggers"), dict) else {}
+
+    status_filters = _normalize_status_filters(config.get("statuses"))
+    status_filters |= _normalize_status_filters(triggers.get("statuses"))
+
+    if bool(config.get("only_on_failures") or triggers.get("only_on_failures")):
+        status_filters |= {"failed", "error"}
+
+    status = str(payload.get("status") or "").strip().lower()
+    if status_filters and status not in status_filters:
+        return False, "status_filter"
+
+    threshold_value = (
+        triggers.get("pass_rate_below")
+        if triggers.get("pass_rate_below") is not None
+        else config.get("pass_rate_below")
+    )
+    threshold = _coerce_fraction(threshold_value)
+    if threshold is not None and threshold <= 0:
+        threshold = None
+    if threshold is not None:
+        observed = _extract_pass_rate(payload)
+        if observed is None:
+            observed = 1.0
+        if observed >= threshold:
+            return False, "pass_rate_threshold"
+
+    return True, None
 
 
 def _resolve_entity_details(session: Session, report: TestReport) -> dict[str, Any]:
@@ -87,7 +166,14 @@ def build_run_finished_payload(session: Session, report: TestReport) -> dict[str
         "report_url": _build_report_url(report),
     }
 
-    payload["message"] = render_run_finished_message(payload)
+    template = render_run_finished_template(payload)
+    if isinstance(template, NotificationTemplate):
+        payload["message"] = template.text
+        payload["text"] = template.text
+        payload["markdown"] = template.markdown
+        payload["locale"] = template.locale
+    else:  # pragma: no cover - defensive
+        payload["message"] = str(template)
     return payload
 
 
@@ -109,16 +195,35 @@ def queue_run_finished_notifications(session: Session, report: TestReport) -> li
     events: list[NotifierEvent] = []
 
     for notifier in notifiers:
+        should_send, reason = _should_send_notification(notifier, payload)
+        if not should_send:
+            logger.info(
+                "notifier_event_skipped",
+                notifier_id=str(notifier.id),
+                project_id=str(report.project_id),
+                report_id=str(report.id),
+                reason=reason or "unknown",
+            )
+            continue
+
+        event_payload = dict(payload)
         event = NotifierEvent(
             project_id=report.project_id,
             notifier_id=notifier.id,
             event=NotifierEventType.RUN_FINISHED,
-            payload=payload,
+            payload=event_payload,
             status=NotifierEventStatus.PENDING,
         )
-        event.created_at = now  # ensure deterministic timestamps for tests
         session.add(event)
         events.append(event)
+
+    if not events:
+        logger.info(
+            "notifier_events_skipped_all",
+            project_id=str(report.project_id),
+            report_id=str(report.id),
+        )
+        return []
 
     session.flush()
 

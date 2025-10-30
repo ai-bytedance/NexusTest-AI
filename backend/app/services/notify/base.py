@@ -35,6 +35,14 @@ def get_provider(notifier: Notifier) -> NotifierProvider:
         from app.services.notify.slack import SlackProvider
 
         return SlackProvider(notifier)
+    if notifier.type == NotifierType.WECOM:
+        from app.services.notify.wecom import WeComProvider
+
+        return WeComProvider(notifier)
+    if notifier.type == NotifierType.DINGTALK:
+        from app.services.notify.dingtalk import DingTalkProvider
+
+        return DingTalkProvider(notifier)
     raise NotifierSendError(f"Unsupported notifier type: {notifier.type}")
 
 

@@ -50,6 +50,9 @@ class NotifierEventRead(IdentifierModel):
     status: NotifierEventStatus
     error_message: str | None
     retry_count: int
+    created_at: datetime
+    updated_at: datetime
+    last_attempted_at: datetime | None
     processed_at: datetime | None
 
 
