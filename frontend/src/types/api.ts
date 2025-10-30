@@ -112,6 +112,10 @@ export interface ReportSummary {
   created_at: string;
   updated_at: string;
   summary: string | null;
+  failure_signature: string | null;
+  failure_excerpt: string | null;
+  is_flaky: boolean;
+  flakiness_score: number | null;
   assertions_total: number;
   assertions_passed: number;
   pass_rate: number;

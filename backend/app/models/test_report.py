@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import BigInteger, DateTime, Enum, ForeignKey, Index, Text, text
+from sqlalchemy import BigInteger, Boolean, DateTime, Enum, Float, ForeignKey, Index, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -50,6 +50,7 @@ class TestReport(BaseModel, Base):
         Index("ix_test_reports_response_payload_gin", "response_payload", postgresql_using="gin"),
         Index("ix_test_reports_assertions_result_gin", "assertions_result", postgresql_using="gin"),
         Index("ix_test_reports_metrics_gin", "metrics", postgresql_using="gin"),
+        Index("ix_test_reports_failure_signature", "project_id", "failure_signature"),
     )
 
     project_id: Mapped[uuid.UUID] = mapped_column(
@@ -100,6 +101,18 @@ class TestReport(BaseModel, Base):
         nullable=False,
         server_default=text("'{}'::jsonb"),
     )
+    failure_signature: Mapped[str | None] = mapped_column(
+        String(128),
+        nullable=True,
+    )
+    failure_excerpt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_flaky: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=text("FALSE"),
+    )
+    flakiness_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     parent_report_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),

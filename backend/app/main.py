@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.routes import (
     ai,
+    analytics,
     apis,
     auth,
     datasets,
@@ -57,6 +58,7 @@ def create_app() -> FastAPI:
 
     app.include_router(projects.router, prefix="/api/v1")
     app.include_router(ai.router, prefix="/api/v1")
+    app.include_router(analytics.router, prefix="/api/v1")
     app.include_router(apis.router, prefix="/api/v1")
     app.include_router(environments.router, prefix="/api/v1")
     app.include_router(datasets.router, prefix="/api/v1")

@@ -27,7 +27,11 @@ def create_celery_app() -> Celery:
             "refresh_execution_plans": {
                 "task": "app.tasks.scheduler.refresh_execution_plans",
                 "schedule": settings.plan_refresh_seconds,
-            }
+            },
+            "process_failure_analytics": {
+                "task": "app.tasks.analytics.process_failure_analytics",
+                "schedule": 120,
+            },
         },
         worker_concurrency=settings.celery_worker_concurrency,
         worker_prefetch_multiplier=settings.celery_worker_prefetch_multiplier,

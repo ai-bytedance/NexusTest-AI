@@ -1,5 +1,6 @@
 from . import (
     ai,
+    analytics,
     apis,
     auth,
     datasets,
@@ -20,6 +21,7 @@ from . import (
 
 __all__ = [
     "ai",
+    "analytics",
     "apis",
     "auth",
     "datasets",
