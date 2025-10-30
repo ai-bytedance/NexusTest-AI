@@ -10,6 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, BaseModel
 
 if TYPE_CHECKING:
+    from app.models.agent import Agent, AgentAlertThreshold
     from app.models.execution_policy import ExecutionPolicy
     from app.models.execution_queue import ExecutionQueue
     from app.models.project import Project
@@ -63,6 +64,16 @@ class Environment(BaseModel, Base):
     test_cases: Mapped[list["TestCase"]] = relationship("TestCase", back_populates="environment")
     queues: Mapped[list["ExecutionQueue"]] = relationship(
         "ExecutionQueue",
+        back_populates="environment",
+        cascade="all, delete-orphan",
+    )
+    agents: Mapped[list["Agent"]] = relationship(
+        "Agent",
+        back_populates="environment",
+        cascade="all, delete-orphan",
+    )
+    agent_thresholds: Mapped[list["AgentAlertThreshold"]] = relationship(
+        "AgentAlertThreshold",
         back_populates="environment",
         cascade="all, delete-orphan",
     )

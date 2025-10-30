@@ -11,6 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, BaseModel
 
 if TYPE_CHECKING:
+    from app.models.agent import AgentQueueMembership
     from app.models.environment import Environment
     from app.models.execution_policy import ExecutionPolicy
     from app.models.project import Project
@@ -79,6 +80,11 @@ class ExecutionQueue(BaseModel, Base):
     test_suites: Mapped[list["TestSuite"]] = relationship("TestSuite", back_populates="queue")
     reports: Mapped[list["TestReport"]] = relationship("TestReport", back_populates="queue")
     policies: Mapped[list["ExecutionPolicy"]] = relationship("ExecutionPolicy", back_populates="queue")
+    agent_memberships: Mapped[list["AgentQueueMembership"]] = relationship(
+        "AgentQueueMembership",
+        back_populates="queue",
+        cascade="all, delete-orphan",
+    )
 
 
 __all__ = [
