@@ -23,6 +23,11 @@ class IssueLinkSource(str, enum.Enum):
     AUTO = "auto"
 
 
+class IssueSyncState(str, enum.Enum):
+    OK = "ok"
+    ERROR = "error"
+
+
 class Issue(BaseModel, Base):
     __tablename__ = "issues"
 
@@ -48,6 +53,14 @@ class Issue(BaseModel, Base):
     url: Mapped[str] = mapped_column(Text, nullable=False)
     title: Mapped[str] = mapped_column(String(512), nullable=False)
     status: Mapped[str] = mapped_column(String(64), nullable=False, default="open")
+    sync_state: Mapped[IssueSyncState] = mapped_column(
+        Enum(IssueSyncState, name="issue_sync_state_enum", native_enum=True),
+        nullable=False,
+        default=IssueSyncState.OK,
+        server_default=text("'ok'::issue_sync_state_enum"),
+    )
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    last_webhook_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     dedupe_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_by: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"),
@@ -61,6 +74,18 @@ class Issue(BaseModel, Base):
         nullable=False,
         default=dict,
         server_default=text("'{}'::jsonb"),
+    )
+    linked_prs: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=list,
+        server_default=text("'[]'::jsonb"),
+    )
+    linked_commits: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=list,
+        server_default=text("'[]'::jsonb"),
     )
 
     project: Mapped["Project"] = relationship("Project", back_populates="issues")
@@ -114,4 +139,4 @@ class ReportIssueLink(BaseModel, Base):
     linker: Mapped["User" | None] = relationship("User", back_populates="issue_links_created")
 
 
-__all__ = ["Issue", "ReportIssueLink", "IssueLinkSource"]
+__all__ = ["Issue", "ReportIssueLink", "IssueLinkSource", "IssueSyncState"]

@@ -21,7 +21,8 @@ from app.models.import_source import (
     ImporterKind,
 )
 from app.models.integration import Integration, IntegrationProvider
-from app.models.issue import Issue, IssueLinkSource, ReportIssueLink
+from app.models.integration_webhook import IntegrationWebhook, IntegrationWebhookStatus
+from app.models.issue import Issue, IssueLinkSource, IssueSyncState, ReportIssueLink
 from app.models.notifier import Notifier, NotifierType
 from app.models.notifier_event import NotifierEvent, NotifierEventStatus, NotifierEventType
 from app.models.organization import Organization, OrganizationMembership, OrganizationRole
@@ -60,8 +61,11 @@ __all__ = [
     "ExecutionQueueKind",
     "Integration",
     "IntegrationProvider",
+    "IntegrationWebhook",
+    "IntegrationWebhookStatus",
     "Issue",
     "IssueLinkSource",
+    "IssueSyncState",
     "ReportIssueLink",
     "AutoTicketRule",
     "ImportSource",

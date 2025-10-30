@@ -8,10 +8,11 @@ import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.models import Integration, Issue, IssueLinkSource, Project, TestReport
+from app.models import Integration, Issue, IssueLinkSource, IssueSyncState, Project, TestReport
 from app.models.issue import ReportIssueLink
 from app.schemas.integration import IntegrationConnectionStatus
 from app.schemas.issue import IssueTemplatePayload
+from app.services.issue_tracking.linkage import attach_pull_requests, normalize_pull_request_reference
 from app.services.issue_tracking.providers import (
     IssueCreateData,
     IssueResult,
@@ -260,11 +261,16 @@ def summarize_issue(issue: Issue, include_links: bool = False) -> dict[str, Any]
         "url": issue.url,
         "title": issue.title,
         "status": issue.status,
+        "sync_state": issue.sync_state.value if issue.sync_state else None,
         "dedupe_key": issue.dedupe_key,
         "created_by": issue.created_by,
         "external_created_at": issue.external_created_at,
         "last_sync_at": issue.last_sync_at,
+        "last_webhook_at": issue.last_webhook_at,
+        "last_error": issue.last_error,
         "metadata": issue.metadata,
+        "linked_prs": issue.linked_prs or [],
+        "linked_commits": issue.linked_commits or [],
         "created_at": issue.created_at,
         "updated_at": issue.updated_at,
     }

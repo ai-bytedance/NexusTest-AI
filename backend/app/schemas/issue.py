@@ -7,7 +7,7 @@ from uuid import UUID
 from pydantic import Field, model_validator
 
 from app.models.integration import IntegrationProvider
-from app.models.issue import IssueLinkSource
+from app.models.issue import IssueLinkSource, IssueSyncState
 from app.schemas.common import IdentifierModel, ORMModel
 
 
@@ -19,6 +19,24 @@ class IssueTemplatePayload(ORMModel):
     assignees: list[str] = Field(default_factory=list)
     components: list[str] = Field(default_factory=list)
     fields: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class LinkedPullRequest(ORMModel):
+    provider: str
+    url: str
+    repo: str | None = None
+    number: int | None = None
+    title: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class LinkedCommit(ORMModel):
+    provider: str
+    sha: str
+    url: str | None = None
+    repo: str | None = None
+    message: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -39,11 +57,16 @@ class IssueRead(IdentifierModel):
     url: str
     title: str
     status: str
+    sync_state: IssueSyncState
     dedupe_key: str | None
     created_by: UUID | None
     external_created_at: datetime | None
     last_sync_at: datetime | None
+    last_webhook_at: datetime | None
+    last_error: str | None
     metadata: dict[str, Any]
+    linked_prs: list[LinkedPullRequest] = Field(default_factory=list)
+    linked_commits: list[LinkedCommit] = Field(default_factory=list)
 
 
 class IssueWithLinks(IssueRead):
@@ -77,6 +100,23 @@ class ReportIssueLinkRequest(ORMModel):
         return self
 
 
+class ReportIssuePRLinkRequest(ORMModel):
+    provider: IntegrationProvider
+    pr_url: str | None = None
+    owner: str | None = None
+    repo: str | None = None
+    number: int | None = Field(default=None, ge=1)
+    title: str | None = None
+    issue_id: UUID | None = None
+    post_comment: bool = False
+
+    @model_validator(mode="after")
+    def _validate_pr_payload(self) -> "ReportIssuePRLinkRequest":
+        if not self.pr_url and not (self.owner and self.repo and self.number is not None):
+            raise ValueError("Provide pr_url or owner/repo/number")
+        return self
+
+
 class ReportIssueListResponse(ORMModel):
     report_id: UUID
     issues: list[IssueWithLinks]
@@ -84,10 +124,13 @@ class ReportIssueListResponse(ORMModel):
 
 __all__ = [
     "IssueTemplatePayload",
+    "LinkedPullRequest",
+    "LinkedCommit",
     "IssueLinkRead",
     "IssueRead",
     "IssueWithLinks",
     "ReportIssueCreateRequest",
     "ReportIssueLinkRequest",
+    "ReportIssuePRLinkRequest",
     "ReportIssueListResponse",
 ]

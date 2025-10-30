@@ -15,6 +15,7 @@ from app.api.routes import (
     exports,
     health,
     importers,
+    integrations,
     plans,
     progress,
     projects,
@@ -68,6 +69,7 @@ def create_app() -> FastAPI:
     app.include_router(plans.router, prefix="/api/v1")
     app.include_router(notifiers.router, prefix="/api/v1")
     app.include_router(importers.router, prefix="/api/v1")
+    app.include_router(integrations.router, prefix="/api/v1")
     app.include_router(reports.router, prefix="/api/v1")
     app.include_router(exports.router, prefix="/api/v1")
     app.include_router(utils.router, prefix="/api/v1")
