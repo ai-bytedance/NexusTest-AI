@@ -1,409 +1,247 @@
-# API Automation Platform Skeleton
+# NexusTest-AI
 
-![CI](https://github.com/your-org/api-automation-platform/actions/workflows/ci.yml/badge.svg)
+English | 中文
 
-This repository contains the initial backend-first skeleton for the API automation platform. It provides a FastAPI-based backend, Docker Compose stack, and placeholders for future frontend and infrastructure work.
+NexusTest-AI is a backend-first, AI-assisted API testing platform. It ships with a FastAPI backend, Celery workers, Docker Compose stack, and a Helm chart for Kubernetes. This README gives a bilingual overview, quick start, and links to deeper docs.
 
-## Project Structure
+NexusTest-AI 是一款后端优先、具备 AI 助力能力的 API 测试平台。项目包含 FastAPI 后端、Celery 任务、Docker Compose 一键启动方案，以及用于 Kubernetes 的 Helm Chart。本文档提供中英双语概览、快速开始和详细文档链接。
 
-```
-backend/            # FastAPI application source
-infra/              # Docker compose and infrastructure configuration
-frontend/           # Placeholder for future frontend implementation
-```
+---
 
-## Quickstart
+## Contents / 目录
+- Overview & Features / 概览与特性
+- Architecture / 架构
+- Prerequisites / 前置条件
+- Quick Start (Docker Compose) / 快速开始（Docker Compose）
+- Environment variables / 环境变量
+- First-run setup & URLs / 首次启动与访问地址
+- Roles & login / 角色与登录
+- Sample workflow / 示例流程
+- AI providers / AI 提供商
+- Troubleshooting / 故障排查
+- Common commands / 常用命令
+- FAQ
+- Docs index / 文档索引
 
-1. Copy the environment template and update values as needed:
+---
 
-   ```bash
-   cp .env.example .env
-   cp infra/env.example infra/.env
-   ```
+## Overview & Features / 概览与特性
 
-2. Start the stack:
+- FastAPI backend with JWT auth, RBAC, and personal access tokens
+- Projects, APIs, Test Cases, Test Suites; importers for OpenAPI and Postman
+- Celery workers for asynchronous execution; Flower dashboard
+- AI helpers to generate test assets and summaries (DeepSeek/OpenAI/Claude/Gemini/Qwen/GLM/Doubao/mock)
+- Report exports (Markdown, PDF-ready) with redaction controls
+- Security hardening at the edge (nginx) with basic rate limiting and headers
+- Helm chart for production-grade K8s deployments; ServiceMonitor support
 
-   ```bash
-   docker compose -f infra/docker-compose.yml up -d --build
-   ```
+- FastAPI 后端：JWT 登录、RBAC、PAT 令牌
+- 资源模型：项目/接口/用例/套件；支持 OpenAPI 与 Postman 导入
+- Celery 异步执行；Flower 可视化面板
+- AI 助手：生成测试资产与报告摘要（支持 DeepSeek/OPENAI/Claude/Gemini/Qwen/GLM/Doubao/mock）
+- 报告导出（Markdown、可拓展至 PDF），支持字段脱敏
+- 边缘安全：nginx 基础限流与安全响应头
+- Helm Chart：生产级 Kubernetes 部署；可选 ServiceMonitor 集成
 
-3. Access the services:
+---
 
-   - API health check: http://localhost/api/healthz
-   - Readiness probe: http://localhost/api/readyz
-   - Interactive docs: http://localhost/api/docs
-   - Flower dashboard: http://localhost/flower
+## Architecture / 架构
 
-4. Interact with the API:
+- Backend API: FastAPI + SQLAlchemy + Alembic
+- Workers: Celery (Redis broker)
+- DB: PostgreSQL
+- Edge: nginx (reverse proxy; rate limits; security headers)
+- Observability: optional Prometheus scraping; Grafana (via override)
 
-   ```bash
-   curl -X POST http://localhost/api/auth/register \
-     -H "Content-Type: application/json" \
-     -d '{"email": "user@example.com", "password": "changeme"}'
+目录结构 / Repo layout:
+- backend/: FastAPI app, Alembic migrations, Dockerfile
+- infra/: docker-compose.yml, nginx config
+- charts/: Helm chart (charts/nexustest-ai)
+- frontend/: Vite + React dev scaffold
+- scripts/: nt_cli.py (CI-friendly CLI)
 
-   curl -X POST http://localhost/api/auth/login \
-     -H "Content-Type: application/json" \
-     -d '{"email": "user@example.com", "password": "changeme"}'
-   ```
+---
 
-## Configuration
+## Prerequisites / 前置条件
+- Docker 24+ and Docker Compose plugin
+- curl or an HTTP client (for examples)
+- For local dev: Python 3.11+, Node.js 18+
 
-The backend reads its configuration from environment variables (see `.env.example`). Key toggles include:
+---
 
-- `ACCESS_TOKEN_EXPIRE_MINUTES` (default `60`): lifetime of issued access tokens.
-- `TOKEN_CLOCK_SKEW_SECONDS` (default `0`): allowable leeway when validating JWT expiry to handle clock drift between services.
-- `APP_VERSION`, `GIT_COMMIT_SHA`, and `BUILD_TIME`: surfaced via the `/api/v1/version` endpoint for build metadata.
-- `MAX_RESPONSE_SIZE_BYTES` (default `512000`): upper bound for response payloads sent back to the UI. Anything larger is replaced with a truncation note.
-- `REDACT_FIELDS` (comma-separated list): case-insensitive field names to mask with `***` inside request/response payloads (defaults to `authorization,password,token,secret`).
-- Multi-provider AI setup, environment variables, and troubleshooting tips are documented in [README/ai-providers.md](README/ai-providers.md).
+## Quick Start (Docker Compose) / 快速开始（Docker Compose）
 
-## API Overview
+For the full step-by-step quickstart (with a demo run), see docs/setup/quickstart.md. The outline below summarises the steps.
 
-All business endpoints live under `/api/v1` and return a standard envelope:
-
-```json
-{
-  "code": "SUCCESS",
-  "message": "Success",
-  "data": {}
-}
-```
-
-### Authentication
-
-Authentication endpoints under `/api/auth` follow the same `{code, message, data}` envelope. Common error codes include:
-
-| Code   | Description                    |
-|--------|--------------------------------|
-| AUTH001 | Invalid credentials            |
-| AUTH002 | Email already registered       |
-| AUTH003 | Authentication token invalid   |
-
-Token lifetimes are governed by `ACCESS_TOKEN_EXPIRE_MINUTES` and `TOKEN_CLOCK_SKEW_SECONDS`.
-
-### Report Exports
-
-The reports API exposes a streaming export endpoint at `/api/v1/reports/{report_id}/export`. It supports Markdown and PDF outputs and allows callers to select a rendering template.
+完整分步说明（含示例执行）见 docs/setup/quickstart.md。以下为简要步骤：
 
 ```bash
-curl -G \
-  "http://localhost/api/v1/reports/<report-id>/export" \
-  -H "Authorization: Bearer <token>" \
-  --data-urlencode "format=pdf" \
-  --data-urlencode "template=detailed" \
-  --output report.pdf
-```
+git clone <your-repo-url>.git
+cd <repo>
+cp .env.example .env
 
-Available templates are:
+docker compose -f infra/docker-compose.yml up -d --build
+# Access: http://localhost/api/healthz, /api/docs, /flower
 
-- `default` – balanced layout with full summary, assertions and payload excerpts.
-- `compact` – high level report focused on failures and key metrics (ideal for dashboards).
-- `detailed` – full execution transcript including raw metrics and payload JSON dumps.
+# Create admin, then login to get an access token (copy access_token from response)
+curl -X POST http://localhost/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"changeme123","role":"admin"}'
 
-Exports inherit redaction rules (`REDACT_FIELDS`) and honour truncation notes produced during execution. Unknown templates or unsupported formats return a `400` error (`R003`/`R006`).
+curl -X POST http://localhost/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@example.com","password":"changeme123"}'
+# Copy .data.access_token as TOKEN
 
-#### Configuration
-
-| Variable | Purpose | Default |
-|----------|---------|---------|
-| `REPORT_EXPORT_MAX_BYTES` | Maximum payload size (bytes) before the export is rejected. | `5242880` (5 MiB) |
-| `PDF_ENGINE` | PDF renderer to use (`weasyprint` or `wkhtml`). | `weasyprint` |
-| `REPORT_EXPORT_FONT_PATH` | Absolute path to a font file (e.g. Noto Sans SC) used for PDF rendering. | _unset_ |
-| `REPORT_EXPORT_BRANDING_TITLE` | Heading shown on exports. | `Test Execution Report` |
-| `REPORT_EXPORT_BRANDING_LOGO` | Optional logo URL for the header. | _unset_ |
-| `REPORT_EXPORT_BRANDING_FOOTER` | Optional footer copy rendered on the last page. | _unset_ |
-| `REPORT_EXPORT_BRANDING_COMPANY` | Company/organisation name displayed alongside IDs. | _unset_ |
-
-Templates are implemented with Jinja and live under `backend/app/services/exports/templates`. You can duplicate the shipped markdown or HTML files to create bespoke layouts (logo, colours, additional metadata, and so on) without touching application code.
-
-#### Chinese font support
-
-Set `REPORT_EXPORT_FONT_PATH` to point at a font file that supports Chinese glyphs (e.g. `NotoSansSC-Regular.otf`). Inside Docker containers mount the font file and ensure the path is reachable by the backend, or bake fonts into the image (install `fonts-noto-cjk` or copy the `.otf` file). When the env var is absent the renderer falls back to system fonts, which may not cover the full CJK range.
-
-### Projects and RBAC
-
-Create a project (the creator becomes the project admin):
-
-```bash
+# Create project (copy .data.id as PROJECT)
 curl -X POST http://localhost/api/v1/projects \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-        "name": "Payments",
-        "key": "PAY",
-        "description": "Demo project"
-      }'
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"name":"Demo","key":"DEMO"}'
+
+# Minimal demo: create case (status 200) and run it; see docs/setup/quickstart.md
 ```
 
-Add another user as a member:
-
+Shutdown / 关闭：
 ```bash
-curl -X POST http://localhost/api/v1/projects/<project-id>/members \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"email": "teammate@example.com", "role": "member"}'
+docker compose -f infra/docker-compose.yml down
 ```
 
-Project admins can update or delete the project and manage membership, while members can manage APIs, test cases, and test suites.
+---
 
-### CRUD Examples
+## Environment variables (common) / 常用环境变量
 
-Create an API definition inside a project:
+See .env.example for a complete list. Highlights below.
+完整列表见 .env.example，以下为重点：
 
-```bash
-curl -X POST http://localhost/api/v1/projects/<project-id>/apis \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-        "name": "Get user",
-        "method": "GET",
-        "path": "/users/{id}",
-        "version": "v1",
-        "group_name": "users",
-        "headers": {},
-        "params": {},
-        "body": {},
-        "mock_example": {}
-      }'
-```
+| Name | Purpose | Default |
+|------|---------|---------|
+| APP_ENV | Environment name | local |
+| SECRET_KEY | JWT signing secret | replace_me |
+| SECRET_ENC_KEY | Optional encryption key | empty |
+| DATABASE_URL | Postgres connection URL | postgresql+psycopg2://app:app@postgres:5432/app |
+| REDIS_URL | Redis URL | redis://redis:6379/0 |
+| ACCESS_TOKEN_EXPIRE_MINUTES | JWT expiry | 60 |
+| TOKEN_CLOCK_SKEW_SECONDS | JWT clock skew | 30 |
+| CORS_ORIGINS | Comma list or * | * |
+| PROVIDER | AI provider | mock |
+| REQUEST_TIMEOUT_SECONDS | HTTP request timeout | 30 |
+| MAX_RESPONSE_SIZE_BYTES | Response payload cap | 512000 |
+| REPORT_EXPORT_MAX_BYTES | Report export cap | 5242880 |
+| PDF_ENGINE | PDF renderer | weasyprint |
+| REDACT_FIELDS | Masked fields | authorization,password,token,secret |
 
-Test cases live under `/projects/<project-id>/test-cases` and test suites under `/projects/<project-id>/test-suites` with the same CRUD semantics.
+AI provider keys / AI 提供商密钥：
+- DEEPSEEK_API_KEY (+ DEEPSEEK_BASE_URL, DEEPSEEK_MODEL)
+- OPENAI_API_KEY (+ OPENAI_BASE_URL, OPENAI_MODEL)
+- ANTHROPIC_API_KEY (+ ANTHROPIC_BASE_URL, ANTHROPIC_MODEL)
+- GOOGLE_API_KEY (+ GOOGLE_BASE_URL, GEMINI_MODEL)
+- QWEN_API_KEY (+ QWEN_BASE_URL, QWEN_MODEL)
+- ZHIPU_API_KEY (+ ZHIPU_BASE_URL, GLM_MODEL)
+- DOUBAO_API_KEY (+ DOUBAO_BASE_URL, DOUBAO_MODEL)
 
-### Importers
+Email / 邮件:
+- SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM, SMTP_FROM_NAME, SMTP_TLS
+- SENDGRID_API_KEY, MAILGUN_API_KEY
 
-The importers are production-ready and idempotent. They normalise method + path combinations, surface field-level diffs, and store import metadata for resynchronisation.
+Metrics / 指标:
+- METRICS_ENABLED, METRICS_NAMESPACE, METRICS_HOST, METRICS_PORT, CELERY_METRICS_PORT
 
-#### OpenAPI
+More in docs/security.md and docs/ai-providers.md.
+更多内容见 docs/security.md 与 docs/ai-providers.md。
 
-* Resolves local and remote `$ref`, merges `allOf`/`oneOf`/`anyOf`, and expands component schemas.
-* Parses servers (including variable substitution) and records the selected URL template for each endpoint.
-* Generates request/response bodies for JSON, multipart form-data, and `application/x-www-form-urlencoded` payloads.
-* Maps bearer/API key/basic auth schemes into default headers or query parameters.
-* Preserves tags and `x-*` vendor extensions inside the API metadata alongside mock examples.
+---
 
-```bash
-curl -X POST http://localhost/api/v1/projects/<project-id>/import/openapi \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-        "url": "https://example.com/openapi.json",
-        "dry_run": true,
-        "options": {
-          "server": "https://api.example.com/v1",
-          "server_variables": {"stage": "v2"},
-          "include_tags": ["billing"],
-          "resolve_remote_refs": true
-        }
-      }'
-```
+## First-run setup & URLs / 首次启动与地址
 
-Setting `dry_run` to `true` previews the changes without applying them.
+- Health: http://localhost/api/healthz
+- Swagger: http://localhost/api/docs
+- Flower: http://localhost/flower
+- Register an admin then login to obtain a bearer token for API calls
 
-#### Postman
+---
 
-* Resolves collection/environment variables and `{{placeholders}}` in URLs, headers, params, and bodies.
-* Inherits folder/collection auth into requests and converts it to request headers or query params.
-* Maps folder structure to `group_name` and captures pre-request scripts in the API metadata.
-* Supports multipart file uploads and form/urlencoded bodies.
+## Roles & login / 角色与登录
 
-```bash
-curl -X POST http://localhost/api/v1/projects/<project-id>/import/postman \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-        "collection": {"info": {"name": "Demo", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"}, "item": []},
-        "options": {
-          "environment": {"userId": "42"},
-          "globals": {"baseUrl": "https://sandbox.example.com"},
-          "resolve_variables": true,
-          "inherit_auth": true
-        }
-      }'
-```
+System roles: admin, member. New users default to member unless role is explicitly set at registration. Admins can access system-level endpoints (e.g., backups). Project roles are managed per project (admin/member) for fine-grained access.
 
-You can also upload the collection file via `multipart/form-data` (fields: `file`, optional `options`, optional `dry_run`).
+系统角色：admin、member。新用户默认 member；注册时可显式设置为 admin（仅限首次初始化场景）。管理员可访问系统级接口（如备份）。项目内另有管理员/成员角色用于细粒度管控。
 
-#### Diff preview & resync
+---
 
-Each import writes a summary of created/updated/skipped/removed APIs along with per-endpoint diffs. Use the workflow below to review and replay imports safely:
+## Sample workflow / 示例流程
 
-```bash
-# Preview changes without applying them
-curl -X POST http://localhost/api/v1/projects/<project-id>/import/openapi \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"url": "https://example.com/openapi.json", "dry_run": true}'
+Minimal smoke flow (simplified):
+- Register and login to get TOKEN
+- Create a project (PROJECT)
+- Create a minimal API definition
+- Create a test case that asserts status_code==200 for https://httpbin.org/get
+- Trigger: POST /api/v1/projects/{PROJECT}/execute/case/{CASE_ID}
+- Poll: GET /api/v1/reports/{REPORT_ID}
 
-# Retrieve the detailed diff using the returned run_id
-curl -G http://localhost/api/v1/projects/<project-id>/import/preview \
-  -H "Authorization: Bearer <token>" \
-  --data-urlencode "id=<run_id>"
+详见 docs/setup/quickstart.md 提供的可复制命令。
 
-# Re-sync the most recent source (or pass source_id) and optionally apply the diff
-curl -X POST http://localhost/api/v1/projects/<project-id>/import/resync \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"dry_run": false}'
-```
+---
 
-`summary.items` lists every change with field-level diffs. Imports dedupe by `(project_id, method, normalized_path, version)` so repeated runs update the same API rows instead of creating duplicates.
+## AI providers / AI 提供商
 
-Importer error codes:
+- Default provider is DeepSeek; when no API key is configured, the backend falls back to the mock provider for deterministic output.
+- Full configuration and troubleshooting: docs/ai-providers.md
 
-* `IMP001` – invalid or unsupported specification.
-* `IMP002` – a referenced document could not be resolved.
-* `IMP003` – conflicting changes detected during upsert.
+- 默认提供商为 DeepSeek；如未配置 API Key，后端会自动回退至 Mock 提供商以保证可用性。
+- 完整配置与排障指南：docs/ai-providers.md
 
-### AI Assistance
+---
 
-AI-powered helpers are exposed under `/api/v1/ai` to bootstrap test assets, generate mock payloads, and summarise execution reports.
+## Troubleshooting / 故障排查
 
-#### Configure providers
+- Port 80 already in use → stop the conflicting service or change host port mapping in infra/docker-compose.yml
+- Database connection errors → ensure postgres container is healthy; check DATABASE_URL
+- Migrations failed on start → docker compose logs api; run make migrate to retry
+- 401 errors → missing/expired token; re-login and pass Authorization: Bearer <token>
+- CORS issues in local dev → verify CORS_ORIGINS includes your frontend dev URL
+- nginx HSTS off by default → set HSTS_ENABLED=1 on nginx to enable
 
-Set the `PROVIDER` environment variable to the vendor you want to use. Supported values are `deepseek`, `openai`, `anthropic`, `gemini`, `qwen`, `glm`, `doubao`, and `mock` (default).
+---
 
-Provide the matching API keys in `.env`:
+## Common commands / 常用命令
 
-- `DEEPSEEK_API_KEY` (+ optional `DEEPSEEK_BASE_URL`)
-- `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`, `QWEN_API_KEY`, `ZHIPU_API_KEY`, `DOUBAO_API_KEY` (+ optional `<PROVIDER>_BASE_URL` where applicable)
+Makefile shortcuts / Makefile 命令：
+- make up – start the compose stack
+- make down – stop the stack
+- make logs – tail logs
+- make shell – enter the API container
+- make migrate – run Alembic migrations
+- make revision msg="message" – create a migration
+- make test – run pytest
+- make lint – pre-commit checks
+- make format – black + isort
 
-If a required key is missing, the registry automatically falls back to the deterministic mock provider so the platform keeps working in local environments.
+---
 
-#### Sample requests
+## FAQ
 
-```bash
-# Generate test cases from an API specification
-curl -X POST http://localhost/api/v1/ai/generate-cases \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-        "project_id": "<project-id>",
-        "api_spec": {"path": "/users", "method": "GET"}
-      }'
+- Q: Is there a web UI? 目前是否有 Web UI？
+  - A: The repo includes a frontend dev scaffold (frontend/). For quick evaluation use Swagger UI (/api/docs) and the APIs. 本仓库包含前端开发脚手架；评估阶段可直接使用 Swagger UI 与 API。
+- Q: How to enable TLS locally? 本地如何启用 TLS？
+  - A: Prefer using a local reverse proxy (e.g., Caddy/Traefik) or Kubernetes Ingress with TLS. nginx in Compose is HTTP by default. 建议使用本地反代或 K8s Ingress 实现 TLS；Compose 内置 nginx 默认仅 HTTP。
+- Q: Which AI provider is recommended by default? 默认推荐哪个 AI 提供商？
+  - A: DeepSeek is the default; see docs/ai-providers.md for alternatives and keys. 默认 DeepSeek，其他提供商与密钥配置见 docs/ai-providers.md。
+- Q: Where can I tune rate limits? 如何调整限流？
+  - A: Edge limits in infra/nginx/nginx.conf; app-level policies under project rate limit APIs. 边缘限流见 nginx.conf；应用内限流通过项目策略接口。
+- Q: How to export PDF reports? 如何导出 PDF 报告？
+  - A: Set PDF_ENGINE and optionally REPORT_EXPORT_FONT_PATH (for CJK fonts). 通过 PDF_ENGINE 与 REPORT_EXPORT_FONT_PATH 配置（中文字体需额外字体文件）。
 
-# Generate assertions from an example response payload
-curl -X POST http://localhost/api/v1/ai/generate-assertions \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-        "project_id": "<project-id>",
-        "example_response": {"status": "success", "data": {"id": 1}}
-      }'
+---
 
-# Produce mock data using a JSON schema
-curl -X POST http://localhost/api/v1/ai/mock-data \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-        "project_id": "<project-id>",
-        "json_schema": {"type": "object", "properties": {"id": {"type": "string"}}}
-      }'
+## Docs index / 文档索引
 
-# Summarise an execution report (inline payload)
-curl -X POST http://localhost/api/v1/ai/summarize-report \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-        "project_id": "<project-id>",
-        "report": {"status": "passed", "metrics": {"total": 10, "passed": 9, "failed": 1}}
-      }'
-```
+- Quickstart / 快速开始: docs/setup/quickstart.md
+- Local development / 本地开发: docs/setup/local-dev.md
+- Docker Compose deployment / 使用 Compose 部署: docs/deploy/docker-compose.md
+- Helm deployment / 使用 Helm 部署: docs/deploy/helm.md
+- CI/CD and CLI / CI/CD 与 CLI: docs/ci-cd.md
+- Security / 安全: docs/security.md
+- AI providers / AI 提供商: docs/ai-providers.md
+- Webhooks: docs/webhooks.md
 
-Each response follows the standard `{code, message, data}` envelope. On success the payload includes the generated artefacts alongside the `task_id` that was recorded in the `ai_tasks` table.
-
-### Reporting & Metrics
-
-Reports and analytics endpoints live under `/api/v1/reports` and `/api/v1/metrics`.
-
-List reports with filters, ordering, and pagination:
-
-```bash
-curl -G http://localhost/api/v1/reports \
-  -H "Authorization: Bearer <token>" \
-  --data-urlencode "project_id=<project-id>" \
-  --data-urlencode "status=passed" \
-  --data-urlencode "entity_type=case" \
-  --data-urlencode "date_from=2024-10-01T00:00:00Z" \
-  --data-urlencode "page=1" \
-  --data-urlencode "page_size=10"
-```
-
-Fetch a detailed report with computed assertion metrics and redacted payloads:
-
-```bash
-curl http://localhost/api/v1/reports/<report-id> \
-  -H "Authorization: Bearer <token>"
-```
-
-Generate (or refresh) an AI summary for a report:
-
-```bash
-curl -X POST http://localhost/api/v1/reports/<report-id>/summarize \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"overwrite": false}'
-```
-
-Export a report as Markdown (the payload contains the filename, content type, and Markdown string):
-
-```bash
-curl -G http://localhost/api/v1/reports/<report-id>/export \
-  -H "Authorization: Bearer <token>" \
-  --data-urlencode "format=markdown"
-```
-
-Retrieve aggregated pass/fail/error counts for charting:
-
-```bash
-curl -G http://localhost/api/v1/metrics/reports/summary \
-  -H "Authorization: Bearer <token>" \
-  --data-urlencode "project_id=<project-id>" \
-  --data-urlencode "days=14"
-```
-
-The reporting endpoints always respond with the `{code, message, data}` envelope. When exports are requested, the `data` object carries the file metadata and content (Markdown text today; PDF returns a `501` error with code `R002` until a generator is configured).
-
-## Gateway & Security
-
-The edge nginx proxy defined in `infra/nginx/nginx.conf` now:
-
-- Limits authenticated and general API traffic to 10 requests/second with a burst tolerance of 20 (`/api` and `/api/auth`).
-- Caps request bodies at 10 MB and tightens client/proxy timeouts to reduce slowloris-style attacks.
-- Adds security headers (`X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`, `Referrer-Policy`, `Content-Security-Policy`) alongside gzip tuning.
-- Serves static assets under `/static/` with caching directives while keeping the `/ws` WebSocket proxy untouched.
-
-## Makefile Helpers
-
-```bash
-make up        # start the compose stack
-make down      # stop the stack
-make logs      # tail logs from the stack
-make shell     # enter the running API container
-make lint      # run pre-commit checks across the repo
-make format    # apply black + isort formatting to backend/
-make test      # execute pytest against the backend test suite
-make ci        # run lint + test targets (useful locally before pushing)
-```
-
-## Tooling
-
-Install [pre-commit](https://pre-commit.com), [ruff](https://github.com/astral-sh/ruff), and [black](https://github.com/psf/black) locally to match the automated checks:
-
-```bash
-pip install --upgrade pre-commit ruff black isort
-pre-commit install
-ruff check backend
-black backend
-isort --profile black backend
-```
-
-## Next Steps
-
-- Add database migrations (Alembic)
-- Expand API modules and schemas
-- Implement frontend application
-- Harden deployments and CI pipelines
-
-## License
-
-See [LICENSE](./LICENSE) for placeholder licensing information.
+License: see LICENSE.
