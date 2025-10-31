@@ -70,7 +70,9 @@ git clone <your-repo-url>.git
 cd <repo>
 cp .env.example .env
 
-docker compose -f infra/docker-compose.yml up -d --build
+docker compose -f infra/docker-compose.yml up -d postgres redis
+docker compose -f infra/docker-compose.yml build api celery-worker celery-beat flower --no-cache --progress=plain
+docker compose -f infra/docker-compose.yml up -d
 # Access: http://localhost/api/healthz, /api/docs, /flower
 
 # Create admin, then login to get an access token (copy access_token from response)
@@ -177,6 +179,9 @@ See docs/en/setup/quickstart.md for copy-paste commands.
 
 ## Troubleshooting
 
+- Docker build fails with redis/celery dependency conflicts → pull latest dependencies (`redis>=4.6,<5.0`) and rerun the build step with `--no-cache`.
+- Compose tries to pull `api-automation-backend` → update to the latest infra/docker-compose.yml; services now build locally to `nexustest-backend:local`.
+- Slow image builds or base image pulls → run with BuildKit enabled (`DOCKER_BUILDKIT=1 docker compose …`) and configure registry mirrors if available.
 - Port 80 already in use → stop the conflicting service or change host port mapping in infra/docker-compose.yml
 - Database connection errors → ensure postgres container is healthy; check DATABASE_URL
 - Migrations failed on start → docker compose logs api; run make migrate to retry

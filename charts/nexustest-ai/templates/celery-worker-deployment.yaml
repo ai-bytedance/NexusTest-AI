@@ -63,7 +63,7 @@ spec:
           command:
             {{- toYaml $command | nindent 12 }}
           {{- end }}
-          {{- $defaultArgs := list "celery -A app.core.celery:celery_app worker --loglevel=info -Q cases,suites" -}}
+          {{- $defaultArgs := list "celery -A app.core.celery_app worker --loglevel=info -Q cases,suites" -}}
           {{- $args := default $defaultArgs .Values.celeryWorker.args -}}
           args:
             {{- toYaml $args | nindent 12 }}

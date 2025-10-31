@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   postgres:
     image: postgres:15-alpine
@@ -30,7 +28,7 @@ services:
     build:
       context: ../backend
       dockerfile: Dockerfile
-    image: api-automation-backend
+    image: nexustest-backend:local
     restart: unless-stopped
     depends_on:
       postgres:
@@ -50,7 +48,10 @@ services:
       - "8000"
 
   celery-worker:
-    image: api-automation-backend
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    image: nexustest-backend:local
     restart: unless-stopped
     depends_on:
       redis:
@@ -61,10 +62,13 @@ services:
       - ../.env
     volumes:
       - ../.env:/app/.env:ro
-    command: ["sh", "-c", "celery -A app.core.celery:celery_app worker --loglevel=info -Q cases,suites"]
+    command: ["sh", "-c", "celery -A app.core.celery_app worker --loglevel=info -Q cases,suites"]
 
   celery-beat:
-    image: api-automation-backend
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    image: nexustest-backend:local
     restart: unless-stopped
     depends_on:
       redis:
@@ -73,10 +77,13 @@ services:
       - ../.env
     volumes:
       - ../.env:/app/.env:ro
-    command: ["sh", "-c", "celery -A app.core.celery:celery_app beat --loglevel=info"]
+    command: ["sh", "-c", "celery -A app.core.celery_app beat --loglevel=info"]
 
   flower:
-    image: api-automation-backend
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    image: nexustest-backend:local
     restart: unless-stopped
     depends_on:
       redis:
@@ -87,7 +94,7 @@ services:
       - ../.env
     volumes:
       - ../.env:/app/.env:ro
-    command: ["sh", "-c", "flower --app=app.core.celery:celery_app --port=5555 --url-prefix=flower --queues=cases,suites"]
+    command: ["sh", "-c", "celery -A app.core.celery_app flower --address=0.0.0.0 --port=5555 --url-prefix=flower --queues=cases,suites"]
     expose:
       - "5555"
 

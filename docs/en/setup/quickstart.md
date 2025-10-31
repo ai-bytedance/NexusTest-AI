@@ -27,17 +27,39 @@ Edit .env as needed. Minimal defaults work for local runs.
 
 ---
 
-## 2) Start stack
+## 2) Start data stores
+
+Bring up Postgres and Redis first so the application containers can pass health checks on boot.
 
 ```bash
-docker compose -f infra/docker-compose.yml up -d --build
+docker compose -f infra/docker-compose.yml up -d postgres redis
+```
+
+Wait until both services show `healthy` (check with `docker compose -f infra/docker-compose.yml ps`).
+
+---
+
+## 3) Build backend images
+
+Build the backend images (API, worker, beat, Flower) from the local Dockerfile. The `--no-cache` flag guarantees new dependencies are picked up when requirements change; omit it after the first successful build if you prefer cached layers.
+
+```bash
+docker compose -f infra/docker-compose.yml build api celery-worker celery-beat flower --no-cache --progress=plain
+```
+
+---
+
+## 4) Start stack
+
+```bash
+docker compose -f infra/docker-compose.yml up -d
 ```
 
 This brings up Postgres, Redis, API, Celery worker/beat, Flower, and nginx. The API container applies Alembic migrations automatically.
 
 ---
 
-## 3) Access URLs
+## 5) Access URLs
 - API health: http://localhost/api/healthz
 - Readiness: http://localhost/api/readyz
 - Swagger UI: http://localhost/api/docs
@@ -45,7 +67,7 @@ This brings up Postgres, Redis, API, Celery worker/beat, Flower, and nginx. The 
 
 ---
 
-## 4) First user (admin)
+## 6) First user (admin)
 
 ```bash
 curl -X POST http://localhost/api/auth/register \
@@ -60,7 +82,7 @@ curl -X POST http://localhost/api/auth/login \
 
 ---
 
-## 5) Create a project
+## 7) Create a project
 ```bash
 TOKEN=<paste-access-token>
 
@@ -73,7 +95,7 @@ curl -X POST http://localhost/api/v1/projects \
 
 ---
 
-## 6) Demo case and run
+## 8) Demo case and run
 
 1) Create an API definition
 ```bash
@@ -126,10 +148,19 @@ Status should become "passed" shortly.
 
 ---
 
-## 7) Shutdown
+## 9) Shutdown
 ```bash
 docker compose -f infra/docker-compose.yml down
 ```
+
+---
+
+## Troubleshooting
+
+- **pip dependency conflict (redis / celery)** → ensure you pulled the latest backend/requirements.txt (uses `redis>=4.6,<5.0` with Celery 5.3). Re-run the build step with `--no-cache` to force pip to resolve with the updated constraints.
+- **Compose tries to pull `api-automation-backend`** → update infra/docker-compose.yml and rebuild. The backend services now build locally to the `nexustest-backend:local` tag.
+- **Slow base image pulls** → enable BuildKit (`DOCKER_BUILDKIT=1 docker compose …`) and optionally configure Docker registry mirrors for your environment.
+- **Services not ready after `up -d`** → confirm Postgres/Redis are healthy (`docker compose ps`) and check logs (`docker compose logs api` / `celery-worker`).
 
 ---
 
