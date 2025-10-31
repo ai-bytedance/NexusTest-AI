@@ -1,12 +1,12 @@
-# Docker Compose Deployment / 使用 Docker Compose 部署
+English | [中文](../../zh/deploy/docker-compose.md)
+
+# Docker Compose Deployment
 
 This document explains the default stack shipped in infra/docker-compose.yml and how to extend it with optional services (MailHog, Prometheus, Grafana, etc.).
 
-本文档说明 infra/docker-compose.yml 中的默认服务，并介绍如何通过覆盖文件扩展（MailHog、Prometheus、Grafana 等）。
-
 ---
 
-## Default services / 默认服务
+## Default services
 
 - postgres: Postgres 15 with a named volume
 - redis: Redis 7
@@ -16,42 +16,39 @@ This document explains the default stack shipped in infra/docker-compose.yml and
 - flower: Celery monitoring UI (exposed through nginx at /flower)
 - nginx: reverse proxy on port 80, adds security headers and basic rate limits
 
-Access points / 访问入口:
+Access points:
 - http://localhost/api/healthz
 - http://localhost/api/readyz
 - http://localhost/api/docs
 - http://localhost/flower
 
-Start / 启动:
+Start:
 ```bash
 docker compose -f infra/docker-compose.yml up -d --build
 ```
 
-Stop / 停止:
+Stop:
 ```bash
 docker compose -f infra/docker-compose.yml down
 ```
 
-Logs / 日志:
+Logs:
 ```bash
 docker compose -f infra/docker-compose.yml logs -f
 ```
 
 ---
 
-## Environment files / 环境变量文件
+## Environment files
 
 - The stack reads ../.env into API, workers, and Flower.
-- 可根据需要复制并编辑 .env：cp .env.example .env
 - nginx supports optional HSTS via container env HSTS_ENABLED=1 (set in an override file or docker-compose command).
 
 ---
 
-## Optional services via override / 通过覆盖文件启用可选服务
+## Optional services via override
 
 Create infra/docker-compose.override.yml with the services you need (or use Compose profiles if you maintain multiple variants).
-
-在 infra/docker-compose.override.yml 中添加扩展服务（或使用 Docker Compose profiles 在同一文件中按需启用不同服务集），例如：
 
 ```yaml
 version: "3.9"
@@ -94,8 +91,6 @@ services:
 
 Then start as usual. Compose auto-loads docker-compose.override.yml.
 
-随后按常规方式启动，Compose 会自动加载 override 文件。
-
 Prometheus scrape config example (prometheus.yml):
 ```yaml
 global:
@@ -108,21 +103,19 @@ scrape_configs:
 
 ---
 
-## Email testing / 邮件测试
+## Email testing
 
 - Set SMTP_* to point to a real SMTP or route mail via MailHog SMTP (smtp://mailhog:1025) if you add MailHog.
-- 配置 SMTP_* 变量使用真实 SMTP，或在启用 MailHog 后将 SMTP_HOST=mailhog, SMTP_PORT=1025。
 
 ---
 
-## Agents note / Agent 说明
+## Agents note
 
 - Agents are a logical concept tracked by the backend (with heartbeats and tokens). There is no separate "agent container" required in the default Compose stack. Remote agents can integrate by calling API endpoints with their token.
-- Agent 是后端中的逻辑实体（心跳与令牌管理）。默认 Compose 不需要单独的 Agent 容器。远端执行器可通过 API + 令牌进行集成。
 
 ---
 
-## Production notes / 生产环境提示
+## Production notes
 
 - Prefer a dedicated reverse proxy/ingress with TLS offload and managed certificates.
 - Separate stateful stores (Postgres/Redis) from app lifecycle and enable persistent volumes and backups.

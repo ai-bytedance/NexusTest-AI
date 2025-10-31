@@ -1,36 +1,27 @@
-# AI Providers Configuration / 人工智能提供商配置
+[English](../en/ai-providers.md) | 中文
 
-This guide explains how to configure multi-provider AI for NexusTest-AI. The backend supports DeepSeek (default), OpenAI, Anthropic Claude, Google Gemini, Alibaba Qwen, Zhipu GLM, ByteDance Doubao, and a deterministic mock provider.
+# 人工智能提供商配置
 
 本指南介绍如何在 NexusTest-AI 中配置多家 AI 提供商。后端支持 DeepSeek（默认）、OpenAI、Anthropic Claude、Google Gemini、阿里通义千问（Qwen）、智谱 GLM、字节 Doubao，以及一个可重复结果的 Mock 提供商。
 
 ---
 
-## Selecting a provider / 选择提供商
-
-- Set PROVIDER to one of: mock, deepseek, openai, anthropic, gemini, qwen, glm, zhipu, doubao
-- You can also override per request with query param provider, for example:
-  - POST /api/v1/ai/generate-cases?provider=openai
-  - POST /api/v1/reports/{id}/summarize?provider=anthropic
+## 选择提供商
 
 - 将 PROVIDER 设置为以下之一：mock、deepseek、openai、anthropic、gemini、qwen、glm、zhipu、doubao
 - 也可在请求级别用 provider 查询参数临时覆盖，例如：
   - POST /api/v1/ai/generate-cases?provider=openai
   - POST /api/v1/reports/{id}/summarize?provider=anthropic
 
-When credentials are missing, the system falls back to the mock provider.
-
 如缺少凭据，系统会自动回退到 Mock 提供商。
 
 ---
 
-## Environment variables / 环境变量
-
-Each provider supports an API key, optional custom base URL, and a default model that can be overridden without code changes.
+## 环境变量
 
 每个提供商均支持 API Key、可选的自定义 Base URL 以及默认模型（可通过环境变量覆盖）。
 
-| Provider | Required | Optional | Default model |
+| 提供商 | 必填 | 可选 | 默认模型 |
 |---------|----------|----------|---------------|
 | DeepSeek | DEEPSEEK_API_KEY | DEEPSEEK_BASE_URL, DEEPSEEK_MODEL | deepseek-chat |
 | OpenAI | OPENAI_API_KEY | OPENAI_BASE_URL, OPENAI_MODEL | gpt-4o-mini |
@@ -40,20 +31,11 @@ Each provider supports an API key, optional custom base URL, and a default model
 | GLM | ZHIPU_API_KEY | ZHIPU_BASE_URL, GLM_MODEL | glm-4-airx |
 | Doubao | DOUBAO_API_KEY | DOUBAO_BASE_URL, DOUBAO_MODEL | doubao-pro-4k |
 
-All providers honour REQUEST_TIMEOUT_SECONDS.
-
 所有提供商均遵循 REQUEST_TIMEOUT_SECONDS 超时配置。
 
 ---
 
-## Response shape & errors / 响应结构与错误
-
-- Endpoints return validated JSON with stable schemas:
-  - generate-cases: { "cases": [...] }
-  - generate-assertions: { "assertions": [...] }
-  - mock-data: { "data": <object|array> }
-  - summarize-report: { "markdown": "..." }
-- Failures surface vendor-neutral error codes AI001–AI006; raw payloads are included in detail.data.
+## 响应结构与错误
 
 - 各端点返回经校验的稳定 JSON 结构：
   - generate-cases：{ "cases": [...] }
@@ -64,20 +46,13 @@ All providers honour REQUEST_TIMEOUT_SECONDS.
 
 ---
 
-## Token usage metrics / 令牌用量指标
-
-Successful invocations persist model name and token counts (prompt/completion/total) in the ai_tasks table for analytics and billing.
+## 令牌用量指标
 
 成功调用会在 ai_tasks 表中记录模型名称与令牌用量（提示/生成/总计），便于分析和计费。
 
 ---
 
-## Troubleshooting / 故障排查
-
-- Unexpected mock provider: missing *_API_KEY
-- JSON decode errors: inspect ai_tasks.output_payload and provider error
-- Rate limits: reduce concurrency or use gateways with higher quotas
-- Custom gateways: set *_BASE_URL
+## 故障排查
 
 - 意外使用 Mock：缺少对应的 *_API_KEY
 - JSON 解析失败：检查 ai_tasks.output_payload 及提供商返回

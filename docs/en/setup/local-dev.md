@@ -1,18 +1,18 @@
-# Local Development / 本地开发
+English | [中文](../../zh/setup/local-dev.md)
+
+# Local Development
 
 This guide explains how to run backend and frontend in dev mode with hot reload, run database migrations, and execute tests.
-
-本文档介绍在开发模式下运行后端与前端（热重载）、执行数据库迁移与测试的方法。
 
 ---
 
 ## Backend (FastAPI)
 
-Prerequisites / 前置条件:
+Prerequisites:
 - Python 3.11+
 - PostgreSQL & Redis (use Docker Compose or your local services)
 
-Setup / 环境准备:
+Setup:
 ```bash
 cd backend
 python -m venv .venv
@@ -25,13 +25,13 @@ cd ..
 cp .env.example .env
 ```
 
-Run migrations / 执行数据库迁移:
+Run migrations:
 ```bash
 cd backend
 alembic upgrade head
 ```
 
-Run API with hot reload / 启动 API（热重载）:
+Run API with hot reload:
 ```bash
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
@@ -44,10 +44,10 @@ Note: when using the repo's nginx proxy via Docker Compose, the external URL is 
 
 ## Frontend (Vite + React)
 
-Prerequisites / 前置条件:
+Prerequisites:
 - Node.js 18+
 
-Setup & run / 安装与运行:
+Setup & run:
 ```bash
 cd frontend
 npm install
@@ -58,9 +58,9 @@ The dev server listens on 5173 by default. CORS_ORIGINS in the backend already i
 
 ---
 
-## Common developer tasks / 常用开发任务
+## Common developer tasks
 
-Makefile targets / Makefile 任务（在仓库根目录）:
+Makefile targets (at repo root):
 - make up: start Docker Compose stack
 - make down: stop stack
 - make logs: tail logs
@@ -71,14 +71,14 @@ Makefile targets / Makefile 任务（在仓库根目录）:
 - make lint: run pre-commit hooks
 - make format: black + isort on backend/
 
-Testing / 测试:
+Testing:
 ```bash
 pip install -r backend/requirements.txt
 pip install pytest
 pytest backend/tests -q
 ```
 
-Pre-commit / 代码规范:
+Pre-commit:
 ```bash
 pip install pre-commit ruff black isort
 pre-commit install
@@ -87,8 +87,6 @@ pre-commit run --all-files
 
 ---
 
-## Seed minimal data / 初始化最小数据
+## Seed minimal data
 
-Register user, login, create project via curl (similar to quickstart). Then create API definition and test case, and trigger an execution. See docs/setup/quickstart.md for copy-pastable commands.
-
-通过 curl 注册用户、登录并创建项目（与快速开始一致）。随后创建 API 定义与测试用例并触发执行。命令示例见 docs/setup/quickstart.md。
+Register user, login, create project via curl (similar to quickstart). Then create API definition and test case, and trigger an execution. See ./quickstart.md for copy-pastable commands.

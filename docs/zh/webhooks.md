@@ -1,60 +1,60 @@
+[English](../en/webhooks.md) | 中文
+
 # Webhooks v2
 
-The API Automation Platform provides robust, secure outbound webhooks for key events with HMAC signatures, retry logic, and a delivery console.
+平台提供健壮、安全的 Webhook 出站通知，涵盖 HMAC 签名、指数退避重试与投递控制台。
 
-## Overview
+## 概述
 
-Webhooks allow you to receive real-time notifications when important events happen in your projects. The system provides:
+当项目中发生重要事件时，Webhook 允许你实时接收通知。系统具备：
 
-- **Secure delivery** with HMAC-SHA256 signatures
-- **Reliable delivery** with exponential backoff retries
-- **Dead Letter Queue (DLQ)** for failed deliveries
-- **Delivery console** for monitoring and troubleshooting
-- **Extensible event system** for custom integrations
+- 基于 HMAC-SHA256 的安全签名
+- 指数退避的可靠重试
+- 失败投递的死信队列（DLQ）
+- 用于监控与排障的投递控制台
+- 可扩展的事件系统以便集成
 
-## Supported Events
+## 支持的事件
 
-| Event | Description | Payload Schema |
-|-------|-------------|----------------|
-| `run.started` | A test run has started | [Run Payload](#run-payload) |
-| `run.finished` | A test run has completed | [Run Payload](#run-payload) |
-| `import.diff_ready` | An import diff is ready for review | [Import Payload](#import-payload) |
-| `import.applied` | An import has been applied | [Import Payload](#import-payload) |
-| `issue.created` | A new issue has been created | [Issue Payload](#issue-payload) |
-| `issue.updated` | An issue has been updated | [Issue Payload](#issue-payload) |
+| 事件 | 说明 | 负载 Schema |
+|------|------|-------------|
+| `run.started` | 测试运行开始 | [运行负载](#运行负载) |
+| `run.finished` | 测试运行结束 | [运行负载](#运行负载) |
+| `import.diff_ready` | 导入差异可供审阅 | [导入负载](#导入负载) |
+| `import.applied` | 导入已应用 | [导入负载](#导入负载) |
+| `issue.created` | 创建了新问题 | [问题负载](#问题负载) |
+| `issue.updated` | 问题已更新 | [问题负载](#问题负载) |
 
-## Webhook Delivery
+## Webhook 投递
 
-### Security
+### 安全
 
-All webhook deliveries are signed with HMAC-SHA256 using your subscription's secret:
+所有 Webhook 投递均使用订阅的密钥进行 HMAC-SHA256 签名：
 
-1. **Signature Generation**: The signature is generated using the format `{timestamp}.{payload}`
-2. **Headers**: Each delivery includes the following headers:
+1. 签名生成：格式为 `{timestamp}.{payload}`
+2. 请求头包含：
    - `X-NT-Signature`: `sha256=<signature>`
-   - `X-NT-Timestamp`: Unix timestamp of the delivery
-   - `X-NT-Event`: The event type (e.g., `run.started`)
-   - `X-NT-Delivery-ID`: Unique delivery identifier for idempotency
+   - `X-NT-Timestamp`: 投递的 Unix 时间戳
+   - `X-NT-Event`: 事件类型（如 `run.started`）
+   - `X-NT-Delivery-ID`: 唯一投递 ID（幂等）
 
-### Retry Logic
+### 重试策略
 
-Webhooks use intelligent retry logic:
+- 服务器错误（5xx）：指数退避自动重试
+- 客户端错误（4xx）：不重试（视为永久失败）
+- 网络错误：指数退避重试
+- 最大重试次数：可按订阅配置，默认 5
+- 退避策略：指数、线性或固定间隔
 
-- **Server errors (5xx)**: Automatically retried with exponential backoff
-- **Client errors (4xx)**: Not retried (considered permanent failures)
-- **Network errors**: Retried with exponential backoff
-- **Max retries**: Configurable per subscription (default: 5)
-- **Backoff strategies**: Exponential, linear, or fixed delay
+### 死信队列
 
-### Dead Letter Queue
+超过最大重试次数后，投递将进入 DLQ 以便人工检查和重新投递。
 
-When a webhook exceeds the maximum retry attempts, it's moved to the DLQ for manual inspection and redelivery.
+## API 参考
 
-## API Reference
+### 订阅（Subscriptions）
 
-### Subscriptions
-
-#### Create Subscription
+#### 创建订阅
 ```http
 POST /api/v1/projects/{project_id}/webhooks
 Content-Type: application/json
@@ -73,12 +73,12 @@ Content-Type: application/json
 }
 ```
 
-#### List Subscriptions
+#### 订阅列表
 ```http
 GET /api/v1/projects/{project_id}/webhooks?enabled_only=true
 ```
 
-#### Update Subscription
+#### 更新订阅
 ```http
 PATCH /api/v1/projects/{project_id}/webhooks/{subscription_id}
 Content-Type: application/json
@@ -88,12 +88,12 @@ Content-Type: application/json
 }
 ```
 
-#### Delete Subscription
+#### 删除订阅
 ```http
 DELETE /api/v1/projects/{project_id}/webhooks/{subscription_id}
 ```
 
-#### Test Webhook
+#### 测试发送
 ```http
 POST /api/v1/projects/{project_id}/webhooks/test-send
 Content-Type: application/json
@@ -105,19 +105,19 @@ Content-Type: application/json
 }
 ```
 
-### Deliveries
+### 投递（Deliveries）
 
-#### List Deliveries
+#### 投递列表
 ```http
 GET /api/v1/projects/{project_id}/deliveries?status=failed&limit=50&offset=0
 ```
 
-#### Get Delivery
+#### 获取投递详情
 ```http
 GET /api/v1/projects/{project_id}/deliveries/{delivery_id}
 ```
 
-#### Redeliver Webhook
+#### 重新投递
 ```http
 POST /api/v1/deliveries/{delivery_id}/redeliver
 Content-Type: application/json
@@ -125,9 +125,9 @@ Content-Type: application/json
 {}
 ```
 
-## Payload Schemas
+## 负载结构
 
-### Run Payload
+### 运行负载
 ```json
 {
   "event_id": "uuid",
@@ -157,7 +157,7 @@ Content-Type: application/json
 }
 ```
 
-### Import Payload
+### 导入负载
 ```json
 {
   "event_id": "uuid",
@@ -189,7 +189,7 @@ Content-Type: application/json
 }
 ```
 
-### Issue Payload
+### 问题负载
 ```json
 {
   "event_id": "uuid",
@@ -218,7 +218,7 @@ Content-Type: application/json
 }
 ```
 
-## Signature Verification
+## 签名校验
 
 ### Node.js
 ```javascript
@@ -320,7 +320,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
     
-    // Check timestamp is within 5 minutes
+    // 检查时间戳是否在 5 分钟窗口内
     if time.Now().Unix()-timestamp > 300 {
         http.Error(w, "Timestamp too old", http.StatusBadRequest)
         return
@@ -337,58 +337,58 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
     
-    // Process webhook...
+    // 处理 webhook...
     w.WriteHeader(http.StatusOK)
     fmt.Fprintf(w, "OK")
 }
 ```
 
-## Best Practices
+## 最佳实践
 
-1. **Always verify signatures** before processing webhooks
-2. **Check timestamps** to prevent replay attacks (5-minute window)
-3. **Use the delivery ID** for idempotency when processing
-4. **Monitor the delivery console** for failed deliveries
-5. **Use test endpoints** before configuring production webhooks
-6. **Implement proper error handling** and return appropriate HTTP status codes
-7. **Keep secrets secure** and rotate them regularly
+1. 在处理 Webhook 前务必校验签名
+2. 检查时间戳以防重放攻击（5 分钟窗口）
+3. 使用投递 ID 进行幂等处理
+4. 监控投递控制台以排查失败
+5. 在生产配置前先使用测试端点
+6. 正确处理错误并返回合适的 HTTP 状态码
+7. 安全存放密钥并定期轮换
 
-## Troubleshooting
+## 故障排查
 
-### Common Issues
+### 常见问题
 
-1. **Signature verification fails**
-   - Check that you're using the correct secret
-   - Ensure you're hashing the exact payload string (including whitespace)
-   - Verify timestamp handling
+1. 签名校验失败
+   - 确认使用了正确的密钥
+   - 确保对原始负载字符串进行哈希（包括空白）
+   - 校验时间戳处理逻辑
 
-2. **Webhooks not being delivered**
-   - Check that the subscription is enabled
-   - Verify the URL is accessible from our servers
-   - Check the delivery console for error messages
+2. 未收到 Webhook
+   - 检查订阅是否启用
+   - 确认 URL 能从我们的服务器访问
+   - 查看投递控制台中的错误信息
 
-3. **High failure rates**
-   - Review your endpoint's response times (should be under 30 seconds)
-   - Ensure your server returns appropriate HTTP status codes
-   - Check rate limiting on your endpoint
+3. 失败率高
+   - 检查端点响应时间（应小于 30 秒）
+   - 确保返回合适的 HTTP 状态码
+   - 检查端点上的限流
 
-4. **Missing events**
-   - Verify the subscription includes the desired event types
-   - Check that events are actually occurring in your project
+4. 事件缺失
+   - 确认订阅包含所需事件类型
+   - 确认项目内确实发生了相应事件
 
-### Monitoring
+### 监控
 
-Use the delivery console to:
-- View delivery history and status
-- Inspect payload content (secrets redacted)
-- Retry failed deliveries
-- Monitor delivery latency and success rates
+使用投递控制台可以：
+- 查看投递历史与状态
+- 检查负载内容（敏感信息已打码）
+- 重新投递失败消息
+- 监控延迟与成功率
 
-## Rate Limits
+## 速率限制
 
-- **Subscriptions**: 100 per project
-- **Deliveries**: 10,000 per project per hour
-- **Retry attempts**: Configurable per subscription (max 20)
-- **Timeout**: 30 seconds per delivery attempt
+- 订阅：每个项目 100 个
+- 投递：每个项目每小时 10,000 次
+- 重试次数：按订阅配置（最多 20）
+- 超时：每次投递 30 秒
 
-For higher limits, contact support.
+如需更高配额，请联系支持。

@@ -1,19 +1,19 @@
-# Quick Start (Docker Compose) / 快速开始（Docker Compose）
+English | [中文](../../zh/setup/quickstart.md)
+
+# Quick Start (Docker Compose)
 
 This quick start spins up NexusTest-AI locally with Docker Compose and walks you through first login and a demo test run.
 
-本指南使用 Docker Compose 在本地启动 NexusTest-AI，并带你完成首次登录与一个示例测试流程。
-
 ---
 
-## Prerequisites / 前置条件
+## Prerequisites
 - Docker 24+ and Docker Compose Plugin
 - Ports available: 80 (nginx)
 - Optional: curl or HTTP client
 
 ---
 
-## 1) Clone and configure / 克隆与配置
+## 1) Clone and configure
 
 ```bash
 git clone <your-repo-url>.git
@@ -23,11 +23,11 @@ cp .env.example .env
 cp infra/env.example infra/.env || true
 ```
 
-Edit .env as needed. Minimal defaults work for local runs. / 如有需要编辑 .env；默认值已适配本地运行。
+Edit .env as needed. Minimal defaults work for local runs.
 
 ---
 
-## 2) Start stack / 启动服务
+## 2) Start stack
 
 ```bash
 docker compose -f infra/docker-compose.yml up -d --build
@@ -35,11 +35,9 @@ docker compose -f infra/docker-compose.yml up -d --build
 
 This brings up Postgres, Redis, API, Celery worker/beat, Flower, and nginx. The API container applies Alembic migrations automatically.
 
-该命令会启动 Postgres、Redis、API、Celery worker/beat、Flower 与 nginx。API 容器会自动执行数据库迁移。
-
 ---
 
-## 3) Access URLs / 访问地址
+## 3) Access URLs
 - API health: http://localhost/api/healthz
 - Readiness: http://localhost/api/readyz
 - Swagger UI: http://localhost/api/docs
@@ -47,7 +45,7 @@ This brings up Postgres, Redis, API, Celery worker/beat, Flower, and nginx. The 
 
 ---
 
-## 4) First user (admin) / 创建首个用户（管理员）
+## 4) First user (admin)
 
 ```bash
 curl -X POST http://localhost/api/auth/register \
@@ -62,7 +60,7 @@ curl -X POST http://localhost/api/auth/login \
 
 ---
 
-## 5) Create a project / 创建项目
+## 5) Create a project
 ```bash
 TOKEN=<paste-access-token>
 
@@ -75,9 +73,9 @@ curl -X POST http://localhost/api/v1/projects \
 
 ---
 
-## 6) Demo case and run / 示例用例与执行
+## 6) Demo case and run
 
-1) Create an API definition / 创建 API 定义
+1) Create an API definition
 ```bash
 curl -X POST http://localhost/api/v1/projects/$PROJECT/apis \
   -H "Authorization: Bearer $TOKEN" \
@@ -96,7 +94,7 @@ curl -X POST http://localhost/api/v1/projects/$PROJECT/apis \
 # capture API id as API_ID
 ```
 
-2) Create a minimal test case (assert status 200) / 创建最小化用例（仅断言 200）
+2) Create a minimal test case (assert status 200)
 ```bash
 curl -X POST http://localhost/api/v1/projects/$PROJECT/test-cases \
   -H "Authorization: Bearer $TOKEN" \
@@ -112,36 +110,31 @@ curl -X POST http://localhost/api/v1/projects/$PROJECT/test-cases \
 # capture case id as CASE_ID
 ```
 
-3) Trigger execution / 触发执行
+3) Trigger execution
 ```bash
 curl -X POST http://localhost/api/v1/projects/$PROJECT/execute/case/$CASE_ID \
   -H "Authorization: Bearer $TOKEN"
 # note report_id from response as REPORT_ID
 ```
 
-4) Check report / 查看报告
+4) Check report
 ```bash
 curl http://localhost/api/v1/reports/$REPORT_ID -H "Authorization: Bearer $TOKEN"
 ```
 
-Status should become "passed" shortly. / 片刻后状态应为 "passed"。
+Status should become "passed" shortly.
 
 ---
 
-## 7) Shutdown / 关闭
+## 7) Shutdown
 ```bash
 docker compose -f infra/docker-compose.yml down
 ```
 
 ---
 
-## Next steps / 下一步
-- Configure AI provider keys: docs/ai-providers.md
-- Local development (hot reload, tests): docs/setup/local-dev.md
-- CI/CD integration: docs/ci-cd.md
-- Security hardening: docs/security.md
-
-- 配置 AI 提供商：docs/ai-providers.md
-- 本地开发（热重载、测试）：docs/setup/local-dev.md
-- 集成 CI/CD：docs/ci-cd.md
-- 安全加固：docs/security.md
+## Next steps
+- Configure AI provider keys: ../ai-providers.md
+- Local development (hot reload, tests): ./local-dev.md
+- CI/CD integration: ../ci-cd.md
+- Security hardening: ../security.md
