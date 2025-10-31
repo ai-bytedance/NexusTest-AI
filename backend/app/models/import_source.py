@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from sqlalchemy import DateTime, Enum as SqlEnum, ForeignKey, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
@@ -163,8 +163,8 @@ class ImportRun(BaseModel, Base):
     project: Mapped["Project"] = relationship("Project", back_populates="import_runs")
     source: Mapped[ImportSource | None] = relationship("ImportSource", back_populates="runs")
     creator: Mapped["User"] = relationship("User", foreign_keys=[created_by])
-    applied_by: Mapped["User" | None] = relationship("User", foreign_keys=[applied_by_id])
-    rolled_back_by: Mapped["User" | None] = relationship("User", foreign_keys=[rolled_back_by_id])
+    applied_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[applied_by_id])
+    rolled_back_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[rolled_back_by_id])
     approvals: Mapped[list["ImportApproval"]] = relationship(
         "ImportApproval",
         back_populates="run",

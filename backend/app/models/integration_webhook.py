@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, String, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
@@ -73,8 +73,8 @@ class IntegrationWebhook(BaseModel, Base):
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    integration: Mapped["Integration" | None] = relationship("Integration", back_populates="webhooks")
-    project: Mapped["Project" | None] = relationship("Project", back_populates="integration_webhooks")
+    integration: Mapped[Optional["Integration"]] = relationship("Integration", back_populates="webhooks")
+    project: Mapped[Optional["Project"]] = relationship("Project", back_populates="integration_webhooks")
 
 
 __all__ = ["IntegrationWebhook", "IntegrationWebhookStatus"]

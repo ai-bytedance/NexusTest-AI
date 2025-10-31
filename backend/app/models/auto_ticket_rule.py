@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from sqlalchemy import Boolean, ForeignKey, Index, Integer, String, text
 from sqlalchemy.dialects.postgresql import JSONB
@@ -79,7 +79,7 @@ class AutoTicketRule(BaseModel, Base):
 
     project: Mapped["Project"] = relationship("Project", back_populates="auto_ticket_rules")
     integration: Mapped["Integration"] = relationship("Integration", back_populates="ticket_rules")
-    creator: Mapped["User" | None] = relationship("User", back_populates="auto_ticket_rules_created")
+    creator: Mapped[Optional["User"]] = relationship("User", back_populates="auto_ticket_rules_created")
 
 
 __all__ = ["AutoTicketRule"]

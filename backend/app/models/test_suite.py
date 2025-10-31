@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from sqlalchemy import Enum, ForeignKey, Index, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB
@@ -66,6 +66,6 @@ class TestSuite(BaseModel, Base):
     )
 
     project: Mapped["Project"] = relationship("Project", back_populates="test_suites")
-    queue: Mapped["ExecutionQueue" | None] = relationship("ExecutionQueue", back_populates="test_suites")
-    policy: Mapped["ExecutionPolicy" | None] = relationship("ExecutionPolicy")
+    queue: Mapped[Optional["ExecutionQueue"]] = relationship("ExecutionQueue", back_populates="test_suites")
+    policy: Mapped[Optional["ExecutionPolicy"]] = relationship("ExecutionPolicy")
     creator: Mapped["User"] = relationship("User", back_populates="test_suites_created")

@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from sqlalchemy import (
     Boolean,
@@ -101,8 +101,8 @@ class Agent(BaseModel, Base):
     last_seen_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
     last_seen_user_agent: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-    project: Mapped["Project" | None] = relationship("Project", back_populates="agents")
-    environment: Mapped["Environment" | None] = relationship("Environment", back_populates="agents")
+    project: Mapped[Optional["Project"]] = relationship("Project", back_populates="agents")
+    environment: Mapped[Optional["Environment"]] = relationship("Environment", back_populates="agents")
     reports: Mapped[list["TestReport"]] = relationship("TestReport", back_populates="agent")
     heartbeats: Mapped[list["AgentHeartbeat"]] = relationship(
         "AgentHeartbeat",
@@ -219,7 +219,7 @@ class AgentAlertThreshold(BaseModel, Base):
     )
 
     project: Mapped["Project"] = relationship("Project", back_populates="agent_thresholds")
-    environment: Mapped["Environment" | None] = relationship("Environment", back_populates="agent_thresholds")
+    environment: Mapped[Optional["Environment"]] = relationship("Environment", back_populates="agent_thresholds")
 
 
 class AgentAlertState(BaseModel, Base):

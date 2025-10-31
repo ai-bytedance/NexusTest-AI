@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from sqlalchemy import Boolean, Float, ForeignKey, Index, Integer, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
@@ -91,7 +91,7 @@ class ExecutionPolicy(BaseModel, Base):
     )
 
     project: Mapped["Project"] = relationship("Project", back_populates="execution_policies")
-    queue: Mapped["ExecutionQueue" | None] = relationship("ExecutionQueue", back_populates="policies")
+    queue: Mapped[Optional["ExecutionQueue"]] = relationship("ExecutionQueue", back_populates="policies")
 
 
 __all__ = ["ExecutionPolicy"]

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from sqlalchemy import ForeignKey, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB
@@ -76,7 +76,7 @@ class Project(BaseModel, Base):
         server_default=text("'{}'::jsonb"),
     )
 
-    organization: Mapped["Organization" | None] = relationship("Organization", back_populates="projects")
+    organization: Mapped[Optional["Organization"]] = relationship("Organization", back_populates="projects")
     creator: Mapped["User"] = relationship("User", back_populates="projects_created")
     members: Mapped[list["ProjectMember"]] = relationship(
         "ProjectMember",
@@ -184,17 +184,17 @@ class Project(BaseModel, Base):
         back_populates="project",
         cascade="all, delete-orphan",
     )
-    default_policy: Mapped["ExecutionPolicy" | None] = relationship(
+    default_policy: Mapped[Optional["ExecutionPolicy"]] = relationship(
         "ExecutionPolicy",
         foreign_keys=[default_policy_id],
         post_update=True,
     )
-    default_queue: Mapped["ExecutionQueue" | None] = relationship(
+    default_queue: Mapped[Optional["ExecutionQueue"]] = relationship(
         "ExecutionQueue",
         foreign_keys=[default_queue_id],
         post_update=True,
     )
-    default_rate_limit_policy: Mapped["RateLimitPolicy" | None] = relationship(
+    default_rate_limit_policy: Mapped[Optional["RateLimitPolicy"]] = relationship(
         "RateLimitPolicy",
         foreign_keys=[default_rate_limit_policy_id],
         post_update=True,

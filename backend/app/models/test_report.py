@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from sqlalchemy import BigInteger, Boolean, DateTime, Enum, Float, ForeignKey, Index, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
@@ -157,7 +157,7 @@ class TestReport(BaseModel, Base):
         nullable=True,
     )
 
-    parent_report: Mapped["TestReport" | None] = relationship(
+    parent_report: Mapped[Optional["TestReport"]] = relationship(
         "TestReport",
         remote_side=[id],
         back_populates="child_reports",
@@ -169,8 +169,8 @@ class TestReport(BaseModel, Base):
         passive_deletes=True,
     )
     project: Mapped["Project"] = relationship("Project", back_populates="test_reports")
-    queue: Mapped["ExecutionQueue" | None] = relationship("ExecutionQueue", back_populates="reports")
-    agent: Mapped["Agent" | None] = relationship("Agent", back_populates="reports")
+    queue: Mapped[Optional["ExecutionQueue"]] = relationship("ExecutionQueue", back_populates="reports")
+    agent: Mapped[Optional["Agent"]] = relationship("Agent", back_populates="reports")
     issue_links: Mapped[list["ReportIssueLink"]] = relationship(
         "ReportIssueLink",
         back_populates="report",
