@@ -56,6 +56,29 @@ npm run dev
 
 The dev server listens on 5173 by default. CORS_ORIGINS in the backend already includes http://localhost:5173 and http://127.0.0.1:5173 for local use.
 
+### Monaco editor plugin
+
+The Monaco integration uses the `vite-plugin-monaco-editor` package. The current release ships a CommonJS wrapper, so the Vite config resolves the default export before invoking the plugin to avoid the `TypeError: monacoEditorPlugin is not a function` build failure (notably in Docker builds):
+
+```ts
+import monacoEditorPlugin from "vite-plugin-monaco-editor";
+
+const resolvedMonacoEditorPlugin =
+  (monacoEditorPlugin as unknown as { default?: typeof monacoEditorPlugin }).default ??
+  monacoEditorPlugin;
+
+export default defineConfig({
+  plugins: [
+    react(),
+    resolvedMonacoEditorPlugin({
+      languageWorkers: ["editorWorkerService", "json", "typescript", "html", "css"],
+    }),
+  ],
+});
+```
+
+This keeps the Monaco workers for JSON, TypeScript, HTML, and CSS bundled consistently across local and Docker builds.
+
 ---
 
 ## Common developer tasks
