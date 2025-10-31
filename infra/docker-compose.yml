@@ -99,7 +99,9 @@ services:
       - "5555"
 
   nginx:
-    image: nginx:1.25-alpine
+    build:
+      context: ../
+      dockerfile: infra/nginx/Dockerfile
     restart: unless-stopped
     depends_on:
       api:
@@ -108,8 +110,6 @@ services:
         condition: service_started
     ports:
       - "0.0.0.0:8080:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
 
 volumes:
   postgres_data:

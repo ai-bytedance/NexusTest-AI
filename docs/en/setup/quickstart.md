@@ -60,6 +60,7 @@ This brings up Postgres, Redis, API, Celery worker/beat, Flower, and nginx. The 
 ---
 
 ## 5) Access URLs
+- Web UI: http://localhost:8080/ (nginx serves the Vite build with VITE_API_BASE=/api)
 - API health: http://localhost:8080/api/healthz
 - Readiness: http://localhost:8080/api/readyz
 - Swagger UI: http://localhost:8080/api/docs
