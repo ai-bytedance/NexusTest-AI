@@ -73,20 +73,21 @@ cp .env.example .env
 docker compose -f infra/docker-compose.yml up -d postgres redis
 docker compose -f infra/docker-compose.yml build api celery-worker celery-beat flower --no-cache --progress=plain
 docker compose -f infra/docker-compose.yml up -d
-# Access: http://localhost/api/healthz, /api/docs, /flower
+# Access: http://localhost:8080/api/healthz, /api/docs, /flower
+# Need port 80 instead? Change nginx ports to "80:80" in infra/docker-compose.yml and restart the stack.
 
 # Create admin, then login to get an access token (copy access_token from response)
-curl -X POST http://localhost/api/auth/register \
+curl -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@example.com","password":"changeme123","role":"admin"}'
 
-curl -X POST http://localhost/api/auth/login \
+curl -X POST http://localhost:8080/api/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"admin@example.com","password":"changeme123"}'
 # Copy .data.access_token as TOKEN
 
 # Create project (copy .data.id as PROJECT)
-curl -X POST http://localhost/api/v1/projects \
+curl -X POST http://localhost:8080/api/v1/projects \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   -d '{"name":"Demo","key":"DEMO"}'
 
@@ -143,9 +144,9 @@ More in docs/en/security.md and docs/en/ai-providers.md.
 
 ## First-run setup & URLs
 
-- Health: http://localhost/api/healthz
-- Swagger: http://localhost/api/docs
-- Flower: http://localhost/flower
+- Health: http://localhost:8080/api/healthz
+- Swagger: http://localhost:8080/api/docs
+- Flower: http://localhost:8080/flower
 - Register an admin then login to obtain a bearer token for API calls
 
 ---
@@ -182,7 +183,7 @@ See docs/en/setup/quickstart.md for copy-paste commands.
 - Docker build fails with redis/celery dependency conflicts → pull latest dependencies (`redis>=4.6,<5.0`) and rerun the build step with `--no-cache`.
 - Compose tries to pull `api-automation-backend` → update to the latest infra/docker-compose.yml; services now build locally to `nexustest-backend:local`.
 - Slow image builds or base image pulls → run with BuildKit enabled (`DOCKER_BUILDKIT=1 docker compose …`) and configure registry mirrors if available.
-- Port 80 already in use → stop the conflicting service or change host port mapping in infra/docker-compose.yml
+- Port 8080 already in use → stop the conflicting service or adjust infra/docker-compose.yml (e.g., change nginx ports to "80:80" if port 80 is free)
 - Database connection errors → ensure postgres container is healthy; check DATABASE_URL
 - Migrations failed on start → docker compose logs api; run make migrate to retry
 - 401 errors → missing/expired token; re-login and pass Authorization: Bearer <token>

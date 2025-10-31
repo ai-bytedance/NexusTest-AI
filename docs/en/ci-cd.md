@@ -38,7 +38,7 @@ Environment variables:
 Example:
 ```bash
 python scripts/nt_cli.py \
-  --base-url http://localhost \
+  --base-url http://localhost:8080 \
   --project-id 123e4567-e89b-12d3-a456-426614174000 \
   --suite-id 9aa9f8b0-aaaa-4a1f-9ff0-123456789abc \
   --email runner@example.com \

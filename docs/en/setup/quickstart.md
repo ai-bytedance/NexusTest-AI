@@ -8,7 +8,7 @@ This quick start spins up NexusTest-AI locally with Docker Compose and walks you
 
 ## Prerequisites
 - Docker 24+ and Docker Compose Plugin
-- Ports available: 80 (nginx)
+- Ports available: 8080 (nginx host port)
 - Optional: curl or HTTP client
 
 ---
@@ -60,21 +60,23 @@ This brings up Postgres, Redis, API, Celery worker/beat, Flower, and nginx. The 
 ---
 
 ## 5) Access URLs
-- API health: http://localhost/api/healthz
-- Readiness: http://localhost/api/readyz
-- Swagger UI: http://localhost/api/docs
-- Flower: http://localhost/flower
+- API health: http://localhost:8080/api/healthz
+- Readiness: http://localhost:8080/api/readyz
+- Swagger UI: http://localhost:8080/api/docs
+- Flower: http://localhost:8080/flower
+
+If port 80 is free and you prefer to use it, change the nginx service port mapping in infra/docker-compose.yml back to "80:80" and restart the stack.
 
 ---
 
 ## 6) First user (admin)
 
 ```bash
-curl -X POST http://localhost/api/auth/register \
+curl -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@example.com","password":"changeme123","role":"admin"}'
 
-curl -X POST http://localhost/api/auth/login \
+curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@example.com","password":"changeme123"}'
 # copy access_token from response
@@ -86,7 +88,7 @@ curl -X POST http://localhost/api/auth/login \
 ```bash
 TOKEN=<paste-access-token>
 
-curl -X POST http://localhost/api/v1/projects \
+curl -X POST http://localhost:8080/api/v1/projects \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name":"Demo","key":"DEMO","description":"Quickstart project"}'
@@ -99,7 +101,7 @@ curl -X POST http://localhost/api/v1/projects \
 
 1) Create an API definition
 ```bash
-curl -X POST http://localhost/api/v1/projects/$PROJECT/apis \
+curl -X POST http://localhost:8080/api/v1/projects/$PROJECT/apis \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -118,7 +120,7 @@ curl -X POST http://localhost/api/v1/projects/$PROJECT/apis \
 
 2) Create a minimal test case (assert status 200)
 ```bash
-curl -X POST http://localhost/api/v1/projects/$PROJECT/test-cases \
+curl -X POST http://localhost:8080/api/v1/projects/$PROJECT/test-cases \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -134,14 +136,14 @@ curl -X POST http://localhost/api/v1/projects/$PROJECT/test-cases \
 
 3) Trigger execution
 ```bash
-curl -X POST http://localhost/api/v1/projects/$PROJECT/execute/case/$CASE_ID \
+curl -X POST http://localhost:8080/api/v1/projects/$PROJECT/execute/case/$CASE_ID \
   -H "Authorization: Bearer $TOKEN"
 # note report_id from response as REPORT_ID
 ```
 
 4) Check report
 ```bash
-curl http://localhost/api/v1/reports/$REPORT_ID -H "Authorization: Bearer $TOKEN"
+curl http://localhost:8080/api/v1/reports/$REPORT_ID -H "Authorization: Bearer $TOKEN"
 ```
 
 Status should become "passed" shortly.
