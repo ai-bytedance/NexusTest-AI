@@ -102,6 +102,11 @@ services:
     build:
       context: ../
       dockerfile: infra/nginx/Dockerfile
+      args:
+        NPM_REGISTRY: https://registry.npmmirror.com
+        # HTTP_PROXY: http://proxy.yourcorp:8080
+        # HTTPS_PROXY: http://proxy.yourcorp:8080
+        # USE_LOCAL_DIST: "true"
     restart: unless-stopped
     depends_on:
       api:

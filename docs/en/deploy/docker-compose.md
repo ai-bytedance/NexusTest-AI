@@ -47,6 +47,29 @@ docker compose -f infra/docker-compose.yml logs -f
 
 ---
 
+## Frontend build configuration
+
+The nginx image builds the Vite frontend during `docker compose build nginx`. If your network requires an npm mirror or corporate proxy, adjust the build arguments in `infra/docker-compose.yml`:
+
+```yaml
+services:
+  nginx:
+    build:
+      args:
+        NPM_REGISTRY: https://registry.npmmirror.com
+        # HTTP_PROXY: http://proxy.yourcorp:8080
+        # HTTPS_PROXY: http://proxy.yourcorp:8080
+        # USE_LOCAL_DIST: "true"
+```
+
+- `NPM_REGISTRY` defaults to the npm mirror shown above and enables additional fetch retries inside the image build.
+- Uncomment `HTTP_PROXY` / `HTTPS_PROXY` if you need to route traffic through a proxy.
+- Set `USE_LOCAL_DIST=true` to reuse a prebuilt `frontend/dist/` directory.
+
+When `USE_LOCAL_DIST=true`, ensure `frontend/dist/` exists (e.g. run `npm ci && npm run build` locally). The Dockerfile will skip `npm ci` / `npm run build` and copy those artifacts straight into nginx, which allows builds to succeed even without external npm access.
+
+---
+
 ## Environment files
 
 - The stack reads ../.env into API, workers, and Flower.
