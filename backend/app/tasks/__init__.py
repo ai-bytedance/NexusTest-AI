@@ -1,4 +1,4 @@
-from app.core.celery import celery_app
+from app.core.celery_app import celery_app
 
 # Import task modules so Celery discovers task definitions.
 from app.tasks import (  # noqa: F401

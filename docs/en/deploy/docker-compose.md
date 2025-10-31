@@ -24,8 +24,13 @@ Access points:
 
 Start:
 ```bash
-docker compose -f infra/docker-compose.yml up -d --build
+docker compose -f infra/docker-compose.yml up -d postgres redis
+docker compose -f infra/docker-compose.yml build api celery-worker celery-beat flower --no-cache --progress=plain
+docker compose -f infra/docker-compose.yml up -d
 ```
+The API, worker, beat, and Flower services now build locally from `backend/Dockerfile` and share the `nexustest-backend:local` image tag (drop `--no-cache` after the first successful build if you prefer cached layers).
+
+> Tip: enable BuildKit (`DOCKER_BUILDKIT=1 docker compose …`) and configure registry mirrors if base image pulls are slow in your environment.
 
 Stop:
 ```bash

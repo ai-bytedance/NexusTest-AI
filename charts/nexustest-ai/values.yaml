@@ -160,7 +160,7 @@ celeryWorker:
       command:
         - /bin/sh
         - -c
-        - "celery -A app.core.celery:celery_app inspect ping -d celery@$(hostname)"
+        - "celery -A app.core.celery_app inspect ping -d celery@$(hostname)"
       initialDelaySeconds: 30
       periodSeconds: 30
       timeoutSeconds: 10
@@ -170,7 +170,7 @@ celeryWorker:
       command:
         - /bin/sh
         - -c
-        - "celery -A app.core.celery:celery_app inspect ping"
+        - "celery -A app.core.celery_app inspect ping"
       initialDelaySeconds: 30
       periodSeconds: 30
       timeoutSeconds: 10
@@ -180,7 +180,7 @@ celeryWorker:
       command:
         - /bin/sh
         - -c
-        - "celery -A app.core.celery:celery_app inspect ping"
+        - "celery -A app.core.celery_app inspect ping"
       failureThreshold: 60
       periodSeconds: 10
   autoscaling:
@@ -231,7 +231,7 @@ celeryBeat:
       command:
         - /bin/sh
         - -c
-        - "celery -A app.core.celery:celery_app inspect ping"
+        - "celery -A app.core.celery_app inspect ping"
       initialDelaySeconds: 60
       periodSeconds: 60
       timeoutSeconds: 10
@@ -241,7 +241,7 @@ celeryBeat:
       command:
         - /bin/sh
         - -c
-        - "celery -A app.core.celery:celery_app inspect ping"
+        - "celery -A app.core.celery_app inspect ping"
       initialDelaySeconds: 30
       periodSeconds: 60
       timeoutSeconds: 10
@@ -251,7 +251,7 @@ celeryBeat:
       command:
         - /bin/sh
         - -c
-        - "celery -A app.core.celery:celery_app inspect ping"
+        - "celery -A app.core.celery_app inspect ping"
       failureThreshold: 60
       periodSeconds: 10
 

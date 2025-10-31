@@ -67,7 +67,7 @@ spec:
           command:
             {{- toYaml $command | nindent 12 }}
           {{- end }}
-          {{- $defaultArgs := list (printf "flower --app=app.core.celery:celery_app --port=%d --url-prefix=flower --address=0.0.0.0" .Values.flower.service.port) -}}
+          {{- $defaultArgs := list (printf "celery -A app.core.celery_app flower --address=0.0.0.0 --port=%d --url-prefix=flower --queues=cases,suites" .Values.flower.service.port) -}}
           {{- $args := default $defaultArgs .Values.flower.args -}}
           args:
             {{- toYaml $args | nindent 12 }}
