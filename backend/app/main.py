@@ -8,6 +8,7 @@ from app.api.routes import (
     admin_backups,
     ai,
     analytics,
+    audit,
     apis,
     auth,
     datasets,
@@ -45,7 +46,12 @@ logger = get_logger()
 def create_app() -> FastAPI:
     settings = get_settings()
 
-    app = FastAPI(title="API Automation Platform", version="0.1.0")
+    app = FastAPI(
+        title="API Automation Platform",
+        version="0.1.0",
+        docs_url="/api/docs",
+        openapi_url="/api/openapi.json",
+    )
 
     app.add_middleware(RequestIdMiddleware)
     if settings.metrics_enabled:
@@ -64,6 +70,7 @@ def create_app() -> FastAPI:
     app.include_router(projects.router, prefix="/api/v1")
     app.include_router(ai.router, prefix="/api/v1")
     app.include_router(analytics.router, prefix="/api/v1")
+    app.include_router(audit.router, prefix="/api/v1")
     app.include_router(apis.router, prefix="/api/v1")
     app.include_router(environments.router, prefix="/api/v1")
     app.include_router(datasets.router, prefix="/api/v1")

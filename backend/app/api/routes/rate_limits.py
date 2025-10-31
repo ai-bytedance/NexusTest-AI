@@ -9,7 +9,7 @@ from app.api.response import ResponseEnvelope, success_response
 from app.core.authz import ProjectContext, get_current_user, require_project_admin, require_project_member
 from app.core.errors import ErrorCode, http_exception
 from app.db.session import get_db
-from app.models import ApiToken, RateLimitPolicy
+from app.models import ApiToken, RateLimitPolicy, AuditLog
 from app.models.user import User
 from app.schemas.rate_limit import (
     EffectiveRateLimit,
@@ -173,3 +173,38 @@ def effective_limits(
         active_rules=active_rules,
     )
     return success_response(payload.model_dump(mode="json"))
+
+
+@router.get("/throttles", response_model=ResponseEnvelope)
+def recent_throttles(
+    request: Request,
+    context: ProjectContext = Depends(require_project_admin),
+    limit: int = Query(50, ge=1, le=200),
+    since_minutes: int = Query(60, ge=1, le=1440),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    from datetime import datetime, timedelta, timezone
+
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=since_minutes)
+    stmt = (
+        db.query(AuditLog)
+        .filter(
+            AuditLog.project_id == context.project.id,
+            AuditLog.action == "rate_limit.throttled",
+            AuditLog.created_at >= cutoff,
+        )
+        .order_by(AuditLog.created_at.desc())
+        .limit(limit)
+    )
+    items = [
+        {
+            "id": str(row.id),
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+            "metadata": row.metadata,
+            "ip": row.ip,
+            "user_agent": row.user_agent,
+        }
+        for row in stmt.all()
+    ]
+    return success_response({"items": items, "count": len(items)})

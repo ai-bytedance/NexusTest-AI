@@ -27,6 +27,8 @@ class ApiToken(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     token_prefix: Mapped[str] = mapped_column(String(16), nullable=False, unique=True, index=True)
     token_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    prev_token_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    prev_valid_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     scopes: Mapped[list[str]] = mapped_column(
         JSONB,
         nullable=False,

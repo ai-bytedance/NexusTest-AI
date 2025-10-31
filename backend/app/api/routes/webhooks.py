@@ -127,6 +127,46 @@ async def update_webhook_subscription(
     return subscription
 
 
+@router.post(
+    "/projects/{project_id}/webhooks/{subscription_id}/rotate",
+    response_model=WebhookSubscriptionResponse,
+)
+async def rotate_webhook_secret(
+    project_id: uuid.UUID,
+    subscription_id: uuid.UUID,
+    grace_seconds: int = Query(300, ge=0),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Start rotation for a webhook subscription secret with a dual-valid grace period."""
+    webhook_service = WebhookService(db)
+    # Verify subscription belongs to project
+    existing = await webhook_service.get_subscription(subscription_id, project_id)
+    if not existing:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Webhook subscription not found")
+    rotated = await webhook_service.start_rotation(subscription_id, grace_seconds=grace_seconds)
+    return rotated
+
+
+@router.post(
+    "/projects/{project_id}/webhooks/{subscription_id}/cutover",
+    response_model=WebhookSubscriptionResponse,
+)
+async def finalize_webhook_rotation(
+    project_id: uuid.UUID,
+    subscription_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Immediately finalize rotation by promoting pending secret to active."""
+    webhook_service = WebhookService(db)
+    existing = await webhook_service.get_subscription(subscription_id, project_id)
+    if not existing:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Webhook subscription not found")
+    finalized = await webhook_service.finalize_rotation(subscription_id)
+    return finalized
+
+
 @router.delete(
     "/projects/{project_id}/webhooks/{subscription_id}",
     status_code=status.HTTP_204_NO_CONTENT,

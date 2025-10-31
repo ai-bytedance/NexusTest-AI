@@ -87,7 +87,7 @@ def update_token(
     )
     token = service.get_owned_token(token_id)
     if payload.action == "rotate":
-        updated, secret = service.rotate_token(token)
+        updated, secret = service.rotate_token(token, grace_seconds=payload.grace_period_seconds)
         data = _serialize_token(updated)
         data["token"] = secret
         return success_response(data)

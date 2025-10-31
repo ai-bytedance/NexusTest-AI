@@ -17,3 +17,9 @@ repos:
     hooks:
       - id: end-of-file-fixer
       - id: trailing-whitespace
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        name: bandit (security static analysis)
+        args: ["-r", "backend/app", "-x", "backend/tests"]

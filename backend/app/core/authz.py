@@ -114,7 +114,13 @@ def _authenticate_api_token(request: Request, raw_token: str, db: Session) -> Us
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    if not verify_token_secret(secret, api_token.token_hash):
+    # Verify against current hash or a recently rotated previous hash within grace period
+    valid = verify_token_secret(secret, api_token.token_hash)
+    if not valid and api_token.prev_token_hash and api_token.prev_valid_until:
+        now_ts = datetime.now(timezone.utc)
+        if now_ts < api_token.prev_valid_until and verify_token_secret(secret, api_token.prev_token_hash):
+            valid = True
+    if not valid:
         raise http_exception(
             status.HTTP_401_UNAUTHORIZED,
             ErrorCode.AUTH_TOKEN_INVALID,

@@ -17,6 +17,7 @@ from app.core.api_tokens import (
     normalize_project_ids,
     normalize_scopes,
 )
+from app.core.config import get_settings
 from app.core.errors import ErrorCode, http_exception
 from app.models import ApiToken, ProjectMember, ProjectRole, RateLimitPolicy, User
 from app.services.audit_log import record_audit_log
@@ -115,12 +116,23 @@ class ApiTokenService:
         self.session.refresh(token)
         return token, format_token(prefix, secret)
 
-    def rotate_token(self, token: ApiToken) -> tuple[ApiToken, str]:
+    def rotate_token(self, token: ApiToken, *, grace_seconds: int | None = None) -> tuple[ApiToken, str]:
         if token.revoked_at is not None:
             raise http_exception(status.HTTP_400_BAD_REQUEST, ErrorCode.BAD_REQUEST, "Cannot rotate a revoked token")
 
-        prefix, secret = self._generate_unique_token()
-        token.token_prefix = prefix
+        settings = get_settings()
+        if grace_seconds is None:
+            grace_seconds = int(getattr(settings, "token_rotation_grace_seconds", 0) or 0)
+
+        # Generate a new secret but keep the existing prefix to enable dual-valid window
+        _prefix, secret = generate_token_components()
+        token.prev_token_hash = token.token_hash
+        if grace_seconds > 0:
+            from datetime import datetime, timedelta, timezone
+
+            token.prev_valid_until = datetime.now(timezone.utc) + timedelta(seconds=grace_seconds)
+        else:
+            token.prev_valid_until = None
         token.token_hash = hash_token_secret(secret)
         token.last_used_at = None
 
@@ -130,14 +142,18 @@ class ApiTokenService:
             action="token.rotated",
             resource_type="api_token",
             resource_id=str(token.id),
-            metadata={"token_prefix": prefix},
+            metadata={
+                "token_prefix": token.token_prefix,
+                "grace_seconds": grace_seconds,
+                "prev_valid_until": token.prev_valid_until.isoformat() if token.prev_valid_until else None,
+            },
             ip=self.client_ip,
             user_agent=self.user_agent,
         )
         self.session.add(token)
         self.session.commit()
         self.session.refresh(token)
-        return token, format_token(prefix, secret)
+        return token, format_token(token.token_prefix, secret)
 
     def revoke_token(self, token: ApiToken) -> ApiToken:
         if token.revoked_at is not None:

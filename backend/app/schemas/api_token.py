@@ -71,6 +71,7 @@ class ApiTokenCreate(BaseModel):
 
 class ApiTokenPatchRequest(BaseModel):
     action: Literal["revoke", "rotate"]
+    grace_period_seconds: int | None = Field(default=None, ge=0)
 
 
 class ApiTokenRead(BaseModel):
