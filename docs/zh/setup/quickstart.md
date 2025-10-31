@@ -38,6 +38,7 @@ docker compose -f infra/docker-compose.yml up -d --build
 ---
 
 ## 3) 访问地址
+- 前端 UI: http://localhost:8080/（nginx 提供 Vite 构建，默认使用 VITE_API_BASE=/api）
 - API 健康检查: http://localhost:8080/api/healthz
 - 就绪检查: http://localhost:8080/api/readyz
 - Swagger UI: http://localhost:8080/api/docs
