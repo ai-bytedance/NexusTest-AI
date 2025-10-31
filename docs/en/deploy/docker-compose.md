@@ -14,15 +14,16 @@ This document explains the default stack shipped in infra/docker-compose.yml and
 - celery-worker: background workers (queues: cases,suites)
 - celery-beat: periodic scheduler
 - flower: Celery monitoring UI (exposed through nginx at /flower)
-- nginx: reverse proxy exposing port 8080 on the host, adds security headers and basic rate limits
+- nginx: reverse proxy binding 0.0.0.0:8080 → 80 in the container (security headers + basic rate limits) so the UI is reachable from other machines on your network
 
 Access points:
 - http://localhost:8080/api/healthz
 - http://localhost:8080/api/readyz
 - http://localhost:8080/api/docs
 - http://localhost:8080/flower
+- http://<host>:8080/ (from another device on the LAN, assuming host firewall allows 8080)
 
-If you prefer to keep using port 80 and it is free on your machine, edit infra/docker-compose.yml to change the nginx service ports back to "80:80" before starting the stack.
+If you prefer a different host port, edit infra/docker-compose.yml and update the nginx service ports. The default uses "0.0.0.0:8080:80" so remote clients can reach the stack without extra overrides.
 
 Start:
 ```bash

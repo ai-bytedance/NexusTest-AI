@@ -178,11 +178,14 @@ AI 提供商密钥：
 
 ## 故障排查
 
-- 8080 端口被占用 → 关闭冲突服务，或在 infra/docker-compose.yml 中调整 nginx 主机端口（例如改回 "80:80"）
+- 8080 端口被占用 → 关闭冲突服务，或按需修改 infra/docker-compose.yml（默认映射为 "0.0.0.0:8080:80" 以便其他主机访问；仅在确定需要时才改动）
 - 数据库连接错误 → 确认 postgres 容器健康；检查 DATABASE_URL
 - 启动迁移失败 → docker compose logs api；使用 make migrate 重试
+- SQLAlchemy 报 `Mapped['Model' | None]` 等错误 → 在模型文件头部加入 `from __future__ import annotations`，并将关系类型改为 `Mapped[Model | None]` / `Mapped[list[Model]]`，避免带引号的联合类型，否则 Alembic upgrade 会失败
 - 401 错误 → 缺少/过期 Token；请重新登录并携带 Authorization: Bearer <token>
 - 本地 CORS 问题 → 确认 CORS_ORIGINS 包含前端开发 URL
+- nginx 配置报 "add_header is not allowed here" → 仅在 `http`/`server` 块中添加响应头（参见 infra/nginx/nginx.conf），修改后可执行 `docker compose exec nginx nginx -t` 验证
+- 外部主机无法访问 → 检查宿主机防火墙是否放行 8080 端口，或在 Compose 中重新映射端口
 - nginx 默认未启用 HSTS → 在 nginx 容器上设置 HSTS_ENABLED=1
 
 ---

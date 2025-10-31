@@ -39,4 +39,4 @@ class UserIdentity(BaseModel, Base):
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    user: Mapped["User"] = relationship("User", back_populates="identities")
+    user: Mapped[User] = relationship("User", back_populates="identities")

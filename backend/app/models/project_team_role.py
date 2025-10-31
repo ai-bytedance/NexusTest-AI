@@ -32,5 +32,5 @@ class ProjectTeamRole(BaseModel, Base):
         server_default=text("'member'::project_role_enum"),
     )
 
-    project: Mapped["Project"] = relationship("Project", back_populates="team_roles")
-    team: Mapped["Team"] = relationship("Team", back_populates="project_links")
+    project: Mapped[Project] = relationship("Project", back_populates="team_roles")
+    team: Mapped[Team] = relationship("Team", back_populates="project_links")

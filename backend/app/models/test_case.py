@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Boolean, Enum, ForeignKey, Index, String, text
 from sqlalchemy.dialects.postgresql import JSONB
@@ -18,7 +18,6 @@ if TYPE_CHECKING:
     from app.models.execution_queue import ExecutionQueue
     from app.models.project import Project
     from app.models.user import User
-
 
 class TestCase(BaseModel, Base):
     __tablename__ = "test_cases"
@@ -102,10 +101,10 @@ class TestCase(BaseModel, Base):
         index=True,
     )
 
-    project: Mapped["Project"] = relationship("Project", back_populates="test_cases")
-    api: Mapped["Api"] = relationship("Api", back_populates="test_cases")
-    environment: Mapped[Optional["Environment"]] = relationship("Environment", back_populates="test_cases")
-    dataset: Mapped[Optional["Dataset"]] = relationship("Dataset", back_populates="test_cases")
-    queue: Mapped[Optional["ExecutionQueue"]] = relationship("ExecutionQueue", back_populates="test_cases")
-    policy: Mapped[Optional["ExecutionPolicy"]] = relationship("ExecutionPolicy")
-    creator: Mapped["User"] = relationship("User", back_populates="test_cases_created")
+    project: Mapped[Project] = relationship("Project", back_populates="test_cases")
+    api: Mapped[Api] = relationship("Api", back_populates="test_cases")
+    environment: Mapped[Environment | None] = relationship("Environment", back_populates="test_cases")
+    dataset: Mapped[Dataset | None] = relationship("Dataset", back_populates="test_cases")
+    queue: Mapped[ExecutionQueue | None] = relationship("ExecutionQueue", back_populates="test_cases")
+    policy: Mapped[ExecutionPolicy | None] = relationship("ExecutionPolicy")
+    creator: Mapped[User] = relationship("User", back_populates="test_cases_created")

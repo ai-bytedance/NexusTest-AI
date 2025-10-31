@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import ForeignKey, Integer, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
@@ -12,7 +12,6 @@ from app.db.base import Base, BaseModel
 if TYPE_CHECKING:  # pragma: no cover
     from app.models.project import Project
     from app.models.user import User
-
 
 class AiChat(BaseModel, Base):
     __tablename__ = "ai_chats"
@@ -31,15 +30,14 @@ class AiChat(BaseModel, Base):
         index=True,
     )
 
-    project: Mapped["Project"] = relationship("Project", back_populates="ai_chats")
-    creator: Mapped["User"] = relationship("User", back_populates="ai_chats_created")
-    messages: Mapped[list["AiChatMessage"]] = relationship(
+    project: Mapped[Project] = relationship("Project", back_populates="ai_chats")
+    creator: Mapped[User] = relationship("User", back_populates="ai_chats_created")
+    messages: Mapped[list[AiChatMessage]] = relationship(
         "AiChatMessage",
         back_populates="chat",
         cascade="all, delete-orphan",
         order_by="AiChatMessage.sequence",
     )
-
 
 class AiChatMessage(BaseModel, Base):
     __tablename__ = "ai_chat_messages"
@@ -70,8 +68,7 @@ class AiChatMessage(BaseModel, Base):
     tool_invoked: Mapped[str | None] = mapped_column(String(64), nullable=True)
     result_ref: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-    chat: Mapped["AiChat"] = relationship("AiChat", back_populates="messages")
-    author: Mapped[Optional["User"]] = relationship("User", back_populates="ai_chat_messages")
-
+    chat: Mapped[AiChat] = relationship("AiChat", back_populates="messages")
+    author: Mapped[User | None] = relationship("User", back_populates="ai_chat_messages")
 
 __all__ = ["AiChat", "AiChatMessage"]

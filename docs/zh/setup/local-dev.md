@@ -38,7 +38,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 Swagger UI: http://localhost:8000/api/docs
 
-注意：若通过 Docker Compose 使用仓库内的 nginx 代理，对外访问 URL 为 http://localhost:8080/api/。
+注意：若通过 Docker Compose 使用仓库内的 nginx 代理，对外访问 URL 为 http://localhost:8080/api/（或在其他设备上访问 http://<主机 IP>:8080/api/）。
 
 ---
 

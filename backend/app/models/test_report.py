@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import BigInteger, Boolean, DateTime, Enum, Float, ForeignKey, Index, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
@@ -18,11 +18,9 @@ if TYPE_CHECKING:
     from app.models.issue import ReportIssueLink
     from app.models.project import Project
 
-
 class ReportEntityType(str, enum.Enum):
     CASE = "case"
     SUITE = "suite"
-
 
 class ReportStatus(str, enum.Enum):
     PENDING = "pending"
@@ -31,7 +29,6 @@ class ReportStatus(str, enum.Enum):
     FAILED = "failed"
     ERROR = "error"
     SKIPPED = "skipped"
-
 
 class TestReport(BaseModel, Base):
     __tablename__ = "test_reports"
@@ -157,21 +154,21 @@ class TestReport(BaseModel, Base):
         nullable=True,
     )
 
-    parent_report: Mapped[Optional["TestReport"]] = relationship(
+    parent_report: Mapped[TestReport | None] = relationship(
         "TestReport",
         remote_side=[id],
         back_populates="child_reports",
     )
-    child_reports: Mapped[list["TestReport"]] = relationship(
+    child_reports: Mapped[list[TestReport]] = relationship(
         "TestReport",
         back_populates="parent_report",
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
-    project: Mapped["Project"] = relationship("Project", back_populates="test_reports")
-    queue: Mapped[Optional["ExecutionQueue"]] = relationship("ExecutionQueue", back_populates="reports")
-    agent: Mapped[Optional["Agent"]] = relationship("Agent", back_populates="reports")
-    issue_links: Mapped[list["ReportIssueLink"]] = relationship(
+    project: Mapped[Project] = relationship("Project", back_populates="test_reports")
+    queue: Mapped[ExecutionQueue | None] = relationship("ExecutionQueue", back_populates="reports")
+    agent: Mapped[Agent | None] = relationship("Agent", back_populates="reports")
+    issue_links: Mapped[list[ReportIssueLink]] = relationship(
         "ReportIssueLink",
         back_populates="report",
         cascade="all, delete-orphan",

@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
     Boolean,
@@ -28,13 +28,11 @@ if TYPE_CHECKING:
     from app.models.project import Project
     from app.models.test_report import TestReport
 
-
 class AgentStatus(str, enum.Enum):
     OFFLINE = "offline"
     ONLINE = "online"
     DEGRADED = "degraded"
     DISABLED = "disabled"
-
 
 class Agent(BaseModel, Base):
     __tablename__ = "agents"
@@ -101,26 +99,25 @@ class Agent(BaseModel, Base):
     last_seen_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
     last_seen_user_agent: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-    project: Mapped[Optional["Project"]] = relationship("Project", back_populates="agents")
-    environment: Mapped[Optional["Environment"]] = relationship("Environment", back_populates="agents")
-    reports: Mapped[list["TestReport"]] = relationship("TestReport", back_populates="agent")
-    heartbeats: Mapped[list["AgentHeartbeat"]] = relationship(
+    project: Mapped[Project | None] = relationship("Project", back_populates="agents")
+    environment: Mapped[Environment | None] = relationship("Environment", back_populates="agents")
+    reports: Mapped[list[TestReport]] = relationship("TestReport", back_populates="agent")
+    heartbeats: Mapped[list[AgentHeartbeat]] = relationship(
         "AgentHeartbeat",
         back_populates="agent",
         cascade="all, delete-orphan",
         order_by="AgentHeartbeat.recorded_at.desc()",
     )
-    queue_memberships: Mapped[list["AgentQueueMembership"]] = relationship(
+    queue_memberships: Mapped[list[AgentQueueMembership]] = relationship(
         "AgentQueueMembership",
         back_populates="agent",
         cascade="all, delete-orphan",
     )
-    alert_states: Mapped[list["AgentAlertState"]] = relationship(
+    alert_states: Mapped[list[AgentAlertState]] = relationship(
         "AgentAlertState",
         back_populates="agent",
         cascade="all, delete-orphan",
     )
-
 
 class AgentHeartbeat(Base):
     __tablename__ = "agent_heartbeats"
@@ -153,8 +150,7 @@ class AgentHeartbeat(Base):
         server_default=text("'{}'::jsonb"),
     )
 
-    agent: Mapped["Agent"] = relationship("Agent", back_populates="heartbeats")
-
+    agent: Mapped[Agent] = relationship("Agent", back_populates="heartbeats")
 
 class AgentQueueMembership(BaseModel, Base):
     __tablename__ = "agent_queue_memberships"
@@ -182,15 +178,13 @@ class AgentQueueMembership(BaseModel, Base):
         server_default=text("'{}'::jsonb"),
     )
 
-    agent: Mapped["Agent"] = relationship("Agent", back_populates="queue_memberships")
-    queue: Mapped["ExecutionQueue"] = relationship("ExecutionQueue", back_populates="agent_memberships")
-
+    agent: Mapped[Agent] = relationship("Agent", back_populates="queue_memberships")
+    queue: Mapped[ExecutionQueue] = relationship("ExecutionQueue", back_populates="agent_memberships")
 
 class AgentAlertKind(str, enum.Enum):
     OFFLINE = "offline"
     BACKLOG = "backlog"
     LATENCY = "latency"
-
 
 class AgentAlertThreshold(BaseModel, Base):
     __tablename__ = "agent_alert_thresholds"
@@ -218,9 +212,8 @@ class AgentAlertThreshold(BaseModel, Base):
         server_default=text("'{}'::jsonb"),
     )
 
-    project: Mapped["Project"] = relationship("Project", back_populates="agent_thresholds")
-    environment: Mapped[Optional["Environment"]] = relationship("Environment", back_populates="agent_thresholds")
-
+    project: Mapped[Project] = relationship("Project", back_populates="agent_thresholds")
+    environment: Mapped[Environment | None] = relationship("Environment", back_populates="agent_thresholds")
 
 class AgentAlertState(BaseModel, Base):
     __tablename__ = "agent_alert_states"
@@ -248,8 +241,7 @@ class AgentAlertState(BaseModel, Base):
         server_default=text("'{}'::jsonb"),
     )
 
-    agent: Mapped["Agent"] = relationship("Agent", back_populates="alert_states")
-
+    agent: Mapped[Agent] = relationship("Agent", back_populates="alert_states")
 
 __all__ = [
     "Agent",

@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Index, String, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
@@ -17,16 +17,13 @@ if TYPE_CHECKING:
     from app.models.test_report import TestReport
     from app.models.user import User
 
-
 class IssueLinkSource(str, enum.Enum):
     MANUAL = "manual"
     AUTO = "auto"
 
-
 class IssueSyncState(str, enum.Enum):
     OK = "ok"
     ERROR = "error"
-
 
 class Issue(BaseModel, Base):
     __tablename__ = "issues"
@@ -88,15 +85,14 @@ class Issue(BaseModel, Base):
         server_default=text("'[]'::jsonb"),
     )
 
-    project: Mapped["Project"] = relationship("Project", back_populates="issues")
-    integration: Mapped[Optional["Integration"]] = relationship("Integration", back_populates="issues")
-    creator: Mapped[Optional["User"]] = relationship("User", back_populates="issues_created")
-    links: Mapped[list["ReportIssueLink"]] = relationship(
+    project: Mapped[Project] = relationship("Project", back_populates="issues")
+    integration: Mapped[Integration | None] = relationship("Integration", back_populates="issues")
+    creator: Mapped[User | None] = relationship("User", back_populates="issues_created")
+    links: Mapped[list[ReportIssueLink]] = relationship(
         "ReportIssueLink",
         back_populates="issue",
         cascade="all, delete-orphan",
     )
-
 
 class ReportIssueLink(BaseModel, Base):
     __tablename__ = "report_issue_links"
@@ -134,9 +130,8 @@ class ReportIssueLink(BaseModel, Base):
         server_default=text("'{}'::jsonb"),
     )
 
-    report: Mapped["TestReport"] = relationship("TestReport", back_populates="issue_links")
-    issue: Mapped["Issue"] = relationship("Issue", back_populates="links")
-    linker: Mapped[Optional["User"]] = relationship("User", back_populates="issue_links_created")
-
+    report: Mapped[TestReport] = relationship("TestReport", back_populates="issue_links")
+    issue: Mapped[Issue] = relationship("Issue", back_populates="links")
+    linker: Mapped[User | None] = relationship("User", back_populates="issue_links_created")
 
 __all__ = ["Issue", "ReportIssueLink", "IssueLinkSource", "IssueSyncState"]

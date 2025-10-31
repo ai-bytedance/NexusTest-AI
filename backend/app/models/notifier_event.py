@@ -73,8 +73,8 @@ class NotifierEvent(BaseModel, Base):
     last_attempted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    notifier: Mapped["Notifier"] = relationship("Notifier", back_populates="events")
-    project: Mapped["Project"] = relationship("Project", back_populates="notifier_events")
+    notifier: Mapped[Notifier] = relationship("Notifier", back_populates="events")
+    project: Mapped[Project] = relationship("Project", back_populates="notifier_events")
 
 
 __all__ = ["NotifierEvent", "NotifierEventStatus", "NotifierEventType"]

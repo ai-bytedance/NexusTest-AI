@@ -49,8 +49,8 @@ class Dataset(BaseModel, Base):
         index=True,
     )
 
-    project: Mapped["Project"] = relationship("Project", back_populates="datasets")
-    creator: Mapped["User"] = relationship("User", back_populates="datasets_created")
-    test_cases: Mapped[list["TestCase"]] = relationship("TestCase", back_populates="dataset")
+    project: Mapped[Project] = relationship("Project", back_populates="datasets")
+    creator: Mapped[User] = relationship("User", back_populates="datasets_created")
+    test_cases: Mapped[list[TestCase]] = relationship("TestCase", back_populates="dataset")
 
 __all__ = ["Dataset", "DatasetType"]

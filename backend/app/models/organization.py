@@ -40,17 +40,17 @@ class Organization(BaseModel, Base):
         index=True,
     )
 
-    members: Mapped[list["OrganizationMembership"]] = relationship(
+    members: Mapped[list[OrganizationMembership]] = relationship(
         "OrganizationMembership",
         back_populates="organization",
         cascade="all, delete-orphan",
     )
-    teams: Mapped[list["Team"]] = relationship(
+    teams: Mapped[list[Team]] = relationship(
         "Team",
         back_populates="organization",
         cascade="all, delete-orphan",
     )
-    projects: Mapped[list["Project"]] = relationship(
+    projects: Mapped[list[Project]] = relationship(
         "Project",
         back_populates="organization",
     )
@@ -79,5 +79,5 @@ class OrganizationMembership(BaseModel, Base):
         server_default=text("'member'::org_role_enum"),
     )
 
-    organization: Mapped["Organization"] = relationship("Organization", back_populates="members")
-    user: Mapped["User"] = relationship("User", back_populates="organization_memberships")
+    organization: Mapped[Organization] = relationship("Organization", back_populates="members")
+    user: Mapped[User] = relationship("User", back_populates="organization_memberships")

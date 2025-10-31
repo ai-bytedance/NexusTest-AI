@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, String, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
@@ -13,7 +13,6 @@ from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 if TYPE_CHECKING:  # pragma: no cover
     from app.models.rate_limit_policy import RateLimitPolicy
     from app.models.user import User
-
 
 class ApiToken(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "api_tokens"
@@ -51,8 +50,8 @@ class ApiToken(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         index=True,
     )
 
-    user: Mapped["User"] = relationship("User", back_populates="api_tokens")
-    rate_limit_policy: Mapped[Optional["RateLimitPolicy"]] = relationship(
+    user: Mapped[User] = relationship("User", back_populates="api_tokens")
+    rate_limit_policy: Mapped[RateLimitPolicy | None] = relationship(
         "RateLimitPolicy",
         back_populates="api_tokens",
     )

@@ -56,9 +56,9 @@ class Notifier(BaseModel, Base):
         index=True,
     )
 
-    project: Mapped["Project"] = relationship("Project", back_populates="notifiers")
-    creator: Mapped["User"] = relationship("User", back_populates="notifiers_created")
-    events: Mapped[list["NotifierEvent"]] = relationship(
+    project: Mapped[Project] = relationship("Project", back_populates="notifiers")
+    creator: Mapped[User] = relationship("User", back_populates="notifiers_created")
+    events: Mapped[list[NotifierEvent]] = relationship(
         "NotifierEvent",
         back_populates="notifier",
         cascade="all, delete-orphan",

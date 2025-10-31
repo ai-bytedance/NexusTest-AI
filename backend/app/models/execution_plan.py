@@ -58,8 +58,8 @@ class ExecutionPlan(BaseModel, Base):
         server_default=text("'{}'::jsonb"),
     )
 
-    project: Mapped["Project"] = relationship("Project", back_populates="execution_plans")
-    creator: Mapped["User"] = relationship("User", back_populates="execution_plans_created")
+    project: Mapped[Project] = relationship("Project", back_populates="execution_plans")
+    creator: Mapped[User] = relationship("User", back_populates="execution_plans_created")
 
     def set_suite_ids(self, suite_ids: Iterable[uuid.UUID | str]) -> None:
         payload = list(suite_ids)
