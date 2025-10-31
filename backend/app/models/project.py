@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import ForeignKey, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB
@@ -35,7 +35,6 @@ if TYPE_CHECKING:
     from app.models.test_suite import TestSuite
     from app.models.user import User
     from app.models.webhook import WebhookSubscription
-
 
 class Project(BaseModel, Base):
     __tablename__ = "projects"
@@ -76,130 +75,130 @@ class Project(BaseModel, Base):
         server_default=text("'{}'::jsonb"),
     )
 
-    organization: Mapped[Optional["Organization"]] = relationship("Organization", back_populates="projects")
-    creator: Mapped["User"] = relationship("User", back_populates="projects_created")
-    members: Mapped[list["ProjectMember"]] = relationship(
+    organization: Mapped[Organization | None] = relationship("Organization", back_populates="projects")
+    creator: Mapped[User] = relationship("User", back_populates="projects_created")
+    members: Mapped[list[ProjectMember]] = relationship(
         "ProjectMember",
         back_populates="project",
         cascade="all, delete-orphan",
     )
-    apis: Mapped[list["Api"]] = relationship("Api", back_populates="project", cascade="all, delete-orphan")
-    environments: Mapped[list["Environment"]] = relationship(
+    apis: Mapped[list[Api]] = relationship("Api", back_populates="project", cascade="all, delete-orphan")
+    environments: Mapped[list[Environment]] = relationship(
         "Environment",
         back_populates="project",
         cascade="all, delete-orphan",
     )
-    datasets: Mapped[list["Dataset"]] = relationship(
+    datasets: Mapped[list[Dataset]] = relationship(
         "Dataset",
         back_populates="project",
         cascade="all, delete-orphan",
     )
-    queues: Mapped[list["ExecutionQueue"]] = relationship(
+    queues: Mapped[list[ExecutionQueue]] = relationship(
         "ExecutionQueue",
         back_populates="project",
         cascade="all, delete-orphan",
     )
-    agents: Mapped[list["Agent"]] = relationship(
+    agents: Mapped[list[Agent]] = relationship(
         "Agent",
         back_populates="project",
         cascade="all, delete-orphan",
     )
-    agent_thresholds: Mapped[list["AgentAlertThreshold"]] = relationship(
+    agent_thresholds: Mapped[list[AgentAlertThreshold]] = relationship(
         "AgentAlertThreshold",
         back_populates="project",
         cascade="all, delete-orphan",
     )
-    test_cases: Mapped[list["TestCase"]] = relationship(
+    test_cases: Mapped[list[TestCase]] = relationship(
         "TestCase", back_populates="project", cascade="all, delete-orphan"
     )
-    test_suites: Mapped[list["TestSuite"]] = relationship(
+    test_suites: Mapped[list[TestSuite]] = relationship(
         "TestSuite", back_populates="project", cascade="all, delete-orphan"
     )
-    test_reports: Mapped[list["TestReport"]] = relationship(
+    test_reports: Mapped[list[TestReport]] = relationship(
         "TestReport", back_populates="project", cascade="all, delete-orphan"
     )
-    ai_tasks: Mapped[list["AITask"]] = relationship(
+    ai_tasks: Mapped[list[AITask]] = relationship(
         "AITask", back_populates="project", cascade="all, delete-orphan"
     )
-    ai_chats: Mapped[list["AiChat"]] = relationship(
+    ai_chats: Mapped[list[AiChat]] = relationship(
         "AiChat", back_populates="project", cascade="all, delete-orphan"
     )
-    execution_plans: Mapped[list["ExecutionPlan"]] = relationship(
+    execution_plans: Mapped[list[ExecutionPlan]] = relationship(
         "ExecutionPlan",
         back_populates="project",
         cascade="all, delete-orphan",
     )
-    execution_policies: Mapped[list["ExecutionPolicy"]] = relationship(
+    execution_policies: Mapped[list[ExecutionPolicy]] = relationship(
         "ExecutionPolicy",
         back_populates="project",
         cascade="all, delete-orphan",
     )
-    rate_limit_policies: Mapped[list["RateLimitPolicy"]] = relationship(
+    rate_limit_policies: Mapped[list[RateLimitPolicy]] = relationship(
         "RateLimitPolicy",
         back_populates="project",
         cascade="all, delete-orphan",
     )
-    notifiers: Mapped[list["Notifier"]] = relationship(
+    notifiers: Mapped[list[Notifier]] = relationship(
         "Notifier",
         back_populates="project",
         cascade="all, delete-orphan",
     )
-    notifier_events: Mapped[list["NotifierEvent"]] = relationship(
+    notifier_events: Mapped[list[NotifierEvent]] = relationship(
         "NotifierEvent",
         back_populates="project",
         cascade="all, delete-orphan",
     )
-    integrations: Mapped[list["Integration"]] = relationship(
+    integrations: Mapped[list[Integration]] = relationship(
         "Integration",
         back_populates="project",
         cascade="all, delete-orphan",
     )
-    issues: Mapped[list["Issue"]] = relationship(
+    issues: Mapped[list[Issue]] = relationship(
         "Issue",
         back_populates="project",
         cascade="all, delete-orphan",
     )
-    integration_webhooks: Mapped[list["IntegrationWebhook"]] = relationship(
+    integration_webhooks: Mapped[list[IntegrationWebhook]] = relationship(
         "IntegrationWebhook",
         back_populates="project",
         cascade="all, delete-orphan",
     )
-    auto_ticket_rules: Mapped[list["AutoTicketRule"]] = relationship(
+    auto_ticket_rules: Mapped[list[AutoTicketRule]] = relationship(
         "AutoTicketRule",
         back_populates="project",
         cascade="all, delete-orphan",
     )
-    import_sources: Mapped[list["ImportSource"]] = relationship(
+    import_sources: Mapped[list[ImportSource]] = relationship(
         "ImportSource",
         back_populates="project",
         cascade="all, delete-orphan",
     )
-    import_runs: Mapped[list["ImportRun"]] = relationship(
+    import_runs: Mapped[list[ImportRun]] = relationship(
         "ImportRun",
         back_populates="project",
         cascade="all, delete-orphan",
     )
-    team_roles: Mapped[list["ProjectTeamRole"]] = relationship(
+    team_roles: Mapped[list[ProjectTeamRole]] = relationship(
         "ProjectTeamRole",
         back_populates="project",
         cascade="all, delete-orphan",
     )
-    default_policy: Mapped[Optional["ExecutionPolicy"]] = relationship(
+    default_policy: Mapped[ExecutionPolicy | None] = relationship(
         "ExecutionPolicy",
         foreign_keys=[default_policy_id],
         post_update=True,
     )
-    default_queue: Mapped[Optional["ExecutionQueue"]] = relationship(
+    default_queue: Mapped[ExecutionQueue | None] = relationship(
         "ExecutionQueue",
         foreign_keys=[default_queue_id],
         post_update=True,
     )
-    default_rate_limit_policy: Mapped[Optional["RateLimitPolicy"]] = relationship(
+    default_rate_limit_policy: Mapped[RateLimitPolicy | None] = relationship(
         "RateLimitPolicy",
         foreign_keys=[default_rate_limit_policy_id],
         post_update=True,
     )
-    webhook_subscriptions: Mapped[list["WebhookSubscription"]] = relationship(
+    webhook_subscriptions: Mapped[list[WebhookSubscription]] = relationship(
         "WebhookSubscription",
         back_populates="project",
         cascade="all, delete-orphan",

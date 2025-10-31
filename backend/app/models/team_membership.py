@@ -38,5 +38,5 @@ class TeamMembership(BaseModel, Base):
         server_default=text("'member'::team_role_enum"),
     )
 
-    team: Mapped["Team"] = relationship("Team", back_populates="memberships")
-    user: Mapped["User"] = relationship("User", back_populates="team_memberships")
+    team: Mapped[Team] = relationship("Team", back_populates="memberships")
+    user: Mapped[User] = relationship("User", back_populates="team_memberships")

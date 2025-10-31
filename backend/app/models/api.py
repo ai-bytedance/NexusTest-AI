@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import ForeignKey, Index, Integer, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
@@ -14,7 +14,6 @@ if TYPE_CHECKING:
     from app.models.import_source import ImportSource
     from app.models.project import Project
     from app.models.test_case import TestCase
-
 
 class Api(BaseModel, Base):
     __tablename__ = "apis"
@@ -88,16 +87,16 @@ class Api(BaseModel, Base):
         nullable=True,
     )
 
-    project: Mapped["Project"] = relationship("Project", back_populates="apis")
-    import_source: Mapped[Optional["ImportSource"]] = relationship("ImportSource", back_populates="apis")
-    test_cases: Mapped[list["TestCase"]] = relationship(
+    project: Mapped[Project] = relationship("Project", back_populates="apis")
+    import_source: Mapped[ImportSource | None] = relationship("ImportSource", back_populates="apis")
+    test_cases: Mapped[list[TestCase]] = relationship(
         "TestCase", back_populates="api", cascade="all, delete-orphan"
     )
-    previous_revision: Mapped[Optional["ApiArchive"]] = relationship(
+    previous_revision: Mapped[ApiArchive | None] = relationship(
         "ApiArchive",
         foreign_keys=[previous_revision_id],
     )
-    archives: Mapped[list["ApiArchive"]] = relationship(
+    archives: Mapped[list[ApiArchive]] = relationship(
         "ApiArchive",
         back_populates="api",
         cascade="all, delete-orphan",

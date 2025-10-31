@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import DateTime, Enum as SqlEnum, ForeignKey, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
@@ -17,17 +17,14 @@ if TYPE_CHECKING:
     from app.models.project import Project
     from app.models.user import User
 
-
 class ImporterKind(str, enum.Enum):
     OPENAPI = "openapi"
     POSTMAN = "postman"
-
 
 class ImportSourceType(str, enum.Enum):
     URL = "url"
     FILE = "file"
     RAW = "raw"
-
 
 class ImportRunStatus(str, enum.Enum):
     PENDING = "pending"
@@ -36,11 +33,9 @@ class ImportRunStatus(str, enum.Enum):
     FAILED = "failed"
     ROLLED_BACK = "rolled_back"
 
-
 class ImportApprovalDecision(str, enum.Enum):
     APPROVED = "approved"
     REJECTED = "rejected"
-
 
 class ImportSource(BaseModel, Base):
     __tablename__ = "import_sources"
@@ -84,14 +79,13 @@ class ImportSource(BaseModel, Base):
         server_default=text("'{}'::jsonb"),
     )
 
-    project: Mapped["Project"] = relationship("Project", back_populates="import_sources")
-    apis: Mapped[list["Api"]] = relationship("Api", back_populates="import_source")
-    runs: Mapped[list["ImportRun"]] = relationship(
+    project: Mapped[Project] = relationship("Project", back_populates="import_sources")
+    apis: Mapped[list[Api]] = relationship("Api", back_populates="import_source")
+    runs: Mapped[list[ImportRun]] = relationship(
         "ImportRun",
         back_populates="source",
         cascade="all, delete-orphan",
     )
-
 
 class ImportRun(BaseModel, Base):
     __tablename__ = "import_runs"
@@ -160,22 +154,21 @@ class ImportRun(BaseModel, Base):
     )
     rolled_back_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    project: Mapped["Project"] = relationship("Project", back_populates="import_runs")
+    project: Mapped[Project] = relationship("Project", back_populates="import_runs")
     source: Mapped[ImportSource | None] = relationship("ImportSource", back_populates="runs")
-    creator: Mapped["User"] = relationship("User", foreign_keys=[created_by])
-    applied_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[applied_by_id])
-    rolled_back_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[rolled_back_by_id])
-    approvals: Mapped[list["ImportApproval"]] = relationship(
+    creator: Mapped[User] = relationship("User", foreign_keys=[created_by])
+    applied_by: Mapped[User | None] = relationship("User", foreign_keys=[applied_by_id])
+    rolled_back_by: Mapped[User | None] = relationship("User", foreign_keys=[rolled_back_by_id])
+    approvals: Mapped[list[ImportApproval]] = relationship(
         "ImportApproval",
         back_populates="run",
         cascade="all, delete-orphan",
     )
-    archives: Mapped[list["ApiArchive"]] = relationship(
+    archives: Mapped[list[ApiArchive]] = relationship(
         "ApiArchive",
         back_populates="run",
         cascade="all, delete-orphan",
     )
-
 
 class ImportApproval(BaseModel, Base):
     __tablename__ = "import_approvals"
@@ -199,8 +192,7 @@ class ImportApproval(BaseModel, Base):
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     run: Mapped[ImportRun] = relationship("ImportRun", back_populates="approvals")
-    approver: Mapped["User"] = relationship("User")
-
+    approver: Mapped[User] = relationship("User")
 
 __all__ = [
     "ImportSource",

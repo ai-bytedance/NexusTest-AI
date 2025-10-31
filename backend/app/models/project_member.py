@@ -49,5 +49,5 @@ class ProjectMember(BaseModel, Base):
         server_default=text("'{}'::jsonb"),
     )
 
-    project: Mapped["Project"] = relationship("Project", back_populates="members")
-    user: Mapped["User"] = relationship("User", back_populates="memberships")
+    project: Mapped[Project] = relationship("Project", back_populates="members")
+    user: Mapped[User] = relationship("User", back_populates="memberships")

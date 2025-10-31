@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 import uuid
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, Enum, Float, ForeignKey, Index, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
@@ -19,11 +19,9 @@ if TYPE_CHECKING:
     from app.models.test_report import TestReport
     from app.models.test_suite import TestSuite
 
-
 class ExecutionQueueKind(str, enum.Enum):
     CASE = "case"
     SUITE = "suite"
-
 
 class ExecutionQueue(BaseModel, Base):
     __tablename__ = "execution_queues"
@@ -74,18 +72,17 @@ class ExecutionQueue(BaseModel, Base):
         server_default=text("'{}'::jsonb"),
     )
 
-    project: Mapped["Project"] = relationship("Project", back_populates="queues")
-    environment: Mapped[Optional["Environment"]] = relationship("Environment", back_populates="queues")
-    test_cases: Mapped[list["TestCase"]] = relationship("TestCase", back_populates="queue")
-    test_suites: Mapped[list["TestSuite"]] = relationship("TestSuite", back_populates="queue")
-    reports: Mapped[list["TestReport"]] = relationship("TestReport", back_populates="queue")
-    policies: Mapped[list["ExecutionPolicy"]] = relationship("ExecutionPolicy", back_populates="queue")
-    agent_memberships: Mapped[list["AgentQueueMembership"]] = relationship(
+    project: Mapped[Project] = relationship("Project", back_populates="queues")
+    environment: Mapped[Environment | None] = relationship("Environment", back_populates="queues")
+    test_cases: Mapped[list[TestCase]] = relationship("TestCase", back_populates="queue")
+    test_suites: Mapped[list[TestSuite]] = relationship("TestSuite", back_populates="queue")
+    reports: Mapped[list[TestReport]] = relationship("TestReport", back_populates="queue")
+    policies: Mapped[list[ExecutionPolicy]] = relationship("ExecutionPolicy", back_populates="queue")
+    agent_memberships: Mapped[list[AgentQueueMembership]] = relationship(
         "AgentQueueMembership",
         back_populates="queue",
         cascade="all, delete-orphan",
     )
-
 
 __all__ = [
     "ExecutionQueue",

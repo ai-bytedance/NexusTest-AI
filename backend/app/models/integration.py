@@ -55,19 +55,19 @@ class Integration(BaseModel, Base):
         index=True,
     )
 
-    project: Mapped["Project"] = relationship("Project", back_populates="integrations")
-    creator: Mapped["User"] = relationship("User", back_populates="integrations_created")
-    ticket_rules: Mapped[list["AutoTicketRule"]] = relationship(
+    project: Mapped[Project] = relationship("Project", back_populates="integrations")
+    creator: Mapped[User] = relationship("User", back_populates="integrations_created")
+    ticket_rules: Mapped[list[AutoTicketRule]] = relationship(
         "AutoTicketRule",
         back_populates="integration",
         cascade="all, delete-orphan",
     )
-    issues: Mapped[list["Issue"]] = relationship(
+    issues: Mapped[list[Issue]] = relationship(
         "Issue",
         back_populates="integration",
         cascade="all, delete-orphan",
     )
-    webhooks: Mapped[list["IntegrationWebhook"]] = relationship(
+    webhooks: Mapped[list[IntegrationWebhook]] = relationship(
         "IntegrationWebhook",
         back_populates="integration",
         cascade="all, delete-orphan",

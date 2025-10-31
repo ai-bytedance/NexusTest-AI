@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, ForeignKey, String, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
@@ -12,7 +12,6 @@ from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 if TYPE_CHECKING:  # pragma: no cover
     from app.models.api_token import ApiToken
     from app.models.project import Project
-
 
 class RateLimitPolicy(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "rate_limit_policies"
@@ -32,11 +31,11 @@ class RateLimitPolicy(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("TRUE"))
 
-    project: Mapped[Optional["Project"]] = relationship(
+    project: Mapped[Project | None] = relationship(
         "Project",
         back_populates="rate_limit_policies",
     )
-    api_tokens: Mapped[list["ApiToken"]] = relationship(
+    api_tokens: Mapped[list[ApiToken]] = relationship(
         "ApiToken",
         back_populates="rate_limit_policy",
     )

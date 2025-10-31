@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 import uuid
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Enum as SqlEnum, ForeignKey, Integer, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
@@ -16,12 +16,10 @@ if TYPE_CHECKING:
     from app.models.project import Project
     from app.models.user import User
 
-
 class ApiArchiveChangeType(str, enum.Enum):
     CREATED = "created"
     UPDATED = "updated"
     REMOVED = "removed"
-
 
 class ApiArchive(BaseModel, Base):
     __tablename__ = "api_archives"
@@ -61,10 +59,9 @@ class ApiArchive(BaseModel, Base):
         index=True,
     )
 
-    project: Mapped["Project"] = relationship("Project")
-    api: Mapped[Optional["Api"]] = relationship("Api", back_populates="archives")
-    run: Mapped["ImportRun"] = relationship("ImportRun", back_populates="archives")
-    applied_by: Mapped[Optional["User"]] = relationship("User")
-
+    project: Mapped[Project] = relationship("Project")
+    api: Mapped[Api | None] = relationship("Api", back_populates="archives")
+    run: Mapped[ImportRun] = relationship("ImportRun", back_populates="archives")
+    applied_by: Mapped[User | None] = relationship("User")
 
 __all__ = ["ApiArchive", "ApiArchiveChangeType"]

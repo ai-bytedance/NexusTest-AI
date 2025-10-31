@@ -52,64 +52,64 @@ class User(BaseModel, Base):
     )
     locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    projects_created: Mapped[list["Project"]] = relationship("Project", back_populates="creator")
-    ai_chats_created: Mapped[list["AiChat"]] = relationship("AiChat", back_populates="creator")
-    ai_chat_messages: Mapped[list["AiChatMessage"]] = relationship("AiChatMessage", back_populates="author")
-    memberships: Mapped[list["ProjectMember"]] = relationship(
+    projects_created: Mapped[list[Project]] = relationship("Project", back_populates="creator")
+    ai_chats_created: Mapped[list[AiChat]] = relationship("AiChat", back_populates="creator")
+    ai_chat_messages: Mapped[list[AiChatMessage]] = relationship("AiChatMessage", back_populates="author")
+    memberships: Mapped[list[ProjectMember]] = relationship(
         "ProjectMember",
         back_populates="user",
         cascade="all, delete-orphan",
     )
-    api_tokens: Mapped[list["ApiToken"]] = relationship(
+    api_tokens: Mapped[list[ApiToken]] = relationship(
         "ApiToken",
         back_populates="user",
         cascade="all, delete-orphan",
     )
-    test_cases_created: Mapped[list["TestCase"]] = relationship("TestCase", back_populates="creator")
-    test_suites_created: Mapped[list["TestSuite"]] = relationship("TestSuite", back_populates="creator")
-    environments_created: Mapped[list["Environment"]] = relationship(
+    test_cases_created: Mapped[list[TestCase]] = relationship("TestCase", back_populates="creator")
+    test_suites_created: Mapped[list[TestSuite]] = relationship("TestSuite", back_populates="creator")
+    environments_created: Mapped[list[Environment]] = relationship(
         "Environment",
         back_populates="creator",
     )
-    datasets_created: Mapped[list["Dataset"]] = relationship(
+    datasets_created: Mapped[list[Dataset]] = relationship(
         "Dataset",
         back_populates="creator",
     )
-    execution_plans_created: Mapped[list["ExecutionPlan"]] = relationship(
+    execution_plans_created: Mapped[list[ExecutionPlan]] = relationship(
         "ExecutionPlan",
         back_populates="creator",
     )
-    notifiers_created: Mapped[list["Notifier"]] = relationship(
+    notifiers_created: Mapped[list[Notifier]] = relationship(
         "Notifier",
         back_populates="creator",
     )
-    integrations_created: Mapped[list["Integration"]] = relationship(
+    integrations_created: Mapped[list[Integration]] = relationship(
         "Integration",
         back_populates="creator",
     )
-    issues_created: Mapped[list["Issue"]] = relationship(
+    issues_created: Mapped[list[Issue]] = relationship(
         "Issue",
         back_populates="creator",
     )
-    issue_links_created: Mapped[list["ReportIssueLink"]] = relationship(
+    issue_links_created: Mapped[list[ReportIssueLink]] = relationship(
         "ReportIssueLink",
         back_populates="linker",
     )
-    auto_ticket_rules_created: Mapped[list["AutoTicketRule"]] = relationship(
+    auto_ticket_rules_created: Mapped[list[AutoTicketRule]] = relationship(
         "AutoTicketRule",
         back_populates="creator",
     )
-    organization_memberships: Mapped[list["OrganizationMembership"]] = relationship(
+    organization_memberships: Mapped[list[OrganizationMembership]] = relationship(
         "OrganizationMembership",
         back_populates="user",
         cascade="all, delete-orphan",
     )
-    team_memberships: Mapped[list["TeamMembership"]] = relationship(
+    team_memberships: Mapped[list[TeamMembership]] = relationship(
         "TeamMembership",
         back_populates="user",
         cascade="all, delete-orphan",
     )
-    identities: Mapped[list["UserIdentity"]] = relationship(
+    identities: Mapped[list[UserIdentity]] = relationship(
         "UserIdentity",
         back_populates="user",
         cascade="all, delete-orphan",

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Boolean, ForeignKey, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
@@ -16,7 +16,6 @@ if TYPE_CHECKING:
     from app.models.project import Project
     from app.models.test_case import TestCase
     from app.models.user import User
-
 
 class Environment(BaseModel, Base):
     __tablename__ = "environments"
@@ -59,30 +58,30 @@ class Environment(BaseModel, Base):
         index=True,
     )
 
-    project: Mapped["Project"] = relationship("Project", back_populates="environments")
-    creator: Mapped["User"] = relationship("User", back_populates="environments_created")
-    test_cases: Mapped[list["TestCase"]] = relationship("TestCase", back_populates="environment")
-    queues: Mapped[list["ExecutionQueue"]] = relationship(
+    project: Mapped[Project] = relationship("Project", back_populates="environments")
+    creator: Mapped[User] = relationship("User", back_populates="environments_created")
+    test_cases: Mapped[list[TestCase]] = relationship("TestCase", back_populates="environment")
+    queues: Mapped[list[ExecutionQueue]] = relationship(
         "ExecutionQueue",
         back_populates="environment",
         cascade="all, delete-orphan",
     )
-    agents: Mapped[list["Agent"]] = relationship(
+    agents: Mapped[list[Agent]] = relationship(
         "Agent",
         back_populates="environment",
         cascade="all, delete-orphan",
     )
-    agent_thresholds: Mapped[list["AgentAlertThreshold"]] = relationship(
+    agent_thresholds: Mapped[list[AgentAlertThreshold]] = relationship(
         "AgentAlertThreshold",
         back_populates="environment",
         cascade="all, delete-orphan",
     )
-    default_queue: Mapped[Optional["ExecutionQueue"]] = relationship(
+    default_queue: Mapped[ExecutionQueue | None] = relationship(
         "ExecutionQueue",
         foreign_keys=[default_queue_id],
         post_update=True,
     )
-    default_policy: Mapped[Optional["ExecutionPolicy"]] = relationship(
+    default_policy: Mapped[ExecutionPolicy | None] = relationship(
         "ExecutionPolicy",
         foreign_keys=[default_policy_id],
         post_update=True,

@@ -68,4 +68,4 @@ class AITask(BaseModel, Base):
     )
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    project: Mapped["Project"] = relationship("Project", back_populates="ai_tasks")
+    project: Mapped[Project] = relationship("Project", back_populates="ai_tasks")

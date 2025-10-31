@@ -87,9 +87,9 @@ class WebhookSubscription(BaseModel, Base):
         index=True,
     )
 
-    project: Mapped["Project"] = relationship("Project", back_populates="webhook_subscriptions")
-    creator: Mapped["User"] = relationship("User")
-    deliveries: Mapped[list["WebhookDelivery"]] = relationship(
+    project: Mapped[Project] = relationship("Project", back_populates="webhook_subscriptions")
+    creator: Mapped[User] = relationship("User")
+    deliveries: Mapped[list[WebhookDelivery]] = relationship(
         "WebhookDelivery",
         back_populates="subscription",
         cascade="all, delete-orphan",
@@ -133,7 +133,7 @@ class WebhookDelivery(BaseModel, Base):
         index=True,
     )
 
-    subscription: Mapped["WebhookSubscription"] = relationship(
+    subscription: Mapped[WebhookSubscription] = relationship(
         "WebhookSubscription",
         back_populates="deliveries",
     )

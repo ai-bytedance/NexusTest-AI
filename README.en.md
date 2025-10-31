@@ -183,13 +183,14 @@ See docs/en/setup/quickstart.md for copy-paste commands.
 - Docker build fails with redis/celery dependency conflicts → pull latest dependencies (`redis>=4.6,<5.0`) and rerun the build step with `--no-cache`.
 - Compose tries to pull `api-automation-backend` → update to the latest infra/docker-compose.yml; services now build locally to `nexustest-backend:local`.
 - Slow image builds or base image pulls → run with BuildKit enabled (`DOCKER_BUILDKIT=1 docker compose …`) and configure registry mirrors if available.
-- Port 8080 already in use → stop the conflicting service or adjust infra/docker-compose.yml (e.g., change nginx ports to "80:80" if port 80 is free)
+- Port 8080 already in use → stop the conflicting service or adjust infra/docker-compose.yml (default port mapping is "0.0.0.0:8080:80" so the UI is reachable from other hosts; change it only if you intentionally remap the port)
 - Database connection errors → ensure postgres container is healthy; check DATABASE_URL
 - Migrations failed on start → docker compose logs api; run make migrate to retry
-- SQLAlchemy complains about `Mapped['Model' | None]` during startup/migrations → update relationship annotations to use `Optional[...]` (or enable `from __future__ import annotations`) instead of quoted unions; see backend/app/models for patterns
+- SQLAlchemy complains about `Mapped['Model' | None]` during startup/migrations → add `from __future__ import annotations` to the model module and annotate relationships as `Mapped[Model | None]` / `Mapped[list[Model]]` rather than quoted unions; Alembic upgrade will fail if the forward refs stay quoted
 - 401 errors → missing/expired token; re-login and pass Authorization: Bearer <token>
 - CORS issues in local dev → verify CORS_ORIGINS includes your frontend dev URL
-- nginx config errors like "add_header directive is not allowed here" → keep add_header directives inside the http/server blocks (see infra/nginx/nginx.conf) and out of upstream sections
+- nginx config errors like "add_header directive is not allowed here" → keep add_header directives inside the `http`/`server` blocks (see infra/nginx/nginx.conf) and run `docker compose exec nginx nginx -t` after edits
+- Cannot reach the site from another machine → ensure TCP 8080 is open on your host firewall or remap the nginx host port
 - nginx HSTS off by default → set HSTS_ENABLED=1 on nginx to enable
 
 ---
