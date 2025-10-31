@@ -56,6 +56,29 @@ npm run dev
 
 开发服务默认监听 5173 端口。后端的 CORS_ORIGINS 已包含 http://localhost:5173 与 http://127.0.0.1:5173 以便本地使用。
 
+### Monaco 编辑器插件
+
+前端使用 `vite-plugin-monaco-editor` 打包 Monaco。该插件目前以 CommonJS 形式发布，因此在 `frontend/vite.config.ts` 中会先解析 default 导出再调用插件，以避免（尤其在 Docker 构建阶段）出现 `TypeError: monacoEditorPlugin is not a function` 错误：
+
+```ts
+import monacoEditorPlugin from "vite-plugin-monaco-editor";
+
+const resolvedMonacoEditorPlugin =
+  (monacoEditorPlugin as unknown as { default?: typeof monacoEditorPlugin }).default ??
+  monacoEditorPlugin;
+
+export default defineConfig({
+  plugins: [
+    react(),
+    resolvedMonacoEditorPlugin({
+      languageWorkers: ["editorWorkerService", "json", "typescript", "html", "css"],
+    }),
+  ],
+});
+```
+
+此配置可以确保 JSON、TypeScript、HTML 与 CSS 的 Monaco worker 在本地与 Docker 构建中均被正确打包。
+
 ---
 
 ## 常用开发任务
