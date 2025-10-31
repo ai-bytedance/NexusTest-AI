@@ -71,20 +71,21 @@ cd <repo>
 cp .env.example .env
 
 docker compose -f infra/docker-compose.yml up -d --build
-# 访问: http://localhost/api/healthz, /api/docs, /flower
+# 访问: http://localhost:8080/api/healthz, /api/docs, /flower
+# 如需继续使用 80 端口，可在 infra/docker-compose.yml 中把 nginx 端口映射改为 "80:80" 并重启栈。
 
 # 创建管理员账号并登录获取 access_token
-curl -X POST http://localhost/api/auth/register \
+curl -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@example.com","password":"changeme123","role":"admin"}'
 
-curl -X POST http://localhost/api/auth/login \
+curl -X POST http://localhost:8080/api/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"admin@example.com","password":"changeme123"}'
 # 复制响应中的 .data.access_token 到 TOKEN
 
 # 创建项目（复制响应 .data.id 到 PROJECT）
-curl -X POST http://localhost/api/v1/projects \
+curl -X POST http://localhost:8080/api/v1/projects \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   -d '{"name":"Demo","key":"DEMO"}'
 
@@ -141,9 +142,9 @@ AI 提供商密钥：
 
 ## 首次启动与地址
 
-- 健康检查：http://localhost/api/healthz
-- Swagger：http://localhost/api/docs
-- Flower：http://localhost/flower
+- 健康检查：http://localhost:8080/api/healthz
+- Swagger：http://localhost:8080/api/docs
+- Flower：http://localhost:8080/flower
 - 先注册管理员，再登录以获取 Bearer Token 用于 API 调用
 
 ---
@@ -177,7 +178,7 @@ AI 提供商密钥：
 
 ## 故障排查
 
-- 80 端口被占用 → 关闭冲突服务或调整 infra/docker-compose.yml 的主机端口映射
+- 8080 端口被占用 → 关闭冲突服务，或在 infra/docker-compose.yml 中调整 nginx 主机端口（例如改回 "80:80"）
 - 数据库连接错误 → 确认 postgres 容器健康；检查 DATABASE_URL
 - 启动迁移失败 → docker compose logs api；使用 make migrate 重试
 - 401 错误 → 缺少/过期 Token；请重新登录并携带 Authorization: Bearer <token>

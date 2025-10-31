@@ -38,7 +38,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 Swagger UI: http://localhost:8000/api/docs
 
-Note: when using the repo's nginx proxy via Docker Compose, the external URL is http://localhost/api/.
+Note: when using the repo's nginx proxy via Docker Compose, the external URL is http://localhost:8080/api/.
 
 ---
 

@@ -14,13 +14,15 @@
 - celery-worker：后台工作进程（队列：cases、suites）
 - celery-beat：周期调度器
 - flower：Celery 监控 UI（通过 nginx 暴露在 /flower）
-- nginx：80 端口反向代理，添加安全响应头与基础限流
+- nginx：对外暴露主机 8080 端口的反向代理，添加安全响应头与基础限流
 
 访问入口：
-- http://localhost/api/healthz
-- http://localhost/api/readyz
-- http://localhost/api/docs
-- http://localhost/flower
+- http://localhost:8080/api/healthz
+- http://localhost:8080/api/readyz
+- http://localhost:8080/api/docs
+- http://localhost:8080/flower
+
+如需继续使用 80 端口且本机无冲突，可在 infra/docker-compose.yml 中将 nginx 的端口映射改回 "80:80" 后再启动。
 
 启动：
 ```bash

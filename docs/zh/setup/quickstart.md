@@ -8,7 +8,7 @@
 
 ## 前置条件
 - Docker 24+ 与 Docker Compose 插件
-- 端口可用：80（nginx）
+- 端口可用：8080（nginx 主机端口）
 - 可选：curl 或其他 HTTP 客户端
 
 ---
@@ -38,21 +38,23 @@ docker compose -f infra/docker-compose.yml up -d --build
 ---
 
 ## 3) 访问地址
-- API 健康检查: http://localhost/api/healthz
-- 就绪检查: http://localhost/api/readyz
-- Swagger UI: http://localhost/api/docs
-- Flower: http://localhost/flower
+- API 健康检查: http://localhost:8080/api/healthz
+- 就绪检查: http://localhost:8080/api/readyz
+- Swagger UI: http://localhost:8080/api/docs
+- Flower: http://localhost:8080/flower
+
+如本机的 80 端口空闲且你希望继续使用它，可在 infra/docker-compose.yml 中把 nginx 的端口映射改回 "80:80"，然后重新启动 Compose 栈。
 
 ---
 
 ## 4) 创建首个用户（管理员）
 
 ```bash
-curl -X POST http://localhost/api/auth/register \
+curl -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@example.com","password":"changeme123","role":"admin"}'
 
-curl -X POST http://localhost/api/auth/login \
+curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@example.com","password":"changeme123"}'
 # 从响应中复制 access_token
@@ -64,7 +66,7 @@ curl -X POST http://localhost/api/auth/login \
 ```bash
 TOKEN=<paste-access-token>
 
-curl -X POST http://localhost/api/v1/projects \
+curl -X POST http://localhost:8080/api/v1/projects \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name":"Demo","key":"DEMO","description":"Quickstart project"}'
@@ -77,7 +79,7 @@ curl -X POST http://localhost/api/v1/projects \
 
 1) 创建 API 定义
 ```bash
-curl -X POST http://localhost/api/v1/projects/$PROJECT/apis \
+curl -X POST http://localhost:8080/api/v1/projects/$PROJECT/apis \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -96,7 +98,7 @@ curl -X POST http://localhost/api/v1/projects/$PROJECT/apis \
 
 2) 创建最小化用例（仅断言 200）
 ```bash
-curl -X POST http://localhost/api/v1/projects/$PROJECT/test-cases \
+curl -X POST http://localhost:8080/api/v1/projects/$PROJECT/test-cases \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -112,14 +114,14 @@ curl -X POST http://localhost/api/v1/projects/$PROJECT/test-cases \
 
 3) 触发执行
 ```bash
-curl -X POST http://localhost/api/v1/projects/$PROJECT/execute/case/$CASE_ID \
+curl -X POST http://localhost:8080/api/v1/projects/$PROJECT/execute/case/$CASE_ID \
   -H "Authorization: Bearer $TOKEN"
 # 从响应中记录 report_id 为 REPORT_ID
 ```
 
 4) 查看报告
 ```bash
-curl http://localhost/api/v1/reports/$REPORT_ID -H "Authorization: Bearer $TOKEN"
+curl http://localhost:8080/api/v1/reports/$REPORT_ID -H "Authorization: Bearer $TOKEN"
 ```
 
 片刻后状态应为 "passed"。
