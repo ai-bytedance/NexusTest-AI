@@ -1,0 +1,33 @@
+name: Docs Link Check
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  link-check:
+    name: Markdown links (internal)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Run lychee link checker (offline, check anchors)
+        uses: lycheeverse/lychee-action@v1
+        with:
+          args: >-
+            --offline
+            --no-progress
+            --include-fragments
+            --require-https
+            --exclude-path README/
+            **/*.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload lychee report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lychee-report
+          path: lychee/*.md

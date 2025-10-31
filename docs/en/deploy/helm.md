@@ -1,23 +1,22 @@
-# Helm Deployment / 使用 Helm 部署
+English | [中文](../../zh/deploy/helm.md)
+
+# Helm Deployment
 
 This guide shows how to deploy NexusTest-AI on Kubernetes using the bundled Helm chart (charts/nexustest-ai).
 
-本文介绍通过随仓库提供的 Helm Chart（charts/nexustest-ai）在 Kubernetes 中部署 NexusTest-AI。
-
 ---
 
-## Prerequisites / 前置条件
+## Prerequisites
 - Kubernetes 1.24+
 - Helm 3.12+
 - A container registry with your backend image (or use defaults)
 
 ---
 
-## Values quick start / 最简 values 配置
+## Values quick start
 
 Create values.local.yaml:
 
-创建 values.local.yaml：
 ```yaml
 image:
   repository: ghcr.io/example/nexustest-ai/backend
@@ -52,14 +51,14 @@ nginx:
           - app.example.com
 ```
 
-Install / 安装:
+Install:
 ```bash
 helm upgrade --install nexustest-ai charts/nexustest-ai -f values.local.yaml -n nexustest --create-namespace
 ```
 
 ---
 
-## Scaling / 水平扩缩容
+## Scaling
 
 - API: set api.replicaCount or enable api.autoscaling
 - Celery workers: set celeryWorker.replicaCount or autoscaling
@@ -83,7 +82,7 @@ celeryWorker:
 
 ---
 
-## Metrics / 指标采集
+## Metrics
 
 - Enable API metrics and optional ServiceMonitor when using Prometheus Operator:
 
@@ -107,11 +106,10 @@ celeryWorker:
 
 ---
 
-## External stores / 外部存储
+## External stores
 
 Use external Postgres/Redis by disabling internal ones and setting URLs in secrets:
 
-通过禁用内置组件并在 secrets 中设置 URL 使用外部 Postgres/Redis：
 ```yaml
 postgresql:
   enabled: false
@@ -126,7 +124,7 @@ secrets:
 
 ---
 
-## Security / 安全
+## Security
 
 - Configure CORS_ORIGINS, SECRET_KEY, SECRET_ENC_KEY
 - Optionally enable HSTS on nginx via env
@@ -134,7 +132,7 @@ secrets:
 
 ---
 
-## Uninstall / 卸载
+## Uninstall
 ```bash
 helm uninstall nexustest-ai -n nexustest
 ```
