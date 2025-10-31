@@ -99,7 +99,7 @@ def test_personal_access_token_crud_and_scope_enforcement(client: TestClient, db
     )
     assert other_project_resp.status_code == 403
 
-    # Rotate token returns a new secret and invalidates the previous one
+    # Rotate token returns a new secret and keeps the previous one valid for a short grace period
     rotate_resp = client.patch(
         f"/api/v1/tokens/{token_data['id']}",
         json={"action": "rotate"},
@@ -108,11 +108,20 @@ def test_personal_access_token_crud_and_scope_enforcement(client: TestClient, db
     assert rotate_resp.status_code == 200
     rotated_secret = rotate_resp.json()["data"]["token"]
 
-    # Old token fails, new token succeeds
+    # During grace window both old and new secrets are valid
     old_resp = client.get(f"/api/v1/projects/{project.id}", headers=_pat_headers(secret_token))
-    assert old_resp.status_code == 401
+    assert old_resp.status_code == 200
     rotated_resp = client.get(f"/api/v1/projects/{project.id}", headers=_pat_headers(rotated_secret))
     assert rotated_resp.status_code == 200
+
+    # After grace window, old token is rejected
+    import time
+
+    time.sleep(3)
+    old_after = client.get(f"/api/v1/projects/{project.id}", headers=_pat_headers(secret_token))
+    assert old_after.status_code == 401
+    new_after = client.get(f"/api/v1/projects/{project.id}", headers=_pat_headers(rotated_secret))
+    assert new_after.status_code == 200
 
     # Revoke token blocks further requests
     revoke_resp = client.patch(

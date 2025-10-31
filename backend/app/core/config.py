@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     dataset_storage_dir: str = "./storage/datasets"
     access_token_expire_minutes: int = 60
     token_clock_skew_seconds: int = 0
+    token_rotation_grace_seconds: int = 300
     sso_state_ttl_seconds: int = 600
     feishu_client_id: str | None = None
     feishu_client_secret: str | None = None

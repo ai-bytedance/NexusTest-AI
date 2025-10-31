@@ -19,6 +19,7 @@ from app.core.errors import ErrorCode, http_exception
 from app.logging import get_logger
 from app.models import Project, RateLimitPolicy
 from app.schemas.rate_limit import RateLimitRule
+from app.services.audit_log import record_audit_log
 
 logger = get_logger().bind(component="rate_limit")
 BURST_WINDOW_SECONDS = 10
@@ -182,12 +183,22 @@ def enforce_rate_limits(
     path = request.url.path
 
     rule_applications: list[tuple[CompiledRule, list[WindowCheck]]] = []
+    ip_addr = request.client.host if request.client else None
+    ip_subject: uuid.UUID | None = None
+    if ip_addr:
+        # Deterministic subject for IP to combine with token-based limits
+        ip_subject = uuid.uuid5(uuid.NAMESPACE_DNS, f"ip:{ip_addr}")
+
     for policy in policies:
         compiled_rules = _compile_policy(policy)
         for rule in compiled_rules:
             if not rule.matches(method, path):
                 continue
-            windows = _prepare_windows(rule, auth_context.token_id, project_ref.id if project_ref else project_id)
+            token_windows = _prepare_windows(rule, auth_context.token_id, project_ref.id if project_ref else project_id)
+            ip_windows: list[WindowCheck] = []
+            if ip_subject is not None:
+                ip_windows = _prepare_windows(rule, ip_subject, project_ref.id if project_ref else project_id)
+            windows = token_windows + ip_windows
             if not windows:
                 continue
             rule_applications.append((rule, windows))
@@ -204,6 +215,30 @@ def enforce_rate_limits(
                 max_retry_after = max(max_retry_after, retry_after)
     if max_retry_after > 0:
         headers = {"Retry-After": str(int(math.ceil(max_retry_after))) if max_retry_after else "1"}
+        # Record throttle event for auditing
+        try:
+            record_audit_log(
+                session,
+                actor=None,
+                action="rate_limit.throttled",
+                resource_type="rate_limit",
+                resource_id=str(auth_context.token_id),
+                project_id=project_ref.id if project_ref else project_id,
+                metadata={
+                    "method": method,
+                    "path": path,
+                    "retry_after": headers["Retry-After"],
+                    "ip": ip_addr,
+                    "policy_ids": [str(p.id) for p in policies],
+                    "correlation_id": request.headers.get("X-Request-ID"),
+                },
+                ip=ip_addr,
+                user_agent=request.headers.get("user-agent"),
+            )
+            session.commit()
+        except Exception:  # pragma: no cover - auditing should not block requests
+            pass
+
         raise http_exception(
             status_code=429,
             code=ErrorCode.RATE_LIMIT_EXCEEDED,

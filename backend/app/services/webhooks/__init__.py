@@ -291,6 +291,58 @@ class WebhookService:
         # For now, we'll deliver synchronously
         await self.deliver_webhook(delivery_id)
 
+    async def _ensure_cutover(self, subscription: WebhookSubscription) -> WebhookSubscription:
+        """If cutover time has passed, promote the pending_secret to active."""
+        if subscription.cutover_at and subscription.pending_secret:
+            now = datetime.utcnow()
+            if subscription.cutover_at.tzinfo is not None:
+                # normalize to naive UTC for comparison
+                now = datetime.utcnow()
+                cutoff = subscription.cutover_at.replace(tzinfo=None)
+                if now >= cutoff:
+                    subscription.secret = subscription.pending_secret
+                    subscription.pending_secret = None
+                    subscription.cutover_at = None
+                    await self.db.commit()
+                    await self.db.refresh(subscription)
+            else:
+                if datetime.utcnow() >= subscription.cutover_at:
+                    subscription.secret = subscription.pending_secret
+                    subscription.pending_secret = None
+                    subscription.cutover_at = None
+                    await self.db.commit()
+                    await self.db.refresh(subscription)
+        return subscription
+
+    async def start_rotation(self, subscription_id: uuid.UUID, *, grace_seconds: int = 3600, new_secret: str | None = None) -> WebhookSubscription | None:
+        """Begin secret rotation by staging a pending_secret and cutover time.
+        The active secret continues to be used for signing until cutover.
+        """
+        subscription = await self.get_subscription(subscription_id)
+        if not subscription:
+            return None
+        pending = new_secret or secrets.token_urlsafe(24)
+        subscription.pending_secret = pending
+        subscription.cutover_at = datetime.utcnow() + timedelta(seconds=grace_seconds)
+        await self.db.commit()
+        await self.db.refresh(subscription)
+        logger.info("webhook_secret_rotation_started", subscription_id=str(subscription.id), cutover_at=str(subscription.cutover_at))
+        return subscription
+
+    async def finalize_rotation(self, subscription_id: uuid.UUID) -> WebhookSubscription | None:
+        """Immediately cut over to the pending secret if present."""
+        subscription = await self.get_subscription(subscription_id)
+        if not subscription:
+            return None
+        if subscription.pending_secret:
+            subscription.secret = subscription.pending_secret
+            subscription.pending_secret = None
+            subscription.cutover_at = None
+            await self.db.commit()
+            await self.db.refresh(subscription)
+            logger.info("webhook_secret_rotation_finalized", subscription_id=str(subscription.id))
+        return subscription
+
     async def deliver_webhook(self, delivery_id: uuid.UUID) -> bool:
         """Deliver a webhook."""
         delivery = await self.get_delivery(delivery_id)
@@ -300,6 +352,9 @@ class WebhookService:
         subscription = await self.get_subscription(delivery.subscription_id)
         if not subscription or not subscription.enabled:
             return False
+        
+        # If cutover passed, promote secret
+        subscription = await self._ensure_cutover(subscription)
         
         # Generate signature
         timestamp = int(datetime.utcnow().timestamp())
