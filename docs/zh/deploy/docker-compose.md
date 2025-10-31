@@ -42,6 +42,29 @@ docker compose -f infra/docker-compose.yml logs -f
 
 ---
 
+## 前端构建配置
+
+`docker compose build nginx` 阶段会在 nginx 镜像内构建 Vite 前端。如需使用 npm 镜像站或公司代理，可在 `infra/docker-compose.yml` 中调整构建参数：
+
+```yaml
+services:
+  nginx:
+    build:
+      args:
+        NPM_REGISTRY: https://registry.npmmirror.com
+        # HTTP_PROXY: http://proxy.yourcorp:8080
+        # HTTPS_PROXY: http://proxy.yourcorp:8080
+        # USE_LOCAL_DIST: "true"
+```
+
+- `NPM_REGISTRY` 默认指向上述镜像，并为镜像构建启用额外的 npm 拉取重试。
+- 如果需要通过公司代理，取消注释 `HTTP_PROXY` / `HTTPS_PROXY` 并填入代理地址。
+- 将 `USE_LOCAL_DIST` 设为 `true` 可复用仓库中的 `frontend/dist/` 产物。
+
+当 `USE_LOCAL_DIST=true` 时，请确保仓库中已经存在 `frontend/dist/`（例如先在本地执行 `npm ci && npm run build`）。Dockerfile 会跳过 `npm ci` / `npm run build`，直接将该目录拷贝进 nginx 镜像，从而在无法访问外部 npm 的网络环境中也能完成构建。
+
+---
+
 ## 环境变量文件
 
 - 该栈会将仓库根目录的 .env 注入 API、workers 与 Flower。
