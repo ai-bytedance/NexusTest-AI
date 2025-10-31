@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import Boolean, ForeignKey, String, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
@@ -32,7 +32,7 @@ class RateLimitPolicy(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("TRUE"))
 
-    project: Mapped["Project" | None] = relationship(
+    project: Mapped[Optional["Project"]] = relationship(
         "Project",
         back_populates="rate_limit_policies",
     )

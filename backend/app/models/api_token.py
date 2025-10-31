@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import DateTime, ForeignKey, String, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
@@ -52,7 +52,7 @@ class ApiToken(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     user: Mapped["User"] = relationship("User", back_populates="api_tokens")
-    rate_limit_policy: Mapped["RateLimitPolicy" | None] = relationship(
+    rate_limit_policy: Mapped[Optional["RateLimitPolicy"]] = relationship(
         "RateLimitPolicy",
         back_populates="api_tokens",
     )

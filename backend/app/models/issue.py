@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Index, String, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
@@ -89,8 +89,8 @@ class Issue(BaseModel, Base):
     )
 
     project: Mapped["Project"] = relationship("Project", back_populates="issues")
-    integration: Mapped["Integration" | None] = relationship("Integration", back_populates="issues")
-    creator: Mapped["User" | None] = relationship("User", back_populates="issues_created")
+    integration: Mapped[Optional["Integration"]] = relationship("Integration", back_populates="issues")
+    creator: Mapped[Optional["User"]] = relationship("User", back_populates="issues_created")
     links: Mapped[list["ReportIssueLink"]] = relationship(
         "ReportIssueLink",
         back_populates="issue",
@@ -136,7 +136,7 @@ class ReportIssueLink(BaseModel, Base):
 
     report: Mapped["TestReport"] = relationship("TestReport", back_populates="issue_links")
     issue: Mapped["Issue"] = relationship("Issue", back_populates="links")
-    linker: Mapped["User" | None] = relationship("User", back_populates="issue_links_created")
+    linker: Mapped[Optional["User"]] = relationship("User", back_populates="issue_links_created")
 
 
 __all__ = ["Issue", "ReportIssueLink", "IssueLinkSource", "IssueSyncState"]

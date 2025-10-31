@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from sqlalchemy import Enum as SqlEnum, ForeignKey, Integer, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
@@ -62,9 +62,9 @@ class ApiArchive(BaseModel, Base):
     )
 
     project: Mapped["Project"] = relationship("Project")
-    api: Mapped["Api" | None] = relationship("Api", back_populates="archives")
+    api: Mapped[Optional["Api"]] = relationship("Api", back_populates="archives")
     run: Mapped["ImportRun"] = relationship("ImportRun", back_populates="archives")
-    applied_by: Mapped["User" | None] = relationship("User")
+    applied_by: Mapped[Optional["User"]] = relationship("User")
 
 
 __all__ = ["ApiArchive", "ApiArchiveChangeType"]

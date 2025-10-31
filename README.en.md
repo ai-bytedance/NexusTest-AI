@@ -186,8 +186,10 @@ See docs/en/setup/quickstart.md for copy-paste commands.
 - Port 8080 already in use → stop the conflicting service or adjust infra/docker-compose.yml (e.g., change nginx ports to "80:80" if port 80 is free)
 - Database connection errors → ensure postgres container is healthy; check DATABASE_URL
 - Migrations failed on start → docker compose logs api; run make migrate to retry
+- SQLAlchemy complains about `Mapped['Model' | None]` during startup/migrations → update relationship annotations to use `Optional[...]` (or enable `from __future__ import annotations`) instead of quoted unions; see backend/app/models for patterns
 - 401 errors → missing/expired token; re-login and pass Authorization: Bearer <token>
 - CORS issues in local dev → verify CORS_ORIGINS includes your frontend dev URL
+- nginx config errors like "add_header directive is not allowed here" → keep add_header directives inside the http/server blocks (see infra/nginx/nginx.conf) and out of upstream sections
 - nginx HSTS off by default → set HSTS_ENABLED=1 on nginx to enable
 
 ---

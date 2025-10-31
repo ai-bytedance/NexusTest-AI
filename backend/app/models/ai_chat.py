@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from sqlalchemy import ForeignKey, Integer, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
@@ -71,7 +71,7 @@ class AiChatMessage(BaseModel, Base):
     result_ref: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     chat: Mapped["AiChat"] = relationship("AiChat", back_populates="messages")
-    author: Mapped["User" | None] = relationship("User", back_populates="ai_chat_messages")
+    author: Mapped[Optional["User"]] = relationship("User", back_populates="ai_chat_messages")
 
 
 __all__ = ["AiChat", "AiChatMessage"]

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from sqlalchemy import Boolean, ForeignKey, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
@@ -77,12 +77,12 @@ class Environment(BaseModel, Base):
         back_populates="environment",
         cascade="all, delete-orphan",
     )
-    default_queue: Mapped["ExecutionQueue" | None] = relationship(
+    default_queue: Mapped[Optional["ExecutionQueue"]] = relationship(
         "ExecutionQueue",
         foreign_keys=[default_queue_id],
         post_update=True,
     )
-    default_policy: Mapped["ExecutionPolicy" | None] = relationship(
+    default_policy: Mapped[Optional["ExecutionPolicy"]] = relationship(
         "ExecutionPolicy",
         foreign_keys=[default_policy_id],
         post_update=True,

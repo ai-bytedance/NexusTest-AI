@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 import uuid
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import Boolean, Enum, Float, ForeignKey, Index, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
@@ -75,7 +75,7 @@ class ExecutionQueue(BaseModel, Base):
     )
 
     project: Mapped["Project"] = relationship("Project", back_populates="queues")
-    environment: Mapped["Environment" | None] = relationship("Environment", back_populates="queues")
+    environment: Mapped[Optional["Environment"]] = relationship("Environment", back_populates="queues")
     test_cases: Mapped[list["TestCase"]] = relationship("TestCase", back_populates="queue")
     test_suites: Mapped[list["TestSuite"]] = relationship("TestSuite", back_populates="queue")
     reports: Mapped[list["TestReport"]] = relationship("TestReport", back_populates="queue")
