@@ -48,6 +48,13 @@ from app.models.test_report import ReportEntityType, ReportStatus, TestReport
 from app.models.test_suite import TestSuite
 from app.models.user import User, UserRole
 from app.models.user_identity import IdentityProvider, UserIdentity
+from app.models.webhook import (
+    WebhookSubscription,
+    WebhookDelivery,
+    WebhookEventType,
+    WebhookDeliveryStatus,
+    WebhookBackoffStrategy,
+)
 
 __all__ = [
     "Agent",
@@ -117,4 +124,9 @@ __all__ = [
     "UserIdentity",
     "UserRole",
     "IdentityProvider",
+    "WebhookSubscription",
+    "WebhookDelivery",
+    "WebhookEventType",
+    "WebhookDeliveryStatus",
+    "WebhookBackoffStrategy",
 ]

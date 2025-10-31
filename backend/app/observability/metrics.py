@@ -36,6 +36,9 @@ _AI_TOKEN_LABELS = ("provider", "model", "token_type", "task_type", "project_id"
 _BACKUP_STORAGE_LABELS = ("storage",)
 _BACKUP_DURATION_LABELS = ("storage", "status")
 _BACKUP_FAILURE_LABELS = ("storage", "reason")
+_WEBHOOK_LABELS = ("project_id", "event_type", "subscription_id")
+_WEBHOOK_STATUS_LABELS = (*_WEBHOOK_LABELS, "status")
+_WEBHOOK_FAILURE_LABELS = (*_WEBHOOK_LABELS, "reason")
 
 REQUEST_COUNT = Counter(
     "http_requests_total",
@@ -186,6 +189,31 @@ BACKUP_FAILURES = Counter(
     "Count of failed backup operations",
     _BACKUP_FAILURE_LABELS,
     namespace=_NAMESPACE,
+)
+WEBHOOK_DELIVERED = Counter(
+    "webhook_delivered_total",
+    "Total number of successful webhook deliveries",
+    _WEBHOOK_LABELS,
+    namespace=_NAMESPACE,
+)
+WEBHOOK_FAILED = Counter(
+    "webhook_failed_total",
+    "Total number of failed webhook deliveries",
+    _WEBHOOK_FAILURE_LABELS,
+    namespace=_NAMESPACE,
+)
+WEBHOOK_DLQ = Counter(
+    "webhook_dlq_total",
+    "Total number of webhooks sent to dead letter queue",
+    _WEBHOOK_LABELS,
+    namespace=_NAMESPACE,
+)
+WEBHOOK_DELIVERY_LATENCY = Histogram(
+    "webhook_delivery_latency_ms",
+    "Latency of webhook deliveries in milliseconds",
+    _WEBHOOK_STATUS_LABELS,
+    namespace=_NAMESPACE,
+    buckets=(10, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 30000),
 )
 
 
@@ -475,6 +503,42 @@ def record_backup_result(
             BACKUP_FAILURES.labels(storage=storage_label, reason=normalized_failure).inc()
 
 
+def record_webhook_delivery(
+    *,
+    project_id: str | None,
+    event_type: str | None,
+    subscription_id: str | None,
+    status: str,
+    duration_ms: float | None,
+    failure_reason: str | None = None,
+) -> None:
+    if not _metrics_enabled():
+        return
+
+    normalized_status = (status or "unknown").strip().lower() or "unknown"
+    labels = {
+        "project_id": _normalize_project_id(project_id),
+        "event_type": (event_type or "unknown").strip().lower() or "unknown",
+        "subscription_id": (subscription_id or "unknown").strip() or "unknown",
+    }
+
+    if normalized_status == "delivered":
+        WEBHOOK_DELIVERED.labels(**labels).inc()
+    elif normalized_status == "dlq":
+        WEBHOOK_DLQ.labels(**labels).inc()
+    else:  # failed
+        failure_labels = {
+            **labels,
+            "reason": _normalize_reason(failure_reason or "unknown"),
+        }
+        WEBHOOK_FAILED.labels(**failure_labels).inc()
+
+    # Record latency for all delivery attempts
+    if duration_ms is not None:
+        status_labels = {**labels, "status": normalized_status}
+        WEBHOOK_DELIVERY_LATENCY.labels(**status_labels).observe(max(duration_ms, 0.0))
+
+
 def observe_ai_call(
     *,
     provider: str,
@@ -558,4 +622,9 @@ __all__ = [
     "BACKUP_LAST_SIZE_BYTES",
     "BACKUP_DURATION",
     "BACKUP_FAILURES",
+    "WEBHOOK_DELIVERED",
+    "WEBHOOK_FAILED",
+    "WEBHOOK_DLQ",
+    "WEBHOOK_DELIVERY_LATENCY",
+    "record_webhook_delivery",
 ]

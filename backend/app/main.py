@@ -29,6 +29,7 @@ from app.api.routes import (
     metrics,
     utils,
     version,
+    webhooks,
 )
 from app.core.config import get_settings
 from app.core.errors import ErrorCode, create_error_detail
@@ -79,6 +80,7 @@ def create_app() -> FastAPI:
     app.include_router(exports.router, prefix="/api/v1")
     app.include_router(utils.router, prefix="/api/v1")
     app.include_router(version.router, prefix="/api/v1")
+    app.include_router(webhooks.router, prefix="/api/v1")
     app.include_router(progress.router)
     if settings.metrics_enabled:
         app.include_router(metrics.router)

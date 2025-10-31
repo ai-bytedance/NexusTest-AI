@@ -23,6 +23,7 @@ from app.api.routes import (
     tokens,
     utils,
     version,
+    webhooks,
 )
 
 __all__ = [
@@ -50,4 +51,5 @@ __all__ = [
     "tokens",
     "utils",
     "version",
+    "webhooks",
 ]

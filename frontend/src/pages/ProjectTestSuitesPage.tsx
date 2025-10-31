@@ -17,6 +17,7 @@ import {
 } from "@/api/suites";
 import type { TestSuite } from "@/types/api";
 import { formatDateTime } from "@/utils/format";
+import ProjectNavigation from "@/components/ProjectNavigation";
 
 interface SuiteFormValues {
   name: string;
@@ -212,6 +213,7 @@ export default function ProjectTestSuitesPage() {
 
   return (
     <Space direction="vertical" style={{ width: "100%" }} size="large">
+      <ProjectNavigation />
       <Space style={{ justifyContent: "space-between", width: "100%" }} align="center">
         <Typography.Title level={4} style={{ margin: 0 }}>
           {t("suites:title")}
