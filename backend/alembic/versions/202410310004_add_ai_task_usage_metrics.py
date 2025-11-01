@@ -1,7 +1,7 @@
 """Add model and token usage columns to ai_tasks
 
 Revision ID: 202410310004
-Revises: 202410300003_add_environments_datasets
+Revises: 202410300003
 Create Date: 2024-10-31 12:00:00.000000
 """
 
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "202410310004"
-down_revision = "202410300003_add_environments_datasets"
+down_revision = "202410300003"
 branch_labels = None
 depends_on = None
 
