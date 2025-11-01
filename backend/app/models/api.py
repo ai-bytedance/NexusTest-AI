@@ -67,7 +67,8 @@ class Api(BaseModel, Base):
         nullable=False,
         server_default=text("'{}'::jsonb"),
     )
-    metadata: Mapped[dict[str, Any]] = mapped_column(
+    metadata_: Mapped[dict[str, Any]] = mapped_column(
+        "metadata",
         JSONB,
         nullable=False,
         server_default=text("'{}'::jsonb"),

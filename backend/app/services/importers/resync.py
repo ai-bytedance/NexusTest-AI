@@ -67,8 +67,8 @@ def _resync_openapi(
                 message="Stored OpenAPI payload is unavailable",
             )
         document = source.payload_snapshot
-        if isinstance(source.metadata, dict):
-            base_url = source.metadata.get("base_url")
+        if isinstance(source.metadata_, dict):
+            base_url = source.metadata_.get("base_url")
 
     return import_openapi_spec(
         db,

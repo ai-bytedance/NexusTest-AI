@@ -21,8 +21,8 @@ router = APIRouter(prefix="/admin/backups", tags=["admin-backups"])
 
 def _to_summary(run: BackupRun) -> BackupRunSummary:
     metadata: dict[str, Any] | None
-    if isinstance(run.metadata, dict):
-        metadata = run.metadata
+    if isinstance(run.metadata_, dict):
+        metadata = run.metadata_
     else:
         metadata = None
     storages = [value for value in (run.storage_targets or "").split(",") if value]

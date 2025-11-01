@@ -34,7 +34,8 @@ class AuditLog(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=True,
         index=True,
     )
-    metadata: Mapped[dict | None] = mapped_column(
+    metadata_: Mapped[dict | None] = mapped_column(
+        "metadata",
         JSONB,
         nullable=True,
         default=dict,

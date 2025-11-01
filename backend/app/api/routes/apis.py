@@ -94,7 +94,7 @@ def create_api(
         params=payload.params,
         body=payload.body,
         mock_example=payload.mock_example,
-        metadata=payload.metadata,
+        metadata_=payload.metadata,
         fingerprint=fingerprint,
     )
     db.add(api)
@@ -135,8 +135,10 @@ def update_api(
     version_value = updates.get("version", api.version)
     normalized_path = normalize_path(path_value)
 
-    if "metadata" in updates and updates["metadata"] is None:
-        updates["metadata"] = {}
+    metadata_update_marker = object()
+    metadata_update = updates.pop("metadata", metadata_update_marker)
+    if metadata_update is not metadata_update_marker:
+        api.metadata_ = metadata_update or {}
 
     if (
         method_enum is not None
@@ -172,7 +174,7 @@ def update_api(
         "params": api.params,
         "body": api.body,
         "mock_example": api.mock_example,
-        "metadata": api.metadata,
+        "metadata": api.metadata_,
     }
     api.fingerprint = compute_hash(fingerprint_payload)
 

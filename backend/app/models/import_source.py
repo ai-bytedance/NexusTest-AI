@@ -64,7 +64,8 @@ class ImportSource(BaseModel, Base):
         JSONB,
         nullable=True,
     )
-    metadata: Mapped[dict[str, Any]] = mapped_column(
+    metadata_: Mapped[dict[str, Any]] = mapped_column(
+        "metadata",
         JSONB,
         nullable=False,
         server_default=text("'{}'::jsonb"),

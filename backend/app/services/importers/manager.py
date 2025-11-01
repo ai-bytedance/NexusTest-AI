@@ -148,7 +148,7 @@ class ImportManager:
                         name=api.name,
                         summary="Marked as deleted (missing from import)",
                         diff={"is_deleted": {"from": api.is_deleted, "to": True}},
-                        metadata=api.metadata or {},
+                        metadata=api.metadata_ or {},
                     )
                 )
                 if not self.dry_run:
@@ -199,13 +199,13 @@ class ImportManager:
                 content_hash=descriptor.content_hash,
                 options=options,
                 payload_snapshot=payload_snapshot,
-                metadata=metadata,
+                metadata_=metadata,
             )
         else:
             target.content_hash = descriptor.content_hash
             target.options = options
             target.payload_snapshot = payload_snapshot
-            target.metadata = metadata
+            target.metadata_ = metadata
 
         self.db.add(target)
         self.db.flush()
@@ -234,7 +234,10 @@ class ImportManager:
     def _calculate_diff(self, existing: Api, candidate: ImportCandidate) -> dict[str, Any]:
         diff: dict[str, Any] = {}
         for field in significant_fields():
-            existing_value = getattr(existing, field)
+            if field == "metadata":
+                existing_value = existing.metadata_ or {}
+            else:
+                existing_value = getattr(existing, field)
             candidate_value = getattr(candidate, field)
             if existing_value != candidate_value:
                 diff[field] = {"from": existing_value, "to": candidate_value}
@@ -256,7 +259,7 @@ class ImportManager:
             params=payload["params"],
             body=payload["body"],
             mock_example=payload["mock_example"],
-            metadata=payload["metadata"],
+            metadata_=payload["metadata"],
             fingerprint=candidate.fingerprint,
             source_key=candidate.source_key,
             import_source_id=source.id if source else None,
@@ -274,7 +277,7 @@ class ImportManager:
         api.params = payload["params"]
         api.body = payload["body"]
         api.mock_example = payload["mock_example"]
-        api.metadata = payload["metadata"]
+        api.metadata_ = payload["metadata"]
         api.source_key = payload["source_key"]
         api.fingerprint = candidate.fingerprint
         api.import_source_id = source.id if source else None

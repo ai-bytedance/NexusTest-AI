@@ -61,7 +61,7 @@ def export_audit_logs(
             "resource_id": row.resource_id,
             "project_id": str(row.project_id) if row.project_id else None,
             "organization_id": str(row.organization_id) if row.organization_id else None,
-            "metadata": row.metadata,
+            "metadata": row.metadata_,
             "ip": row.ip,
             "user_agent": row.user_agent,
             "created_at": row.created_at.isoformat() if row.created_at else None,
