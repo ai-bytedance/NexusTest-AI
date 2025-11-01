@@ -1,7 +1,7 @@
+import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import monacoEditorPlugin from "vite-plugin-monaco-editor";
-import path from "path";
 
 const resolvedMonacoEditorPlugin =
   (monacoEditorPlugin as unknown as { default?: typeof monacoEditorPlugin }).default ??
@@ -17,7 +17,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "src"),
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
     extensions: [".mjs", ".js", ".ts", ".jsx", ".tsx", ".json"],
   },

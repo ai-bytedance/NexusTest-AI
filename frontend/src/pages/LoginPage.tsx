@@ -3,7 +3,7 @@ import { Button, Form, Input, message } from "antd";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { login } from "@/api/auth";
-import { useAuthStore } from "@/stores/auth";
+import { useAuthStore } from "@/stores";
 
 interface LoginFormValues {
   email: string;
