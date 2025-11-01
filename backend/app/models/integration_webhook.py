@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 import uuid
-from datetime import datetime
+from datetime import datetime as DateTimePy
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, String, Text, UniqueConstraint, text
@@ -68,7 +68,7 @@ class IntegrationWebhook(BaseModel, Base):
         server_default=text("'pending'::integration_webhook_status_enum"),
     )
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default=text("0"))
-    processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    processed_at: Mapped[DateTimePy | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     integration: Mapped[Integration | None] = relationship("Integration", back_populates="webhooks")

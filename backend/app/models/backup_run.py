@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import enum
-from datetime import datetime
+from datetime import datetime as DateTimePy
 
 from sqlalchemy import BigInteger, DateTime, Enum, Float, Index, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB
@@ -21,12 +21,12 @@ class BackupRun(BaseModel, Base):
 
     __table_args__ = (Index("ix_backup_runs_started_at", "started_at"),)
 
-    started_at: Mapped[datetime] = mapped_column(
+    started_at: Mapped[DateTimePy] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         server_default=text("TIMEZONE('utc', NOW())"),
     )
-    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[DateTimePy | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[BackupStatus] = mapped_column(
         Enum(BackupStatus, name="backup_status_enum", native_enum=True),
         nullable=False,
@@ -39,14 +39,14 @@ class BackupRun(BaseModel, Base):
     size_bytes: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
     retention_class: Mapped[str] = mapped_column(String(32), nullable=False, default="daily", server_default=text("'daily'"))
-    metadata_: Mapped[dict | None] = mapped_column(
+    metadata_: Mapped[dict[str, str] | None] = mapped_column(
         "metadata",
         JSONB,
         nullable=True,
     )
     triggered_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    verified_at: Mapped[DateTimePy | None] = mapped_column(DateTime(timezone=True), nullable=True)
     verify_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 import uuid
-from datetime import datetime
+from datetime import datetime as DateTimePy
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, String, Text, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
@@ -42,12 +42,12 @@ class AnalyticsFailCluster(BaseModel, Base):
         server_default=text("'[]'::jsonb"),
     )
     count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default=text("0"))
-    first_seen_at: Mapped[datetime] = mapped_column(
+    first_seen_at: Mapped[DateTimePy] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         server_default=text("TIMEZONE('utc', NOW())"),
     )
-    last_seen_at: Mapped[datetime] = mapped_column(
+    last_seen_at: Mapped[DateTimePy] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         server_default=text("TIMEZONE('utc', NOW())"),

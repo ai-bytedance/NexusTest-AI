@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime as DateTimePy
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
@@ -54,7 +54,7 @@ class WebhookSubscription(BaseModel, Base):
     url: Mapped[str] = mapped_column(String(2048), nullable=False)
     secret: Mapped[str] = mapped_column(String(255), nullable=False)
     pending_secret: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    cutover_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cutover_at: Mapped[DateTimePy | None] = mapped_column(DateTime(timezone=True), nullable=True)
     events: Mapped[list[str]] = mapped_column(
         JSONB,
         nullable=False,
@@ -125,12 +125,12 @@ class WebhookDelivery(BaseModel, Base):
         server_default=text("0"),
     )
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    next_retry_at: Mapped[datetime | None] = mapped_column(
+    next_retry_at: Mapped[DateTimePy | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
         index=True,
     )
-    delivered_at: Mapped[datetime | None] = mapped_column(
+    delivered_at: Mapped[DateTimePy | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
         index=True,

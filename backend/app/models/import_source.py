@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 import uuid
-from datetime import datetime
+from datetime import datetime as DateTimePy
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import DateTime, Enum as SqlEnum, ForeignKey, String, Text, text
@@ -72,8 +72,8 @@ class ImportSource(BaseModel, Base):
     )
     last_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     last_prepared_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
-    last_imported_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    last_prepared_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_imported_at: Mapped[DateTimePy | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_prepared_at: Mapped[DateTimePy | None] = mapped_column(DateTime(timezone=True), nullable=True)
     sync_rules: Mapped[dict[str, Any]] = mapped_column(
         JSONB,
         nullable=False,
@@ -146,14 +146,14 @@ class ImportRun(BaseModel, Base):
         nullable=True,
         index=True,
     )
-    applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    applied_at: Mapped[DateTimePy | None] = mapped_column(DateTime(timezone=True), nullable=True)
     rolled_back_by_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )
-    rolled_back_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    rolled_back_at: Mapped[DateTimePy | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     project: Mapped[Project] = relationship("Project", back_populates="import_runs")
     source: Mapped[ImportSource | None] = relationship("ImportSource", back_populates="runs")
