@@ -235,16 +235,24 @@ class Settings(BaseSettings):
     @field_validator("cors_origins", mode="before")
     @classmethod
     def normalize_cors_origins(cls, value: List[str] | str | None) -> List[str]:
-        if value is None:
-            return cls._get_default_cors_origins()
+        """Robust CORS origins validator that never crashes on malformed input."""
+        # Handle None or empty values
+        if value is None or (isinstance(value, str) and not value.strip()):
+            origins = cls._get_default_cors_origins()
+            logger.info("CORS_ORIGINS not set or empty, using defaults: %s", origins)
+            return origins
 
         items: list[str]
+        
+        # Handle list input
         if isinstance(value, list):
             items = value
         elif isinstance(value, str):
             raw_value = value.strip()
             if not raw_value:
-                return cls._get_default_cors_origins()
+                origins = cls._get_default_cors_origins()
+                logger.info("CORS_ORIGINS empty string, using defaults: %s", origins)
+                return origins
             
             # Try JSON parsing first if it looks like JSON
             if raw_value.startswith("["):
@@ -252,18 +260,23 @@ class Settings(BaseSettings):
                     parsed = json.loads(raw_value)
                     if isinstance(parsed, list):
                         items = parsed
+                        logger.debug("Successfully parsed CORS_ORIGINS as JSON array")
                     else:
                         # If JSON is not a list, fall back to CSV parsing
                         logger.warning("CORS_ORIGINS JSON is not an array, falling back to CSV parsing")
                         items = raw_value.split(",")
-                except json.JSONDecodeError:
+                except (json.JSONDecodeError, TypeError, ValueError) as e:
                     # If JSON parsing fails, fall back to CSV parsing
-                    logger.warning("Failed to parse CORS_ORIGINS as JSON, falling back to CSV parsing")
+                    logger.warning("Failed to parse CORS_ORIGINS as JSON (error: %s), falling back to CSV parsing", str(e))
                     items = raw_value.split(",")
             else:
+                # Handle as CSV
                 items = raw_value.split(",")
         else:
-            raise ValueError("Invalid format for CORS_ORIGINS")
+            # Handle unexpected types by converting to string and treating as CSV
+            logger.warning("CORS_ORIGINS has unexpected type %s, converting to string and parsing as CSV", type(value).__name__)
+            str_value = str(value)
+            items = str_value.split(",") if str_value else []
 
         origins: list[str] = []
         for item in items:
@@ -274,6 +287,12 @@ class Settings(BaseSettings):
             if origin:
                 # Remove trailing slashes for consistency
                 origin = origin.rstrip('/')
+                # Ensure scheme is present (http/https)
+                if origin and not origin.startswith(("http://", "https://")):
+                    # If no scheme, assume http for common localhost patterns
+                    if origin.startswith(("localhost:", "127.0.0.1:", "192.168.", "10.")):
+                        origin = f"http://{origin}"
+                        logger.debug("Added http:// scheme to origin: %s", origin)
                 origins.append(origin)
 
         # Remove duplicates while preserving order
@@ -286,13 +305,16 @@ class Settings(BaseSettings):
 
         # Handle wildcard case
         if "*" in unique_origins and len(unique_origins) > 1:
-            raise ValueError("CORS_ORIGINS cannot include '*' alongside specific origins")
+            logger.warning("CORS_ORIGINS cannot include '*' alongside specific origins, using '*' only")
+            unique_origins = ["*"]
         
         # If no valid origins found, return defaults
         if not unique_origins:
-            return cls._get_default_cors_origins()
+            origins = cls._get_default_cors_origins()
+            logger.info("No valid CORS origins found, using defaults: %s", origins)
+            return origins
         
-        # Log parsed origins at INFO level (no secrets)
+        # Log parsed origins at INFO level for diagnostics (no secrets)
         logger.info("Parsed CORS origins: %s", unique_origins)
             
         return unique_origins
