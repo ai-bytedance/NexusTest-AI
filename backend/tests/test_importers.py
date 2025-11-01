@@ -80,8 +80,8 @@ def test_openapi_import_and_diff_preview(client: TestClient, db_session: Session
     assert create_api.headers["Authorization"] == "Bearer {{token}}"
     assert create_api.headers["trace-id"] == "abc-123"
     assert create_api.group_name == "users"
-    assert create_api.metadata["openapi"]["operation_vendor_extensions"]["x-operation-flag"] is True
-    assert create_api.metadata["openapi"]["selected_server"]["url"].startswith("https://api.example.com")
+    assert create_api.metadata_["openapi"]["operation_vendor_extensions"]["x-operation-flag"] is True
+    assert create_api.metadata_["openapi"]["selected_server"]["url"].startswith("https://api.example.com")
     assert "multipart/form-data" in create_api.body
     assert create_api.mock_example["responses"]["201"]["application/json"]["id"] == "user-1"
 
@@ -227,15 +227,15 @@ def test_postman_import_variables_and_auth(client: TestClient, db_session: Sessi
     assert get_api.params["include"] == "full"
     assert get_api.headers["Authorization"] == "Bearer abc123"
     assert get_api.headers["X-Correlation-Id"] == "corr-9"
-    assert get_api.metadata["postman"]["folder_path"] == ["User APIs"]
-    assert "pm.variables.set" in get_api.metadata["postman"]["pre_request_script"]
-    assert get_api.metadata["postman"]["resolved_url"] == "https://api.test.local/users/42?include=full"
+    assert get_api.metadata_["postman"]["folder_path"] == ["User APIs"]
+    assert "pm.variables.set" in get_api.metadata_["postman"]["pre_request_script"]
+    assert get_api.metadata_["postman"]["resolved_url"] == "https://api.test.local/users/42?include=full"
 
     post_api = next(api for api in apis if api.method == "POST")
     assert post_api.group_name == "User APIs"
     assert post_api.body["formdata"]["name"] == "Ada"
     assert post_api.body["files"]["avatar"] == ["./avatar.png"]
-    assert post_api.metadata["postman"]["auth"]["type"] == "bearer"
+    assert post_api.metadata_["postman"]["auth"]["type"] == "bearer"
 
     source = db_session.execute(
         select(ImportSource).where(

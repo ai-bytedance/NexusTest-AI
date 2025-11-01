@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import Field, model_validator
+from pydantic import AliasChoices, Field, model_validator
 
 from app.models.integration import IntegrationProvider
 from app.models.issue import IssueLinkSource, IssueSyncState
@@ -46,7 +46,10 @@ class IssueLinkRead(IdentifierModel):
     linked_by: UUID | None
     source: IssueLinkSource
     note: str | None
-    metadata: dict[str, Any]
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        validation_alias=AliasChoices("metadata_", "metadata"),
+    )
 
 
 class IssueRead(IdentifierModel):
@@ -64,7 +67,10 @@ class IssueRead(IdentifierModel):
     last_sync_at: datetime | None
     last_webhook_at: datetime | None
     last_error: str | None
-    metadata: dict[str, Any]
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        validation_alias=AliasChoices("metadata_", "metadata"),
+    )
     linked_prs: list[LinkedPullRequest] = Field(default_factory=list)
     linked_commits: list[LinkedCommit] = Field(default_factory=list)
 

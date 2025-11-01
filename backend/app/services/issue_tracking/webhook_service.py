@@ -230,7 +230,7 @@ def process_webhook_event(
     if isinstance(remote_url, str) and remote_url.strip():
         issue.url = remote_url.strip()
 
-    metadata = dict(issue.metadata or {})
+    metadata = dict(issue.metadata_ or {})
     remote_state = dict(metadata.get("remote_state") or {})
     remote_state.update(
         {
@@ -242,7 +242,7 @@ def process_webhook_event(
         }
     )
     metadata["remote_state"] = remote_state
-    issue.metadata = metadata
+    issue.metadata_ = metadata
 
     prs = list(_iter_pull_requests(provider, issue_payload.get("pull_requests") or issue_payload.get("prs")))
     commits = list(_iter_commits(provider, issue_payload.get("commits") or issue_payload.get("commit_refs")))

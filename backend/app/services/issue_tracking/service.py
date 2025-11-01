@@ -192,7 +192,7 @@ def create_issue_for_report(
         status=result.status,
         dedupe_key=dedupe_key,
         created_by=linked_by,
-        metadata=metadata,
+        metadata_=metadata,
         last_sync_at=now,
     )
     session.add(issue)
@@ -205,7 +205,7 @@ def create_issue_for_report(
         linked_by=linked_by,
         source=source,
         note=note,
-        metadata=link_metadata,
+        metadata_=link_metadata,
     )
     session.add(link)
 
@@ -222,13 +222,13 @@ def link_issue_to_report(
     note: str | None = None,
     metadata_updates: dict[str, Any] | None = None,
 ) -> ReportIssueLink:
-    metadata = dict(issue.metadata or {})
+    metadata = dict(issue.metadata_ or {})
     metadata.setdefault("pass_streak", 0)
     _checkpoint_occurrences(metadata, report=report, source=source)
     if metadata_updates:
         metadata.update(metadata_updates)
 
-    issue.metadata = metadata
+    issue.metadata_ = metadata
     issue.last_sync_at = datetime.now(timezone.utc)
     session.add(issue)
 
@@ -238,7 +238,7 @@ def link_issue_to_report(
         linked_by=linked_by,
         source=source,
         note=note,
-        metadata={"source": source.value, "note": note} if note else {"source": source.value},
+        metadata_={"source": source.value, "note": note} if note else {"source": source.value},
     )
     session.add(link)
     session.flush()
@@ -268,7 +268,7 @@ def summarize_issue(issue: Issue, include_links: bool = False) -> dict[str, Any]
         "last_sync_at": issue.last_sync_at,
         "last_webhook_at": issue.last_webhook_at,
         "last_error": issue.last_error,
-        "metadata": issue.metadata,
+        "metadata": issue.metadata_,
         "linked_prs": issue.linked_prs or [],
         "linked_commits": issue.linked_commits or [],
         "created_at": issue.created_at,
@@ -283,7 +283,7 @@ def summarize_issue(issue: Issue, include_links: bool = False) -> dict[str, Any]
                 "linked_by": link.linked_by,
                 "source": link.source.value,
                 "note": link.note,
-                "metadata": link.metadata,
+                "metadata": link.metadata_,
                 "created_at": link.created_at,
                 "updated_at": link.updated_at,
             }
@@ -314,17 +314,17 @@ def find_issue_by_external(
 
 
 def increment_pass_streak(issue: Issue, report: TestReport) -> None:
-    metadata = dict(issue.metadata or {})
+    metadata = dict(issue.metadata_ or {})
     pass_streak = int(metadata.get("pass_streak", 0)) + 1
     metadata["pass_streak"] = pass_streak
     _checkpoint_occurrences(metadata, report=report, source=IssueLinkSource.AUTO)
-    issue.metadata = metadata
+    issue.metadata_ = metadata
 
 
 def reset_pass_streak(issue: Issue) -> None:
-    metadata = dict(issue.metadata or {})
+    metadata = dict(issue.metadata_ or {})
     metadata["pass_streak"] = 0
-    issue.metadata = metadata
+    issue.metadata_ = metadata
 
 
 def aggregate_occurrence_windows(issues: Iterable[Issue]) -> list[str]:

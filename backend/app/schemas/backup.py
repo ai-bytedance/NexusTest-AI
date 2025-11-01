@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class BackupRunSummary(BaseModel):
@@ -23,7 +23,10 @@ class BackupRunSummary(BaseModel):
     duration_seconds: float | None
     verified_at: datetime | None
     verify_notes: str | None
-    metadata: dict[str, Any] | None
+    metadata: dict[str, Any] | None = Field(
+        default=None,
+        validation_alias=AliasChoices("metadata_", "metadata"),
+    )
 
 
 class BackupStatusResponse(BaseModel):

@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 
 from app.models.agent import AgentAlertKind, AgentStatus
 from app.schemas.common import IdentifierModel, ORMModel
@@ -140,7 +140,10 @@ class AgentQueueMembershipRead(IdentifierModel):
     capacity: int | None = None
     weight: int | None = None
     enabled: bool
-    metadata: dict[str, Any]
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        validation_alias=AliasChoices("metadata_", "metadata"),
+    )
 
 
 class AgentDetail(AgentRead):
@@ -172,7 +175,10 @@ class AgentThresholdRead(IdentifierModel):
     offline_seconds: int
     backlog_threshold: int
     latency_threshold_ms: int
-    metadata: dict[str, Any]
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        validation_alias=AliasChoices("metadata_", "metadata"),
+    )
 
 
 class AgentThresholdUpdate(ORMModel):
