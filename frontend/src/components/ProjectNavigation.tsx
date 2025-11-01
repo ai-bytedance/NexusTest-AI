@@ -3,7 +3,7 @@ import {
   ApiOutlined,
   FileSearchOutlined,
   SettingOutlined,
-  WebhookOutlined,
+  DeploymentUnitOutlined,
   BranchesOutlined,
   BugOutlined,
 } from "@ant-design/icons";
@@ -45,7 +45,7 @@ export function ProjectNavigation() {
     },
     {
       key: "webhooks",
-      icon: <WebhookOutlined />,
+      icon: <DeploymentUnitOutlined />,
       label: "Webhooks",
       onClick: () => navigate(`/projects/${projectId}/webhooks`),
     },
