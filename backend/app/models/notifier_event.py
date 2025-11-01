@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 import uuid
-from datetime import datetime
+from datetime import datetime as DateTimePy
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, Text, text
@@ -70,8 +70,8 @@ class NotifierEvent(BaseModel, Base):
     )
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default=text("0"))
-    last_attempted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_attempted_at: Mapped[DateTimePy | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    processed_at: Mapped[DateTimePy | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     notifier: Mapped[Notifier] = relationship("Notifier", back_populates="events")
     project: Mapped[Project] = relationship("Project", back_populates="notifier_events")
