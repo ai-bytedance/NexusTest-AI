@@ -24,6 +24,10 @@ def _parse_cron(expression: str):
 
 def create_celery_app() -> Celery:
     settings = get_settings()
+    
+    # Log CORS origins for diagnostics
+    logger.info("celery_cors_origins_configured", origins=settings.cors_origins)
+    
     celery_app = Celery(
         "app",
         broker=settings.redis_url,

@@ -121,6 +121,7 @@ def create_app() -> FastAPI:
     @app.on_event("startup")
     async def on_startup() -> None:
         logger.info("application_started", environment=settings.app_env)
+        logger.info("cors_origins_configured", origins=settings.cors_origins)
 
     @app.on_event("shutdown")
     async def on_shutdown() -> None:

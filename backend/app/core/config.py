@@ -236,7 +236,7 @@ class Settings(BaseSettings):
     @classmethod
     def normalize_cors_origins(cls, value: List[str] | str | None) -> List[str]:
         if value is None:
-            return []
+            return cls._get_default_cors_origins()
 
         items: list[str]
         if isinstance(value, list):
@@ -244,15 +244,20 @@ class Settings(BaseSettings):
         elif isinstance(value, str):
             raw_value = value.strip()
             if not raw_value:
-                return []
+                return cls._get_default_cors_origins()
+            
+            # Try JSON parsing first if it looks like JSON
             if raw_value.startswith("["):
                 try:
                     parsed = json.loads(raw_value)
-                except json.JSONDecodeError as exc:
-                    raise ValueError("Invalid JSON format for CORS_ORIGINS") from exc
-                if not isinstance(parsed, list):
-                    raise ValueError("CORS_ORIGINS JSON must be a list of strings")
-                items = parsed
+                    if isinstance(parsed, list):
+                        items = parsed
+                    else:
+                        # If JSON is not a list, fall back to CSV parsing
+                        items = raw_value.split(",")
+                except json.JSONDecodeError:
+                    # If JSON parsing fails, fall back to CSV parsing
+                    items = raw_value.split(",")
             else:
                 items = raw_value.split(",")
         else:
@@ -261,14 +266,37 @@ class Settings(BaseSettings):
         origins: list[str] = []
         for item in items:
             if not isinstance(item, str):
-                raise ValueError("CORS_ORIGINS entries must be strings")
+                # Convert non-string items to string
+                item = str(item)
             origin = item.strip()
             if origin:
+                # Remove trailing slashes for consistency
+                origin = origin.rstrip('/')
                 origins.append(origin)
 
-        if "*" in origins and len(origins) > 1:
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_origins = []
+        for origin in origins:
+            if origin not in seen:
+                seen.add(origin)
+                unique_origins.append(origin)
+
+        # Handle wildcard case
+        if "*" in unique_origins and len(unique_origins) > 1:
             raise ValueError("CORS_ORIGINS cannot include '*' alongside specific origins")
-        return origins
+        
+        # If no valid origins found, return defaults
+        if not unique_origins:
+            return cls._get_default_cors_origins()
+            
+        return unique_origins
+
+    @classmethod
+    def _get_default_cors_origins(cls) -> List[str]:
+        """Get default CORS origins based on environment."""
+        # In development, provide sensible defaults
+        return ["http://localhost:8080", "http://127.0.0.1:8080"]
 
     @field_validator("redact_fields", mode="before")
     @classmethod
