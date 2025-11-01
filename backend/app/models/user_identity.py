@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 import uuid
-from datetime import datetime
+from datetime import datetime as DateTimePy
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Enum, ForeignKey, String, UniqueConstraint
@@ -40,8 +40,8 @@ class UserIdentity(BaseModel, Base):
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     access_token: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     refresh_token: Mapped[str | None] = mapped_column(String(1024), nullable=True)
-    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[DateTimePy | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_login_at: Mapped[DateTimePy | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     user: Mapped[User] = relationship("User", back_populates="identities")
 

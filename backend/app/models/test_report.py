@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 import uuid
-from datetime import datetime
+from datetime import datetime as DateTimePy
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import BigInteger, Boolean, DateTime, Enum, Float, ForeignKey, Index, String, Text, text
@@ -71,12 +71,12 @@ class TestReport(BaseModel, Base):
         default=ReportStatus.PENDING,
         server_default=text("'pending'::report_status_enum"),
     )
-    started_at: Mapped[datetime] = mapped_column(  # type: ignore[name-defined]
+    started_at: Mapped[DateTimePy] = mapped_column(  # type: ignore[name-defined]
         DateTime(timezone=True),
         nullable=False,
         server_default=text("TIMEZONE('utc', NOW())"),
     )
-    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[DateTimePy | None] = mapped_column(DateTime(timezone=True), nullable=True)
     duration_ms: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     request_payload: Mapped[dict[str, Any]] = mapped_column(
         JSONB,
