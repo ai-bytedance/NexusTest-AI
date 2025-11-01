@@ -6,7 +6,7 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "202410300003"
+revision: str = "202410300003_add_environments_datasets"
 down_revision: str | None = "202410290002"
 branch_labels: tuple[str, ...] | None = None
 depends_on: tuple[str, ...] | None = None
