@@ -4,7 +4,7 @@ import enum
 from typing import Any
 from uuid import UUID
 
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 
 from app.schemas.common import IdentifierModel, ORMModel
 
@@ -75,5 +75,8 @@ class ApiRead(IdentifierModel):
     params: dict[str, Any]
     body: dict[str, Any]
     mock_example: dict[str, Any]
-    metadata: dict[str, Any]
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        validation_alias=AliasChoices("metadata_", "metadata"),
+    )
     import_source_id: UUID | None

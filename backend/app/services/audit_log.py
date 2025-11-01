@@ -30,7 +30,7 @@ def record_audit_log(
         resource_id=resource_id,
         project_id=project_id,
         organization_id=organization_id,
-        metadata=metadata or {},
+        metadata_=metadata or {},
         ip=ip,
         user_agent=user_agent,
     )

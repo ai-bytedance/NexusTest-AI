@@ -473,7 +473,7 @@ class BackupManager:
                 logger.info("backup_pruned", backup_id=str(backup.id), path=str(path))
             except Exception as exc:  # noqa: BLE001
                 logger.warning("backup_prune_failed", backup_id=str(backup.id), reason=str(exc))
-        metadata = backup.metadata or {}
+        metadata = backup.metadata_ or {}
         s3_uri = metadata.get("s3_uri") if isinstance(metadata, dict) else None
         if s3_uri:
             self._delete_s3_object(s3_uri)

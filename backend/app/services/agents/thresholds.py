@@ -120,7 +120,7 @@ class AgentThresholdService:
             offline_seconds=defaults["offline_seconds"],
             backlog_threshold=defaults["backlog_threshold"],
             latency_threshold_ms=defaults["latency_threshold_ms"],
-            metadata={},
+            metadata_={},
         )
         self.session.add(threshold)
         self.session.commit()
