@@ -1,9 +1,12 @@
 import json
+import logging
 from functools import lru_cache
 from typing import List
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -289,6 +292,9 @@ class Settings(BaseSettings):
         # If no valid origins found, return defaults
         if not unique_origins:
             return cls._get_default_cors_origins()
+        
+        # Log parsed origins at INFO level (no secrets)
+        logger.info("Parsed CORS origins: %s", unique_origins)
             
         return unique_origins
 
