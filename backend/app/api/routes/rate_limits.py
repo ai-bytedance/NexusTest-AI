@@ -201,7 +201,7 @@ def recent_throttles(
         {
             "id": str(row.id),
             "created_at": row.created_at.isoformat() if row.created_at else None,
-            "metadata": row.metadata,
+            "metadata": row.metadata_,
             "ip": row.ip,
             "user_agent": row.user_agent,
         }

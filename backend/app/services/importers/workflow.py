@@ -101,7 +101,7 @@ def prepare_import_run(
     if source is not None:
         source.last_prepared_hash = descriptor.payload_hash
         source.last_prepared_at = now
-        source.metadata = descriptor.metadata or {}
+        source.metadata_ = descriptor.metadata or {}
         source.options = descriptor.options or {}
         db.add(source)
 
@@ -165,14 +165,14 @@ def approve_import_run(
             "last_hash": source.last_hash,
             "last_prepared_hash": source.last_prepared_hash,
             "last_imported_at": source.last_imported_at.isoformat() if source.last_imported_at else None,
-            "metadata": source.metadata,
+            "metadata": source.metadata_,
             "payload_snapshot": source.payload_snapshot,
         }
 
         source.last_hash = payload_hash
         source.last_prepared_hash = payload_hash
         source.last_imported_at = now
-        source.metadata = context_source.get("metadata") or source.metadata or {}
+        source.metadata_ = context_source.get("metadata") or source.metadata_ or {}
         if context_source.get("payload_snapshot") is not None:
             source.payload_snapshot = context_source.get("payload_snapshot")
         source.options = context_source.get("options") or source.options or {}
@@ -181,7 +181,7 @@ def approve_import_run(
             "last_hash": source.last_hash,
             "last_prepared_hash": source.last_prepared_hash,
             "last_imported_at": source.last_imported_at.isoformat() if source.last_imported_at else None,
-            "metadata": source.metadata,
+            "metadata": source.metadata_,
             "payload_snapshot": source.payload_snapshot,
         }
 
@@ -265,7 +265,7 @@ def rollback_import_run(
                 if isinstance(previous_imported_at, str)
                 else None
             )
-            source.metadata = previous_state.get("metadata") or {}
+            source.metadata_ = previous_state.get("metadata") or {}
             source.payload_snapshot = previous_state.get("payload_snapshot")
             db.add(source)
 
@@ -319,13 +319,13 @@ def _ensure_source(
             source_type=descriptor.source_type,
             location=descriptor.location,
             options=descriptor.options or {},
-            metadata=descriptor.metadata or {},
+            metadata_=descriptor.metadata or {},
         )
     else:
         source.source_type = descriptor.source_type
         source.location = descriptor.location
         source.options = descriptor.options or {}
-        source.metadata = descriptor.metadata or {}
+        source.metadata_ = descriptor.metadata or {}
 
     db.add(source)
     db.flush()
@@ -437,7 +437,7 @@ def _build_diff(
                     api_id=api.id,
                     summary="Marked as deleted (missing from import)",
                     diff={"is_deleted": {"from": api.is_deleted, "to": True}},
-                    metadata=api.metadata or {},
+                    metadata=api.metadata_ or {},
                 )
             )
 
@@ -458,7 +458,10 @@ def _load_existing_map(db: Session, project: Project) -> dict[tuple[str, str, st
 def _calculate_diff(existing: Api, candidate: ImportCandidate) -> dict[str, Any]:
     diff: dict[str, Any] = {}
     for field in significant_fields():
-        existing_value = getattr(existing, field)
+        if field == "metadata":
+            existing_value = existing.metadata_ or {}
+        else:
+            existing_value = getattr(existing, field)
         candidate_value = getattr(candidate, field)
         if existing_value != candidate_value:
             diff[field] = {"from": existing_value, "to": candidate_value}
@@ -544,7 +547,7 @@ def _apply_created_change(
         params=payload.get("params") or {},
         body=payload.get("body") or {},
         mock_example=payload.get("mock_example") or {},
-        metadata=payload.get("metadata") or {},
+        metadata_=payload.get("metadata") or {},
         fingerprint=fingerprint,
         source_key=payload.get("source_key"),
         import_source_id=source.id,
@@ -561,7 +564,7 @@ def _apply_created_change(
         change_type=ApiArchiveChangeType.CREATED,
         revision=api.revision,
         payload=_serialize_api(api),
-        metadata={"change": change.model_dump(mode="json")},
+        metadata_={"change": change.model_dump(mode="json")},
         applied_by_id=actor.id,
     )
     db.add(archive)
@@ -599,7 +602,7 @@ def _apply_updated_change(
         change_type=ApiArchiveChangeType.UPDATED,
         revision=api.revision,
         payload=snapshot,
-        metadata={"change": change.model_dump(mode="json")},
+        metadata_={"change": change.model_dump(mode="json")},
         applied_by_id=actor.id,
     )
     db.add(archive)
@@ -607,6 +610,9 @@ def _apply_updated_change(
 
     for field, delta in change.diff.items():
         if not isinstance(delta, dict) or "to" not in delta:
+            continue
+        if field == "metadata":
+            api.metadata_ = delta["to"] or {}
             continue
         if not hasattr(api, field):
             continue
@@ -646,7 +652,7 @@ def _apply_removed_change(
         change_type=ApiArchiveChangeType.REMOVED,
         revision=api.revision,
         payload=snapshot,
-        metadata={"change": change.model_dump(mode="json")},
+        metadata_={"change": change.model_dump(mode="json")},
         applied_by_id=actor.id,
     )
     db.add(archive)
@@ -696,7 +702,7 @@ def _restore_archives(
             api.params = payload.get("params") or {}
             api.body = payload.get("body") or {}
             api.mock_example = payload.get("mock_example") or {}
-            api.metadata = payload.get("metadata") or {}
+            api.metadata_ = payload.get("metadata") or {}
             api.fingerprint = payload.get("fingerprint")
             api.source_key = payload.get("source_key")
             api.import_source_id = payload.get("import_source_id")
@@ -743,7 +749,7 @@ def _serialize_api(api: Api) -> dict[str, Any]:
         "params": api.params,
         "body": api.body,
         "mock_example": api.mock_example,
-        "metadata": api.metadata,
+        "metadata": api.metadata_,
         "fingerprint": api.fingerprint,
         "source_key": api.source_key,
         "import_source_id": str(api.import_source_id) if api.import_source_id else None,
@@ -776,7 +782,7 @@ def _compute_fingerprint_from_api(api: Api) -> str:
         "params": api.params or {},
         "body": api.body or {},
         "mock_example": api.mock_example or {},
-        "metadata": api.metadata or {},
+        "metadata": api.metadata_ or {},
     }
     return compute_hash(data)
 

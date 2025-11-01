@@ -365,7 +365,7 @@ def _load_openapi_from_source(source: ImportSource) -> tuple[dict[str, Any], str
             ErrorCode.IMPORT_INVALID_SPEC,
             "Stored OpenAPI payload is unavailable",
         )
-    metadata = source.metadata or {}
+    metadata = source.metadata_ or {}
     return source.payload_snapshot, metadata.get("base_url")
 
 

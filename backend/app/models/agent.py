@@ -173,7 +173,8 @@ class AgentQueueMembership(BaseModel, Base):
     capacity: Mapped[int | None] = mapped_column(Integer, nullable=True)
     weight: Mapped[int | None] = mapped_column(Integer, nullable=True)
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("TRUE"))
-    metadata: Mapped[dict[str, Any]] = mapped_column(
+    metadata_: Mapped[dict[str, Any]] = mapped_column(
+        "metadata",
         JSONB,
         nullable=False,
         server_default=text("'{}'::jsonb"),
@@ -207,7 +208,8 @@ class AgentAlertThreshold(BaseModel, Base):
     offline_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=120, server_default=text("120"))
     backlog_threshold: Mapped[int] = mapped_column(Integer, nullable=False, default=25, server_default=text("25"))
     latency_threshold_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=1000, server_default=text("1000"))
-    metadata: Mapped[dict[str, Any]] = mapped_column(
+    metadata_: Mapped[dict[str, Any]] = mapped_column(
+        "metadata",
         JSONB,
         nullable=False,
         server_default=text("'{}'::jsonb"),

@@ -66,7 +66,8 @@ class Issue(BaseModel, Base):
     )
     external_created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    metadata: Mapped[dict[str, Any]] = mapped_column(
+    metadata_: Mapped[dict[str, Any]] = mapped_column(
+        "metadata",
         JSONB,
         nullable=False,
         default=dict,
@@ -123,7 +124,8 @@ class ReportIssueLink(BaseModel, Base):
         server_default=text("'manual'::issue_link_source_enum"),
     )
     note: Mapped[str | None] = mapped_column(String(512), nullable=True)
-    metadata: Mapped[dict[str, Any]] = mapped_column(
+    metadata_: Mapped[dict[str, Any]] = mapped_column(
+        "metadata",
         JSONB,
         nullable=False,
         default=dict,

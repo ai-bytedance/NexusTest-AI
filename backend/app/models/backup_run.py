@@ -39,7 +39,8 @@ class BackupRun(BaseModel, Base):
     size_bytes: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
     retention_class: Mapped[str] = mapped_column(String(32), nullable=False, default="daily", server_default=text("'daily'"))
-    metadata: Mapped[dict | None] = mapped_column(
+    metadata_: Mapped[dict | None] = mapped_column(
+        "metadata",
         JSONB,
         nullable=True,
     )

@@ -47,7 +47,8 @@ class ApiArchive(BaseModel, Base):
     )
     revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default=text("1"))
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
-    metadata: Mapped[dict[str, Any]] = mapped_column(
+    metadata_: Mapped[dict[str, Any]] = mapped_column(
+        "metadata",
         JSONB,
         nullable=False,
         server_default=text("'{}'::jsonb"),

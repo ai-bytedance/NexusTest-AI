@@ -61,7 +61,7 @@ class BackupManager:
             storage_targets="local",
             triggered_by=triggered_by,
             retention_class="daily",
-            metadata={"local_path": str(plan.path)},
+            metadata_={"local_path": str(plan.path)},
         )
         self.session.add(backup_run)
         self.session.commit()
@@ -70,7 +70,7 @@ class BackupManager:
         duration: float | None = None
         failure_reason: str | None = None
         final_path = plan.path
-        metadata = backup_run.metadata or {}
+        metadata = backup_run.metadata_ or {}
 
         try:
             start_time = time.perf_counter()
@@ -115,7 +115,7 @@ class BackupManager:
             backup_run.checksum = checksum
             backup_run.storage_targets = ",".join(sorted(storage_targets))
             backup_run.location = str(final_path)
-            backup_run.metadata = metadata
+            backup_run.metadata_ = metadata
 
             self.session.add(backup_run)
             self.session.commit()
