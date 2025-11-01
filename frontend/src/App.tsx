@@ -4,16 +4,16 @@ import AuthLayout from "@/layouts/AuthLayout";
 import AppLayout from "@/layouts/AppLayout";
 import RequireAuth from "@/router/RequireAuth";
 
-const LoginPage = lazy(() => import("@/pages/LoginPage"));
-const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
-const ProjectsPage = lazy(() => import("@/pages/ProjectsPage"));
-const ProjectApisPage = lazy(() => import("@/pages/ProjectApisPage"));
-const ProjectTestCasesPage = lazy(() => import("@/pages/ProjectTestCasesPage"));
-const ProjectTestSuitesPage = lazy(() => import("@/pages/ProjectTestSuitesPage"));
-const ProjectWebhooksPage = lazy(() => import("@/pages/ProjectWebhooksPage"));
-const AiAssistantPage = lazy(() => import("@/pages/AiAssistantPage"));
-const ReportsPage = lazy(() => import("@/pages/ReportsPage"));
-const ReportDetailPage = lazy(() => import("@/pages/ReportDetailPage"));
+const LoginPage = lazy(() => import("@/pages/LoginPage.tsx"));
+const DashboardPage = lazy(() => import("@/pages/DashboardPage.tsx"));
+const ProjectsPage = lazy(() => import("@/pages/ProjectsPage.tsx"));
+const ProjectApisPage = lazy(() => import("@/pages/ProjectApisPage.tsx"));
+const ProjectTestCasesPage = lazy(() => import("@/pages/ProjectTestCasesPage.tsx"));
+const ProjectTestSuitesPage = lazy(() => import("@/pages/ProjectTestSuitesPage.tsx"));
+const ProjectWebhooksPage = lazy(() => import("@/pages/ProjectWebhooksPage.tsx"));
+const AiAssistantPage = lazy(() => import("@/pages/AiAssistantPage.tsx"));
+const ReportsPage = lazy(() => import("@/pages/ReportsPage.tsx"));
+const ReportDetailPage = lazy(() => import("@/pages/ReportDetailPage.tsx"));
 
 export default function App() {
   return (
