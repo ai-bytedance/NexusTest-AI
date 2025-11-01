@@ -1,3 +1,4 @@
+import json
 from functools import lru_cache
 from typing import List
 
@@ -233,15 +234,38 @@ class Settings(BaseSettings):
 
     @field_validator("cors_origins", mode="before")
     @classmethod
-    def split_cors_origins(cls, value: List[str] | str | None) -> List[str]:
-        if isinstance(value, list):
-            origins = [origin.strip() for origin in value if isinstance(origin, str) and origin.strip()]
-        elif isinstance(value, str):
-            origins = [origin.strip() for origin in value.split(",") if origin.strip()]
-        elif value is None:
+    def normalize_cors_origins(cls, value: List[str] | str | None) -> List[str]:
+        if value is None:
             return []
+
+        items: list[str]
+        if isinstance(value, list):
+            items = value
+        elif isinstance(value, str):
+            raw_value = value.strip()
+            if not raw_value:
+                return []
+            if raw_value.startswith("["):
+                try:
+                    parsed = json.loads(raw_value)
+                except json.JSONDecodeError as exc:
+                    raise ValueError("Invalid JSON format for CORS_ORIGINS") from exc
+                if not isinstance(parsed, list):
+                    raise ValueError("CORS_ORIGINS JSON must be a list of strings")
+                items = parsed
+            else:
+                items = raw_value.split(",")
         else:
             raise ValueError("Invalid format for CORS_ORIGINS")
+
+        origins: list[str] = []
+        for item in items:
+            if not isinstance(item, str):
+                raise ValueError("CORS_ORIGINS entries must be strings")
+            origin = item.strip()
+            if origin:
+                origins.append(origin)
+
         if "*" in origins and len(origins) > 1:
             raise ValueError("CORS_ORIGINS cannot include '*' alongside specific origins")
         return origins

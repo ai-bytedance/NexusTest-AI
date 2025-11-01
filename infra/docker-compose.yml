@@ -43,6 +43,7 @@ services:
       - ../backend/alembic.ini:/app/alembic.ini:ro
     environment:
       UVICORN_WORKERS: ${UVICORN_WORKERS:-2}
+      CORS_ORIGINS: '["http://localhost:8080","http://127.0.0.1:8080","http://192.168.210.129:8080"]'
     command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-2}"]
     expose:
       - "8000"
@@ -62,6 +63,8 @@ services:
       - ../.env
     volumes:
       - ../.env:/app/.env:ro
+    environment:
+      CORS_ORIGINS: '["http://localhost:8080","http://127.0.0.1:8080","http://192.168.210.129:8080"]'
     command: ["sh", "-c", "celery -A app.core.celery_app worker --loglevel=info -Q cases,suites"]
 
   celery-beat:
@@ -77,6 +80,8 @@ services:
       - ../.env
     volumes:
       - ../.env:/app/.env:ro
+    environment:
+      CORS_ORIGINS: '["http://localhost:8080","http://127.0.0.1:8080","http://192.168.210.129:8080"]'
     command: ["sh", "-c", "celery -A app.core.celery_app beat --loglevel=info"]
 
   flower:
@@ -94,6 +99,8 @@ services:
       - ../.env
     volumes:
       - ../.env:/app/.env:ro
+    environment:
+      CORS_ORIGINS: '["http://localhost:8080","http://127.0.0.1:8080","http://192.168.210.129:8080"]'
     command: ["sh", "-c", "celery -A app.core.celery_app flower --address=0.0.0.0 --port=5555 --url-prefix=flower --queues=cases,suites"]
     expose:
       - "5555"
