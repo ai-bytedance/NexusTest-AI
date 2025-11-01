@@ -31,10 +31,7 @@ class Settings(BaseSettings):
     database_url: str
     redis_url: str
     uvicorn_workers: int = 2
-    cors_origins: List[str] = [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ]
+    cors_origins: List[str] = []  # Will be set by validator if None/empty
     provider: str = "mock"
     ai_chat_rate_limit_per_minute: int = 30
     ai_chat_message_max_bytes: int = 16000
@@ -257,9 +254,11 @@ class Settings(BaseSettings):
                         items = parsed
                     else:
                         # If JSON is not a list, fall back to CSV parsing
+                        logger.warning("CORS_ORIGINS JSON is not an array, falling back to CSV parsing")
                         items = raw_value.split(",")
                 except json.JSONDecodeError:
                     # If JSON parsing fails, fall back to CSV parsing
+                    logger.warning("Failed to parse CORS_ORIGINS as JSON, falling back to CSV parsing")
                     items = raw_value.split(",")
             else:
                 items = raw_value.split(",")
