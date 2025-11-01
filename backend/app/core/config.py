@@ -3,7 +3,7 @@ import logging
 from functools import lru_cache
 from typing import List
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     redis_url: str
     uvicorn_workers: int = 2
     cors_origins: List[str] = []  # Will be set by validator if None/empty
+    allow_any_origin: bool = False  # If True, allows all origins with credentials disabled
     provider: str = "mock"
     ai_chat_rate_limit_per_minute: int = 30
     ai_chat_message_max_bytes: int = 16000
@@ -318,6 +319,20 @@ class Settings(BaseSettings):
         logger.info("Parsed CORS origins: %s", unique_origins)
             
         return unique_origins
+
+    @model_validator(mode="after")
+    def validate_cors_configuration(self) -> "Settings":
+        """Validate CORS configuration and apply allow_any_origin logic."""
+        if self.allow_any_origin:
+            # When allow_any_origin is True, set cors_origins to ["*"]
+            # This will be used by the CORS middleware
+            self.cors_origins = ["*"]
+            logger.info("allow_any_origin=True, setting CORS origins to ['*'] with credentials disabled")
+        elif "*" in self.cors_origins and len(self.cors_origins) > 1:
+            # If wildcard is present with other origins, use wildcard only
+            logger.warning("CORS_ORIGINS cannot include '*' alongside specific origins, using '*' only")
+            self.cors_origins = ["*"]
+        return self
 
     @classmethod
     def _get_default_cors_origins(cls) -> List[str]:
