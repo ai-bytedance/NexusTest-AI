@@ -39,3 +39,7 @@ class RateLimitPolicy(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         "ApiToken",
         back_populates="rate_limit_policy",
     )
+
+if not TYPE_CHECKING:  # pragma: no cover - runtime typing support
+    from app.models.api_token import ApiToken  # noqa: F401
+    from app.models.project import Project  # noqa: F401

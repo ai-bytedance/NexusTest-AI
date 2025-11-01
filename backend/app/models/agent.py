@@ -243,6 +243,12 @@ class AgentAlertState(BaseModel, Base):
 
     agent: Mapped[Agent] = relationship("Agent", back_populates="alert_states")
 
+if not TYPE_CHECKING:  # pragma: no cover - runtime typing support
+    from app.models.environment import Environment  # noqa: F401
+    from app.models.execution_queue import ExecutionQueue  # noqa: F401
+    from app.models.project import Project  # noqa: F401
+    from app.models.test_report import TestReport  # noqa: F401
+
 __all__ = [
     "Agent",
     "AgentStatus",

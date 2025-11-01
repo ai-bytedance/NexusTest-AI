@@ -2,11 +2,16 @@ from __future__ import annotations
 
 import enum
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Enum, ForeignKey, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, BaseModel
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from app.models.team import Team
+    from app.models.user import User
 
 
 class TeamRole(str, enum.Enum):
@@ -40,3 +45,8 @@ class TeamMembership(BaseModel, Base):
 
     team: Mapped[Team] = relationship("Team", back_populates="memberships")
     user: Mapped[User] = relationship("User", back_populates="team_memberships")
+
+
+if not TYPE_CHECKING:  # pragma: no cover - runtime typing support
+    from app.models.team import Team  # noqa: F401
+    from app.models.user import User  # noqa: F401
