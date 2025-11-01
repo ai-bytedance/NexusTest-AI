@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Enum, ForeignKey, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, BaseModel
 from app.models.project_member import ProjectRole
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from app.models.project import Project
+    from app.models.team import Team
 
 
 class ProjectTeamRole(BaseModel, Base):
@@ -34,3 +39,8 @@ class ProjectTeamRole(BaseModel, Base):
 
     project: Mapped[Project] = relationship("Project", back_populates="team_roles")
     team: Mapped[Team] = relationship("Team", back_populates="project_links")
+
+
+if not TYPE_CHECKING:  # pragma: no cover - runtime typing support
+    from app.models.project import Project  # noqa: F401
+    from app.models.team import Team  # noqa: F401

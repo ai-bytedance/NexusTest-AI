@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, BaseModel
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from app.models.organization import Organization
+    from app.models.project_team_role import ProjectTeamRole
+    from app.models.team_membership import TeamMembership
 
 
 class Team(BaseModel, Base):
@@ -34,3 +40,9 @@ class Team(BaseModel, Base):
         back_populates="team",
         cascade="all, delete-orphan",
     )
+
+
+if not TYPE_CHECKING:  # pragma: no cover - runtime typing support
+    from app.models.organization import Organization  # noqa: F401
+    from app.models.project_team_role import ProjectTeamRole  # noqa: F401
+    from app.models.team_membership import TeamMembership  # noqa: F401

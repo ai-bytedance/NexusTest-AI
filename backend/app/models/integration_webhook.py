@@ -74,4 +74,8 @@ class IntegrationWebhook(BaseModel, Base):
     integration: Mapped[Integration | None] = relationship("Integration", back_populates="webhooks")
     project: Mapped[Project | None] = relationship("Project", back_populates="integration_webhooks")
 
+if not TYPE_CHECKING:  # pragma: no cover - runtime typing support
+    from app.models.integration import Integration  # noqa: F401
+    from app.models.project import Project  # noqa: F401
+
 __all__ = ["IntegrationWebhook", "IntegrationWebhookStatus"]

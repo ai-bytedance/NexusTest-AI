@@ -3,11 +3,15 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Enum, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, BaseModel
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from app.models.user import User
 
 
 class IdentityProvider(str, enum.Enum):
@@ -40,3 +44,7 @@ class UserIdentity(BaseModel, Base):
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     user: Mapped[User] = relationship("User", back_populates="identities")
+
+
+if not TYPE_CHECKING:  # pragma: no cover - runtime typing support
+    from app.models.user import User  # noqa: F401

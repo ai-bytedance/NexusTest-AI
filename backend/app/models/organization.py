@@ -2,12 +2,18 @@ from __future__ import annotations
 
 import enum
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, Enum, ForeignKey, String, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, BaseModel
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from app.models.project import Project
+    from app.models.team import Team
+    from app.models.user import User
 
 
 class OrganizationRole(str, enum.Enum):
@@ -81,3 +87,9 @@ class OrganizationMembership(BaseModel, Base):
 
     organization: Mapped[Organization] = relationship("Organization", back_populates="members")
     user: Mapped[User] = relationship("User", back_populates="organization_memberships")
+
+
+if not TYPE_CHECKING:  # pragma: no cover - runtime typing support
+    from app.models.project import Project  # noqa: F401
+    from app.models.team import Team  # noqa: F401
+    from app.models.user import User  # noqa: F401
