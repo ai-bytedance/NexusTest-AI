@@ -9,7 +9,7 @@ import {
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Suspense, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useAuthStore } from "@/stores/auth";
+import { useAuthStore } from "@/stores";
 import { useProjects } from "@/hooks/useProjects";
 import ProjectSelector from "@/components/ProjectSelector";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";

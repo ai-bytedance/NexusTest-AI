@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import type { SupportedLanguage } from "@/i18n";
-import { selectLanguage, useSettingsStore } from "@/stores/settings";
+import { selectLanguage, useSettingsStore } from "@/stores";
 
 export function useLanguage() {
   const language = useSettingsStore(selectLanguage);

@@ -1,7 +1,7 @@
 import axios from "axios";
 import type { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import { message } from "antd";
-import { useAuthStore } from "@/stores/auth";
+import { useAuthStore } from "@/stores";
 import type { ApiResponse } from "@/types/api";
 
 const baseURL = import.meta.env.VITE_API_BASE ?? "/api";

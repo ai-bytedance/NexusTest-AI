@@ -2,7 +2,7 @@ import { useCallback, useEffect } from "react";
 import { message } from "antd";
 import { getProjects } from "@/api/projects";
 import i18n from "@/i18n";
-import { selectSelectedProject, useProjectStore } from "@/stores/projects";
+import { selectSelectedProject, useProjectStore } from "@/stores";
 import type { Project } from "@/types/api";
 
 interface UseProjectsOptions {

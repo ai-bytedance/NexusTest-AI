@@ -32,7 +32,7 @@ import {
   EyeOutlined,
 } from "@ant-design/icons";
 import { webhookApi, type WebhookSubscription, type WebhookDelivery } from "@/api/webhooks";
-import { useProjectStore } from "@/stores/project";
+import { selectSelectedProject, useProjectStore } from "@/stores";
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -40,7 +40,7 @@ const { TabPane } = Tabs;
 const { Option } = Select;
 
 const WebhooksPage: React.FC = () => {
-  const { currentProject } = useProjectStore();
+  const currentProject = useProjectStore(selectSelectedProject);
   const [subscriptions, setSubscriptions] = useState<WebhookSubscription[]>([]);
   const [deliveries, setDeliveries] = useState<WebhookDelivery[]>([]);
   const [loading, setLoading] = useState(false);
