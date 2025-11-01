@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime as DateTimePy, timezone
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, String, text
@@ -27,7 +27,7 @@ class ApiToken(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     token_prefix: Mapped[str] = mapped_column(String(16), nullable=False, unique=True, index=True)
     token_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     prev_token_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    prev_valid_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    prev_valid_until: Mapped[DateTimePy | None] = mapped_column(DateTime(timezone=True), nullable=True)
     scopes: Mapped[list[str]] = mapped_column(
         JSONB,
         nullable=False,
@@ -40,9 +40,9 @@ class ApiToken(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         default=list,
         server_default=text("'[]'::jsonb"),
     )
-    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[DateTimePy | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_used_at: Mapped[DateTimePy | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[DateTimePy | None] = mapped_column(DateTime(timezone=True), nullable=True)
     rate_limit_policy_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("rate_limit_policies.id", ondelete="SET NULL"),
@@ -56,13 +56,13 @@ class ApiToken(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         back_populates="api_tokens",
     )
 
-    def is_active(self, reference: datetime | None = None) -> bool:
+    def is_active(self, reference: DateTimePy | None = None) -> bool:
         if self.revoked_at is not None:
             return False
         if self.expires_at is not None:
             expires_at = self.expires_at
             if reference is None:
-                reference = datetime.now(timezone.utc)
+                reference = DateTimePy.now(timezone.utc)
             if expires_at.tzinfo is None:
                 expires_at = expires_at.replace(tzinfo=timezone.utc)
             if reference.tzinfo is None:

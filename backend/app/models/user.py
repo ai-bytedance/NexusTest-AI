@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import enum
-from datetime import datetime
+from datetime import datetime as DateTimePy
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Enum, Integer, String, text
@@ -50,7 +50,7 @@ class User(BaseModel, Base):
         default=0,
         server_default=text("0"),
     )
-    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    locked_until: Mapped[DateTimePy | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     projects_created: Mapped[list[Project]] = relationship("Project", back_populates="creator")
     ai_chats_created: Mapped[list[AiChat]] = relationship("AiChat", back_populates="creator")

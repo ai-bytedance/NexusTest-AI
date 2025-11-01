@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 import uuid
-from datetime import datetime
+from datetime import datetime as DateTimePy
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
@@ -71,7 +71,7 @@ class Agent(BaseModel, Base):
         default=True,
         server_default=text("TRUE"),
     )
-    last_heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_heartbeat_at: Mapped[DateTimePy | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
     last_latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     last_cpu_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -90,12 +90,12 @@ class Agent(BaseModel, Base):
     )
     token_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     token_prefix: Mapped[str] = mapped_column(String(32), nullable=False)
-    token_last_rotated_at: Mapped[datetime] = mapped_column(
+    token_last_rotated_at: Mapped[DateTimePy] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         server_default=UTC_NOW,
     )
-    token_revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    token_revoked_at: Mapped[DateTimePy | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_seen_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
     last_seen_user_agent: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
@@ -133,7 +133,7 @@ class AgentHeartbeat(Base):
         nullable=False,
         index=True,
     )
-    recorded_at: Mapped[datetime] = mapped_column(
+    recorded_at: Mapped[DateTimePy] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         server_default=UTC_NOW,
@@ -236,8 +236,8 @@ class AgentAlertState(BaseModel, Base):
         nullable=False,
     )
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("FALSE"))
-    last_triggered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    last_cleared_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_triggered_at: Mapped[DateTimePy | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_cleared_at: Mapped[DateTimePy | None] = mapped_column(DateTime(timezone=True), nullable=True)
     context: Mapped[dict[str, Any]] = mapped_column(
         JSONB,
         nullable=False,
