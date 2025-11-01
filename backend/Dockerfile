@@ -1,19 +1,9 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.11-slim AS builder
-
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
-
-WORKDIR /wheels
-
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential libpq-dev && rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt /tmp/requirements.txt
-RUN pip install --upgrade pip && pip wheel --wheel-dir /wheels -r /tmp/requirements.txt
-
-
 FROM python:3.11-slim
+
+ARG PIP_INDEX_URL
+ARG PIP_EXTRA_INDEX_URL
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -23,8 +13,15 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends libpq5 curl && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /wheels /wheels
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir /wheels/*
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --upgrade pip && \
+    if [ -n "$PIP_INDEX_URL" ]; then \
+        pip config set global.index-url "$PIP_INDEX_URL"; \
+    fi && \
+    if [ -n "$PIP_EXTRA_INDEX_URL" ]; then \
+        pip config set global.extra-index-url "$PIP_EXTRA_INDEX_URL"; \
+    fi && \
+    pip install --no-cache-dir --prefer-binary -r /tmp/requirements.txt
 
 COPY . /app
 
