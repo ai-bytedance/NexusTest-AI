@@ -16,7 +16,7 @@ down_revision: str | None = None
 branch_labels: tuple[str, ...] | None = None
 depends_on: tuple[str, ...] | None = None
 
-user_role_enum = postgresql.ENUM("admin", "member", name="user_role_enum")
+user_role_enum = postgresql.ENUM("admin", "member", name="user_role_enum", create_type=False)
 report_entity_type_enum = postgresql.ENUM("case", "suite", name="report_entity_type_enum")
 report_status_enum = postgresql.ENUM(
     "pending",
@@ -40,7 +40,23 @@ ai_task_status_enum = postgresql.ENUM("pending", "success", "failed", name="ai_t
 def upgrade() -> None:
     bind = op.get_bind()
 
-    user_role_enum.create(bind, checkfirst=True)
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'user_role_enum' AND n.nspname = 'public'
+            ) THEN
+                CREATE TYPE user_role_enum AS ENUM ('admin', 'member');
+            END IF;
+        END
+        $$;
+        """
+    )
+
     report_entity_type_enum.create(bind, checkfirst=True)
     report_status_enum.create(bind, checkfirst=True)
     ai_task_type_enum.create(bind, checkfirst=True)
@@ -418,4 +434,4 @@ def downgrade() -> None:
     ai_task_type_enum.drop(op.get_bind(), checkfirst=True)
     report_status_enum.drop(op.get_bind(), checkfirst=True)
     report_entity_type_enum.drop(op.get_bind(), checkfirst=True)
-    user_role_enum.drop(op.get_bind(), checkfirst=True)
+    op.execute("DROP TYPE IF EXISTS user_role_enum")
