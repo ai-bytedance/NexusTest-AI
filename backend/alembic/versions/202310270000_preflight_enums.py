@@ -88,6 +88,42 @@ def _quote_label(label: str) -> str:
     return "'" + label.replace("'", "''") + "'"
 
 
+def _build_enum_add_value_sql(
+    enum_name: str,
+    label: str,
+    *,
+    position: str | None = None,
+    relative_to: str | None = None,
+) -> str:
+    quoted_label = _quote_label(label)
+    alter_sql = f"ALTER TYPE public.{enum_name} ADD VALUE {quoted_label}"
+    if position is not None:
+        if relative_to is None:
+            raise ValueError("relative_to is required when position is provided")
+        quoted_relative = _quote_label(relative_to)
+        alter_sql += f" {position} {quoted_relative}"
+    alter_sql += ";"
+    return "\n".join(
+        [
+            "DO $enum$",
+            "BEGIN",
+            "    IF NOT EXISTS (",
+            "        SELECT 1",
+            "        FROM pg_enum e",
+            "        JOIN pg_type t ON t.oid = e.enumtypid",
+            "        JOIN pg_namespace n ON n.oid = t.typnamespace",
+            f"        WHERE t.typname = '{enum_name}'",
+            "          AND n.nspname = 'public'",
+            f"          AND e.enumlabel = {quoted_label}",
+            "    ) THEN",
+            f"        {alter_sql}",
+            "    END IF;",
+            "END",
+            "$enum$;",
+        ]
+    )
+
+
 def upgrade() -> None:
     bind = op.get_bind()
 
@@ -140,20 +176,27 @@ ORDER BY enumsortorder
             if before_label is not None:
                 bind.execute(
                     sa.text(
-                        f"ALTER TYPE {enum_name} ADD VALUE IF NOT EXISTS :value BEFORE :before"
-                    ),
-                    {"value": label, "before": before_label},
+                        _build_enum_add_value_sql(
+                            enum_name,
+                            label,
+                            position="BEFORE",
+                            relative_to=before_label,
+                        )
+                    )
                 )
             elif after_label is not None:
                 bind.execute(
-                    sa.text(f"ALTER TYPE {enum_name} ADD VALUE IF NOT EXISTS :value AFTER :after"),
-                    {"value": label, "after": after_label},
+                    sa.text(
+                        _build_enum_add_value_sql(
+                            enum_name,
+                            label,
+                            position="AFTER",
+                            relative_to=after_label,
+                        )
+                    )
                 )
             else:
-                bind.execute(
-                    sa.text(f"ALTER TYPE {enum_name} ADD VALUE IF NOT EXISTS :value"),
-                    {"value": label},
-                )
+                bind.execute(sa.text(_build_enum_add_value_sql(enum_name, label)))
 
             present.add(label)
 
