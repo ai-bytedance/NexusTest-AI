@@ -12,7 +12,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "202310280000"
-down_revision: str | None = None
+down_revision: str | None = "202310270000_preflight_reconcile_postgres_enums"
 branch_labels: tuple[str, ...] | None = None
 depends_on: tuple[str, ...] | None = None
 
