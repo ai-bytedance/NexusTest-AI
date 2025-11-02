@@ -16,9 +16,9 @@ down_revision: str | None = None
 branch_labels: tuple[str, ...] | None = None
 depends_on: tuple[str, ...] | None = None
 
-user_role_enum = postgresql.ENUM("admin", "member", name="user_role_enum", create_type=False)
-report_entity_type_enum = postgresql.ENUM("case", "suite", name="report_entity_type_enum")
-report_status_enum = postgresql.ENUM(
+user_role_enum = sa.Enum("admin", "member", name="user_role_enum", create_type=False)
+report_entity_type_enum = sa.Enum("case", "suite", name="report_entity_type_enum", create_type=False)
+report_status_enum = sa.Enum(
     "pending",
     "running",
     "passed",
@@ -26,20 +26,20 @@ report_status_enum = postgresql.ENUM(
     "error",
     "skipped",
     name="report_status_enum",
+    create_type=False,
 )
-ai_task_type_enum = postgresql.ENUM(
+ai_task_type_enum = sa.Enum(
     "generate_cases",
     "generate_assertions",
     "generate_mock",
     "summarize_report",
     name="ai_task_type_enum",
+    create_type=False,
 )
-ai_task_status_enum = postgresql.ENUM("pending", "success", "failed", name="ai_task_status_enum")
+ai_task_status_enum = sa.Enum("pending", "success", "failed", name="ai_task_status_enum", create_type=False)
 
 
 def upgrade() -> None:
-    bind = op.get_bind()
-
     op.execute(
         """
         DO $$
@@ -57,10 +57,73 @@ def upgrade() -> None:
         """
     )
 
-    report_entity_type_enum.create(bind, checkfirst=True)
-    report_status_enum.create(bind, checkfirst=True)
-    ai_task_type_enum.create(bind, checkfirst=True)
-    ai_task_status_enum.create(bind, checkfirst=True)
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'report_entity_type_enum' AND n.nspname = 'public'
+            ) THEN
+                CREATE TYPE report_entity_type_enum AS ENUM ('case', 'suite');
+            END IF;
+        END
+        $$;
+        """
+    )
+
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'report_status_enum' AND n.nspname = 'public'
+            ) THEN
+                CREATE TYPE report_status_enum AS ENUM ('pending', 'running', 'passed', 'failed', 'error', 'skipped');
+            END IF;
+        END
+        $$;
+        """
+    )
+
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'ai_task_type_enum' AND n.nspname = 'public'
+            ) THEN
+                CREATE TYPE ai_task_type_enum AS ENUM ('generate_cases', 'generate_assertions', 'generate_mock', 'summarize_report');
+            END IF;
+        END
+        $$;
+        """
+    )
+
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'ai_task_status_enum' AND n.nspname = 'public'
+            ) THEN
+                CREATE TYPE ai_task_status_enum AS ENUM ('pending', 'success', 'failed');
+            END IF;
+        END
+        $$;
+        """
+    )
 
     op.create_table(
         "users",
@@ -430,8 +493,8 @@ def downgrade() -> None:
 
     op.drop_table("users")
 
-    ai_task_status_enum.drop(op.get_bind(), checkfirst=True)
-    ai_task_type_enum.drop(op.get_bind(), checkfirst=True)
-    report_status_enum.drop(op.get_bind(), checkfirst=True)
-    report_entity_type_enum.drop(op.get_bind(), checkfirst=True)
+    op.execute("DROP TYPE IF EXISTS ai_task_status_enum")
+    op.execute("DROP TYPE IF EXISTS ai_task_type_enum")
+    op.execute("DROP TYPE IF EXISTS report_status_enum")
+    op.execute("DROP TYPE IF EXISTS report_entity_type_enum")
     op.execute("DROP TYPE IF EXISTS user_role_enum")

@@ -22,19 +22,51 @@ integration_provider_enum = sa.Enum(
     "linear",
     "github",
     name="integration_provider_enum",
+    create_type=False,
 )
 
 issue_link_source_enum = sa.Enum(
     "manual",
     "auto",
     name="issue_link_source_enum",
+    create_type=False,
 )
 
 
 def upgrade() -> None:
-    bind = op.get_bind()
-    integration_provider_enum.create(bind, checkfirst=True)
-    issue_link_source_enum.create(bind, checkfirst=True)
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'integration_provider_enum' AND n.nspname = 'public'
+            ) THEN
+                CREATE TYPE integration_provider_enum AS ENUM ('jira', 'linear', 'github');
+            END IF;
+        END
+        $$;
+        """
+    )
+
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'issue_link_source_enum' AND n.nspname = 'public'
+            ) THEN
+                CREATE TYPE issue_link_source_enum AS ENUM ('manual', 'auto');
+            END IF;
+        END
+        $$;
+        """
+    )
 
     op.create_table(
         "integrations",
@@ -336,5 +368,5 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_integrations_project_id"), table_name="integrations")
     op.drop_table("integrations")
 
-    issue_link_source_enum.drop(op.get_bind(), checkfirst=True)
-    integration_provider_enum.drop(op.get_bind(), checkfirst=True)
+    op.execute("DROP TYPE IF EXISTS issue_link_source_enum")
+    op.execute("DROP TYPE IF EXISTS integration_provider_enum")

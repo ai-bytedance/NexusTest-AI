@@ -16,12 +16,26 @@ down_revision: str | None = "202310280000"
 branch_labels: tuple[str, ...] | None = None
 depends_on: tuple[str, ...] | None = None
 
-project_role_enum = postgresql.ENUM("admin", "member", name="project_role_enum")
+project_role_enum = sa.Enum("admin", "member", name="project_role_enum", create_type=False)
 
 
 def upgrade() -> None:
-    bind = op.get_bind()
-    project_role_enum.create(bind, checkfirst=True)
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'project_role_enum' AND n.nspname = 'public'
+            ) THEN
+                CREATE TYPE project_role_enum AS ENUM ('admin', 'member');
+            END IF;
+        END
+        $$;
+        """
+    )
 
     op.create_table(
         "project_members",
@@ -72,4 +86,4 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_project_members_user_id"), table_name="project_members")
     op.drop_index(op.f("ix_project_members_project_id"), table_name="project_members")
     op.drop_table("project_members")
-    project_role_enum.drop(op.get_bind(), checkfirst=True)
+    op.execute("DROP TYPE IF EXISTS project_role_enum")

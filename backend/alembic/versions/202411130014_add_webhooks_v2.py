@@ -41,33 +41,75 @@ WEBHOOK_BACKOFF_STRATEGIES = (
     "fixed",
 )
 
+webhook_backoff_strategy_enum = sa.Enum(
+    *WEBHOOK_BACKOFF_STRATEGIES,
+    name="webhook_backoff_strategy",
+    create_type=False,
+)
+webhook_delivery_status_enum = sa.Enum(
+    *WEBHOOK_DELIVERY_STATUSES,
+    name="webhook_delivery_status",
+    create_type=False,
+)
+webhook_event_type_enum = sa.Enum(
+    *WEBHOOK_EVENT_TYPES,
+    name="webhook_event_type",
+    create_type=False,
+)
+
 
 def upgrade() -> None:
-    # Create webhook_backoff_strategy enum type
-    webhook_backoff_strategy_enum = postgresql.ENUM(
-        *WEBHOOK_BACKOFF_STRATEGIES,
-        name="webhook_backoff_strategy",
-        create_type=True,
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'webhook_backoff_strategy' AND n.nspname = 'public'
+            ) THEN
+                CREATE TYPE webhook_backoff_strategy AS ENUM ('exponential', 'linear', 'fixed');
+            END IF;
+        END
+        $$;
+        """
     )
-    webhook_backoff_strategy_enum.create(op.get_bind())
 
-    # Create webhook_delivery_status enum type
-    webhook_delivery_status_enum = postgresql.ENUM(
-        *WEBHOOK_DELIVERY_STATUSES,
-        name="webhook_delivery_status",
-        create_type=True,
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'webhook_delivery_status' AND n.nspname = 'public'
+            ) THEN
+                CREATE TYPE webhook_delivery_status AS ENUM ('pending', 'delivered', 'failed', 'dlq');
+            END IF;
+        END
+        $$;
+        """
     )
-    webhook_delivery_status_enum.create(op.get_bind())
 
-    # Create webhook_event_type enum type
-    webhook_event_type_enum = postgresql.ENUM(
-        *WEBHOOK_EVENT_TYPES,
-        name="webhook_event_type",
-        create_type=True,
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'webhook_event_type' AND n.nspname = 'public'
+            ) THEN
+                CREATE TYPE webhook_event_type AS ENUM ('run.started', 'run.finished', 'import.diff_ready', 'import.applied', 'issue.created', 'issue.updated');
+            END IF;
+        END
+        $$;
+        """
     )
-    webhook_event_type_enum.create(op.get_bind())
 
-    # Create webhook_subscriptions table
     op.create_table(
         "webhook_subscriptions",
         sa.Column(

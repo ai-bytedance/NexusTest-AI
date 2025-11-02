@@ -16,16 +16,62 @@ down_revision: str | None = "202411010005"
 branch_labels: tuple[str, ...] | None = None
 depends_on: tuple[str, ...] | None = None
 
-org_role_enum = postgresql.ENUM("owner", "admin", "member", name="org_role_enum")
-team_role_enum = postgresql.ENUM("owner", "admin", "member", name="team_role_enum")
-identity_provider_enum = postgresql.ENUM("feishu", "google", "github", "oidc", name="identity_provider_enum")
+org_role_enum = sa.Enum("owner", "admin", "member", name="org_role_enum", create_type=False)
+team_role_enum = sa.Enum("owner", "admin", "member", name="team_role_enum", create_type=False)
+identity_provider_enum = sa.Enum("feishu", "google", "github", "oidc", name="identity_provider_enum", create_type=False)
 
 
 def upgrade() -> None:
-    bind = op.get_bind()
-    org_role_enum.create(bind, checkfirst=True)
-    team_role_enum.create(bind, checkfirst=True)
-    identity_provider_enum.create(bind, checkfirst=True)
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'org_role_enum' AND n.nspname = 'public'
+            ) THEN
+                CREATE TYPE org_role_enum AS ENUM ('owner', 'admin', 'member');
+            END IF;
+        END
+        $$;
+        """
+    )
+
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'team_role_enum' AND n.nspname = 'public'
+            ) THEN
+                CREATE TYPE team_role_enum AS ENUM ('owner', 'admin', 'member');
+            END IF;
+        END
+        $$;
+        """
+    )
+
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'identity_provider_enum' AND n.nspname = 'public'
+            ) THEN
+                CREATE TYPE identity_provider_enum AS ENUM ('feishu', 'google', 'github', 'oidc');
+            END IF;
+        END
+        $$;
+        """
+    )
 
     op.create_table(
         "organizations",
@@ -213,7 +259,7 @@ def upgrade() -> None:
         sa.Column("team_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column(
             "role",
-            postgresql.ENUM("admin", "member", name="project_role_enum", create_type=False),
+            sa.Enum("admin", "member", name="project_role_enum", create_type=False),
             nullable=False,
             server_default=sa.text("'member'::project_role_enum"),
         ),
@@ -391,6 +437,6 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_organizations_slug"), table_name="organizations")
     op.drop_table("organizations")
 
-    identity_provider_enum.drop(op.get_bind(), checkfirst=True)
-    team_role_enum.drop(op.get_bind(), checkfirst=True)
-    org_role_enum.drop(op.get_bind(), checkfirst=True)
+    op.execute("DROP TYPE IF EXISTS identity_provider_enum")
+    op.execute("DROP TYPE IF EXISTS team_role_enum")
+    op.execute("DROP TYPE IF EXISTS org_role_enum")

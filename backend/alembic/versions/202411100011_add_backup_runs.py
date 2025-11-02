@@ -16,12 +16,26 @@ down_revision: str | None = "202411090010"
 branch_labels: tuple[str, ...] | None = None
 depends_on: tuple[str, ...] | None = None
 
-backup_status_enum = sa.Enum("running", "success", "failed", name="backup_status_enum")
+backup_status_enum = sa.Enum("running", "success", "failed", name="backup_status_enum", create_type=False)
 
 
 def upgrade() -> None:
-    bind = op.get_bind()
-    backup_status_enum.create(bind, checkfirst=True)
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'backup_status_enum' AND n.nspname = 'public'
+            ) THEN
+                CREATE TYPE backup_status_enum AS ENUM ('running', 'success', 'failed');
+            END IF;
+        END
+        $$;
+        """
+    )
 
     op.create_table(
         "backup_runs",
@@ -94,4 +108,4 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_index(op.f("ix_backup_runs_started_at"), table_name="backup_runs")
     op.drop_table("backup_runs")
-    backup_status_enum.drop(op.get_bind(), checkfirst=True)
+    op.execute("DROP TYPE IF EXISTS backup_status_enum")
