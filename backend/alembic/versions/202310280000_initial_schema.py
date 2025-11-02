@@ -1,7 +1,7 @@
 """Initial schema
 
 Revision ID: 202310280000
-Revises: 202310270000
+Revises: 202310270001
 Create Date: 2023-10-28 11:07:00.000000
 """
 
@@ -14,7 +14,7 @@ from sqlalchemy.dialects import postgresql as psql
 postgresql = psql
 
 revision: str = "202310280000"
-down_revision: str | None = "202310270000"
+down_revision: str | None = "202310270001"
 branch_labels: tuple[str, ...] | None = None
 depends_on: tuple[str, ...] | None = None
 
