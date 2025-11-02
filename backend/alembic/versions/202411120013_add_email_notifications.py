@@ -38,6 +38,29 @@ _NEW_NOTIFIER_TYPES = (
 )
 
 
+def _build_enum_add_value_sql(enum_name: str, value: str) -> str:
+    escaped_value = value.replace("'", "''")
+    return "\n".join(
+        [
+            "DO $enum$",
+            "BEGIN",
+            "    IF NOT EXISTS (",
+            "        SELECT 1",
+            "        FROM pg_enum e",
+            "        JOIN pg_type t ON t.oid = e.enumtypid",
+            "        JOIN pg_namespace n ON n.oid = t.typnamespace",
+            f"        WHERE t.typname = '{enum_name}'",
+            "          AND n.nspname = 'public'",
+            f"          AND e.enumlabel = '{escaped_value}'",
+            "    ) THEN",
+            f"        ALTER TYPE public.{enum_name} ADD VALUE '{escaped_value}';",
+            "    END IF;",
+            "END",
+            "$enum$;",
+        ]
+    )
+
+
 def upgrade() -> None:
     op.add_column(
         "projects",
@@ -52,22 +75,22 @@ def upgrade() -> None:
     for notifier_type in _NEW_NOTIFIER_TYPES:
         op.execute(
             sa.text(
-                "ALTER TYPE notifier_type_enum ADD VALUE IF NOT EXISTS :value"
-            ).bindparams(value=notifier_type)
+                _build_enum_add_value_sql("notifier_type_enum", notifier_type)
+            )
         )
 
     for event_type in _NEW_EVENT_TYPES:
         op.execute(
             sa.text(
-                "ALTER TYPE notifier_event_type_enum ADD VALUE IF NOT EXISTS :value"
-            ).bindparams(value=event_type)
+                _build_enum_add_value_sql("notifier_event_type_enum", event_type)
+            )
         )
 
     for status in _NEW_EVENT_STATUSES:
         op.execute(
             sa.text(
-                "ALTER TYPE notifier_event_status_enum ADD VALUE IF NOT EXISTS :value"
-            ).bindparams(value=status)
+                _build_enum_add_value_sql("notifier_event_status_enum", status)
+            )
         )
 
     # preserve explicit default for future inserts
