@@ -25,12 +25,12 @@ def test_alembic_env_simulation():
     # Test cases that simulate various environment states
     test_cases = [
         ("No CORS env vars", {}, None, False),
-        ("Empty CORS_ORIGINS", {"cors_origins": ""}, None, False),
-        ("Whitespace CORS_ORIGINS", {"cors_origins": "   "}, None, False),
-        ("JSON array CORS_ORIGINS", {"cors_origins": '["http://localhost:3000"]'}, None, False),
-        ("CSV CORS_ORIGINS", {"cors_origins": "http://localhost:3000,http://127.0.0.1:3000"}, None, False),
-        ("Wildcard CORS_ORIGINS", {"cors_origins": "*"}, None, False),
-        ("Allow any origin", {"cors_origins": "http://localhost:3000", "allow_any_origin": True}, None, False),
+        ("Empty BACKEND_CORS_ORIGINS", {"cors_origins_raw": ""}, None, False),
+        ("Whitespace BACKEND_CORS_ORIGINS", {"cors_origins_raw": "   "}, None, False),
+        ("JSON array BACKEND_CORS_ORIGINS", {"cors_origins_raw": '["http://localhost:3000"]'}, None, False),
+        ("CSV BACKEND_CORS_ORIGINS", {"cors_origins_raw": "http://localhost:3000,http://127.0.0.1:3000"}, None, False),
+        ("Wildcard BACKEND_CORS_ORIGINS", {"cors_origins_raw": "*"}, None, False),
+        ("Allow any origin", {"cors_origins_raw": "http://localhost:3000", "allow_any_origin": True}, None, False),
         ("Allow any origin with empty CORS", {"allow_any_origin": True}, None, False),
     ]
     
@@ -88,7 +88,7 @@ def test_real_world_docker_scenario():
     
     # Simulate the Docker Compose environment
     docker_env = {
-        "CORS_ORIGINS": '["http://localhost:8080","http://127.0.0.1:8080","http://192.168.210.129:8080"]',
+        "BACKEND_CORS_ORIGINS": '["http://localhost:8080","http://127.0.0.1:8080","http://192.168.210.129:8080"]',
         "ALLOW_ANY_ORIGIN": "false",
         "DATABASE_URL": "postgresql+psycopg2://app:app@postgres:5432/app",
         "REDIS_URL": "redis://redis:6379/0",

@@ -1,9 +1,9 @@
 import json
 import logging
 from functools import lru_cache
-from typing import List
+from typing import Any, Iterable, List
 
-from pydantic import field_validator, model_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
@@ -31,7 +31,12 @@ class Settings(BaseSettings):
     database_url: str
     redis_url: str
     uvicorn_workers: int = 2
-    cors_origins: List[str] = []  # Will be set by validator if None/empty
+    cors_origins_raw: str | None = Field(
+        default=None,
+        alias="BACKEND_CORS_ORIGINS",
+        validation_alias=AliasChoices("BACKEND_CORS_ORIGINS", "CORS_ORIGINS"),
+    )
+    cors_origins: List[str] = Field(default_factory=list, alias="__cors_origins_internal__")
     allow_any_origin: bool = False  # If True, allows all origins with credentials disabled
     provider: str = "mock"
     ai_chat_rate_limit_per_minute: int = 30
@@ -147,6 +152,7 @@ class Settings(BaseSettings):
         env_file=(".env", "/app/.env"),
         env_file_encoding="utf-8",
         extra="ignore",
+        populate_by_name=True,
     )
 
     @field_validator("access_token_expire_minutes", mode="before")
@@ -235,110 +241,112 @@ class Settings(BaseSettings):
 
     @field_validator("cors_origins", mode="before")
     @classmethod
-    def normalize_cors_origins(cls, value: List[str] | str | None) -> List[str]:
-        """Robust CORS origins validator that never crashes on malformed input."""
-        # Handle None or empty values
-        if value is None or (isinstance(value, str) and not value.strip()):
-            origins = cls._get_default_cors_origins()
-            logger.info("CORS_ORIGINS not set or empty, using defaults: %s", origins)
-            return origins
-
-        items: list[str]
-        
-        # Handle list input
+    def _coerce_cors_origins(cls, value: List[str] | str | None) -> List[str]:
+        if value is None:
+            return []
         if isinstance(value, list):
-            items = value
-        elif isinstance(value, str):
-            raw_value = value.strip()
-            if not raw_value:
-                origins = cls._get_default_cors_origins()
-                logger.info("CORS_ORIGINS empty string, using defaults: %s", origins)
-                return origins
-            
-            # Try JSON parsing first if it looks like JSON
-            if raw_value.startswith("["):
-                try:
-                    parsed = json.loads(raw_value)
-                    if isinstance(parsed, list):
-                        items = parsed
-                        logger.debug("Successfully parsed CORS_ORIGINS as JSON array")
-                    else:
-                        # If JSON is not a list, fall back to CSV parsing
-                        logger.warning("CORS_ORIGINS JSON is not an array, falling back to CSV parsing")
-                        items = raw_value.split(",")
-                except (json.JSONDecodeError, TypeError, ValueError) as e:
-                    # If JSON parsing fails, fall back to CSV parsing
-                    logger.warning("Failed to parse CORS_ORIGINS as JSON (error: %s), falling back to CSV parsing", str(e))
-                    items = raw_value.split(",")
-            else:
-                # Handle as CSV
-                items = raw_value.split(",")
-        else:
-            # Handle unexpected types by converting to string and treating as CSV
-            logger.warning("CORS_ORIGINS has unexpected type %s, converting to string and parsing as CSV", type(value).__name__)
-            str_value = str(value)
-            items = str_value.split(",") if str_value else []
+            return list(value)
+        if isinstance(value, str):
+            return [value]
+        return [str(value)]
 
-        origins: list[str] = []
-        for item in items:
-            if not isinstance(item, str):
-                # Convert non-string items to string
-                item = str(item)
-            origin = item.strip()
-            if origin:
-                # Remove trailing slashes for consistency
-                origin = origin.rstrip('/')
-                # Ensure scheme is present (http/https)
-                if origin and not origin.startswith(("http://", "https://")):
-                    # If no scheme, assume http for common localhost patterns
-                    if origin.startswith(("localhost:", "127.0.0.1:", "192.168.", "10.")):
-                        origin = f"http://{origin}"
-                        logger.debug("Added http:// scheme to origin: %s", origin)
-                origins.append(origin)
+    def model_post_init(self, __context: Any) -> None:
+        raw_origins = self._parse_cors_origins_raw(self.cors_origins_raw)
+        configured_origins = raw_origins
 
-        # Remove duplicates while preserving order
-        seen = set()
-        unique_origins = []
-        for origin in origins:
-            if origin not in seen:
-                seen.add(origin)
-                unique_origins.append(origin)
+        if not configured_origins and self.cors_origins:
+            configured_origins = self._normalize_cors_items(self.cors_origins)
 
-        # Handle wildcard case
-        if "*" in unique_origins and len(unique_origins) > 1:
-            logger.warning("CORS_ORIGINS cannot include '*' alongside specific origins, using '*' only")
-            unique_origins = ["*"]
-        
-        # If no valid origins found, return defaults
-        if not unique_origins:
-            origins = cls._get_default_cors_origins()
-            logger.info("No valid CORS origins found, using defaults: %s", origins)
-            return origins
-        
-        # Log parsed origins at INFO level for diagnostics (no secrets)
-        logger.info("Parsed CORS origins: %s", unique_origins)
-            
-        return unique_origins
+        finalized = self._finalize_cors_origins(configured_origins)
 
-    @model_validator(mode="after")
-    def validate_cors_configuration(self) -> "Settings":
-        """Validate CORS configuration and apply allow_any_origin logic."""
         if self.allow_any_origin:
-            # When allow_any_origin is True, set cors_origins to ["*"]
-            # This will be used by the CORS middleware
+            if finalized and finalized != ["*"]:
+                logger.info("allow_any_origin=True overrides explicit CORS origins: %s", finalized)
             self.cors_origins = ["*"]
-            logger.info("allow_any_origin=True, setting CORS origins to ['*'] with credentials disabled")
-        elif "*" in self.cors_origins and len(self.cors_origins) > 1:
-            # If wildcard is present with other origins, use wildcard only
-            logger.warning("CORS_ORIGINS cannot include '*' alongside specific origins, using '*' only")
-            self.cors_origins = ["*"]
-        return self
+            return
+
+        self.cors_origins = finalized
+
+        if self.cors_origins == ["*"]:
+            logger.info("Configured wildcard CORS origins")
+        elif not self.cors_origins:
+            logger.info("No CORS origins configured")
+        else:
+            logger.info("Configured CORS origins: %s", self.cors_origins)
 
     @classmethod
-    def _get_default_cors_origins(cls) -> List[str]:
-        """Get default CORS origins based on environment."""
-        # In development, provide sensible defaults
-        return ["http://localhost:8080", "http://127.0.0.1:8080"]
+    def _parse_cors_origins_raw(cls, raw_value: str | None) -> List[str]:
+        if raw_value is None:
+            return []
+        candidate = raw_value.strip()
+        if not candidate:
+            return []
+        if candidate == "*":
+            return ["*"]
+
+        items: list[str] = []
+
+        if candidate.startswith("["):
+            try:
+                parsed = json.loads(candidate)
+            except (json.JSONDecodeError, TypeError, ValueError) as exc:
+                logger.warning(
+                    "Failed to parse BACKEND_CORS_ORIGINS as JSON; falling back to comma-separated values: %s",
+                    exc,
+                )
+            else:
+                if isinstance(parsed, list):
+                    items = [str(item) for item in parsed]
+                else:
+                    logger.warning(
+                        "BACKEND_CORS_ORIGINS JSON value is not a list; falling back to comma-separated values",
+                    )
+
+        if not items:
+            items = [part for part in candidate.split(",")]
+
+        return cls._normalize_cors_items(items)
+
+    @classmethod
+    def _normalize_cors_items(cls, items: Iterable[str]) -> List[str]:
+        normalized: list[str] = []
+        seen: set[str] = set()
+
+        for item in items:
+            origin = str(item).strip()
+            if not origin:
+                continue
+
+            origin = origin.lstrip("[")
+            origin = origin.rstrip("]")
+            origin = origin.rstrip(",")
+            origin = origin.strip('\"\'').strip()
+            if not origin:
+                continue
+
+            if origin != "*":
+                origin = origin.rstrip("/")
+                if not origin.startswith(("http://", "https://")):
+                    if origin.startswith(("localhost:", "127.0.0.1:", "192.168.", "10.")):
+                        origin = f"http://{origin}"
+
+            if origin in seen:
+                continue
+
+            seen.add(origin)
+            normalized.append(origin)
+
+        return normalized
+
+    @classmethod
+    def _finalize_cors_origins(cls, origins: List[str]) -> List[str]:
+        if not origins:
+            return []
+        if "*" in origins:
+            if len(origins) > 1:
+                logger.warning("CORS origins include '*' alongside specific origins; using wildcard only")
+            return ["*"]
+        return origins
 
     @field_validator("redact_fields", mode="before")
     @classmethod

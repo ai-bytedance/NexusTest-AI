@@ -114,7 +114,7 @@ See .env.example for a complete list. Highlights below.
 | REDIS_URL | Redis URL | redis://redis:6379/0 |
 | ACCESS_TOKEN_EXPIRE_MINUTES | JWT expiry | 60 |
 | TOKEN_CLOCK_SKEW_SECONDS | JWT clock skew | 30 |
-| CORS_ORIGINS | Comma list or * | * |
+| BACKEND_CORS_ORIGINS | Allowed origins ("", comma list, JSON array, or *) | "" |
 | PROVIDER | AI provider | mock |
 | REQUEST_TIMEOUT_SECONDS | HTTP request timeout | 30 |
 | MAX_RESPONSE_SIZE_BYTES | Response payload cap | 512000 |

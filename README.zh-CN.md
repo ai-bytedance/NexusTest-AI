@@ -112,7 +112,7 @@ docker compose -f infra/docker-compose.yml down
 | REDIS_URL | Redis URL | redis://redis:6379/0 |
 | ACCESS_TOKEN_EXPIRE_MINUTES | JWT 过期时间 | 60 |
 | TOKEN_CLOCK_SKEW_SECONDS | JWT 时间偏差 | 30 |
-| CORS_ORIGINS | CORS 白名单，逗号分隔或 * | * |
+| BACKEND_CORS_ORIGINS | CORS 白名单，可为空、逗号分隔、JSON 数组或 * | "" |
 | PROVIDER | AI 提供商 | mock |
 | REQUEST_TIMEOUT_SECONDS | HTTP 请求超时 | 30 |
 | MAX_RESPONSE_SIZE_BYTES | 响应大小上限 | 512000 |
