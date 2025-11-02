@@ -9,19 +9,22 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects import postgresql as psql
+
+postgresql = psql
 
 revision: str = "202411080009"
 down_revision: str | None = "202411070008"
 branch_labels: tuple[str, ...] | None = None
 depends_on: tuple[str, ...] | None = None
 
-cluster_status_enum = sa.Enum(
+cluster_status_enum = psql.ENUM(
     "open",
     "muted",
     "resolved",
     name="analytics_fail_cluster_status_enum",
     create_type=False,
+    schema="public",
 )
 
 

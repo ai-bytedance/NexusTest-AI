@@ -9,16 +9,30 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects import postgresql as psql
+
+postgresql = psql
 
 revision: str = "202310280000"
 down_revision: str | None = "202310270000"
 branch_labels: tuple[str, ...] | None = None
 depends_on: tuple[str, ...] | None = None
 
-user_role_enum = sa.Enum("admin", "member", name="user_role_enum", create_type=False)
-report_entity_type_enum = sa.Enum("case", "suite", name="report_entity_type_enum", create_type=False)
-report_status_enum = sa.Enum(
+user_role_enum = psql.ENUM(
+    "admin",
+    "member",
+    name="user_role_enum",
+    create_type=False,
+    schema="public",
+)
+report_entity_type_enum = psql.ENUM(
+    "case",
+    "suite",
+    name="report_entity_type_enum",
+    create_type=False,
+    schema="public",
+)
+report_status_enum = psql.ENUM(
     "pending",
     "running",
     "passed",
@@ -27,16 +41,25 @@ report_status_enum = sa.Enum(
     "skipped",
     name="report_status_enum",
     create_type=False,
+    schema="public",
 )
-ai_task_type_enum = sa.Enum(
+ai_task_type_enum = psql.ENUM(
     "generate_cases",
     "generate_assertions",
     "generate_mock",
     "summarize_report",
     name="ai_task_type_enum",
     create_type=False,
+    schema="public",
 )
-ai_task_status_enum = sa.Enum("pending", "success", "failed", name="ai_task_status_enum", create_type=False)
+ai_task_status_enum = psql.ENUM(
+    "pending",
+    "success",
+    "failed",
+    name="ai_task_status_enum",
+    create_type=False,
+    schema="public",
+)
 
 
 def upgrade() -> None:

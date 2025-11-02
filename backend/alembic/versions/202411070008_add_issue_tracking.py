@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects import postgresql as psql
+
+postgresql = psql
 
 revision: str = "202411070008"
 down_revision: str | None = "202411060007"
@@ -17,19 +19,21 @@ branch_labels: tuple[str, ...] | None = None
 depends_on: tuple[str, ...] | None = None
 
 
-integration_provider_enum = sa.Enum(
+integration_provider_enum = psql.ENUM(
     "jira",
     "linear",
     "github",
     name="integration_provider_enum",
     create_type=False,
+    schema="public",
 )
 
-issue_link_source_enum = sa.Enum(
+issue_link_source_enum = psql.ENUM(
     "manual",
     "auto",
     name="issue_link_source_enum",
     create_type=False,
+    schema="public",
 )
 
 

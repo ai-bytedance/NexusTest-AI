@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects import postgresql as psql
+
+postgresql = psql
 
 revision: str = "202411090010"
 down_revision: str | None = "202411080009"
@@ -17,14 +19,21 @@ branch_labels: tuple[str, ...] | None = None
 depends_on: tuple[str, ...] | None = None
 
 
-issue_sync_state_enum = sa.Enum("ok", "error", name="issue_sync_state_enum", create_type=False)
-integration_webhook_status_enum = sa.Enum(
+issue_sync_state_enum = psql.ENUM(
+    "ok",
+    "error",
+    name="issue_sync_state_enum",
+    create_type=False,
+    schema="public",
+)
+integration_webhook_status_enum = psql.ENUM(
     "pending",
     "processing",
     "processed",
     "failed",
     name="integration_webhook_status_enum",
     create_type=False,
+    schema="public",
 )
 
 

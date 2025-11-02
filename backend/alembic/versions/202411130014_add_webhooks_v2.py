@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects import postgresql as psql
+
+postgresql = psql
 
 revision: str = "202411130014"
 down_revision: str | None = "202411120013"
@@ -41,20 +43,23 @@ WEBHOOK_BACKOFF_STRATEGIES = (
     "fixed",
 )
 
-webhook_backoff_strategy_enum = sa.Enum(
+webhook_backoff_strategy_enum = psql.ENUM(
     *WEBHOOK_BACKOFF_STRATEGIES,
     name="webhook_backoff_strategy",
     create_type=False,
+    schema="public",
 )
-webhook_delivery_status_enum = sa.Enum(
+webhook_delivery_status_enum = psql.ENUM(
     *WEBHOOK_DELIVERY_STATUSES,
     name="webhook_delivery_status",
     create_type=False,
+    schema="public",
 )
-webhook_event_type_enum = sa.Enum(
+webhook_event_type_enum = psql.ENUM(
     *WEBHOOK_EVENT_TYPES,
     name="webhook_event_type",
     create_type=False,
+    schema="public",
 )
 
 
