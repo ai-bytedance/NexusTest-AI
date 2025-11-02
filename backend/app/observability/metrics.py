@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+import os
 import time
 import uuid
 from contextlib import contextmanager
@@ -15,8 +17,22 @@ from starlette.responses import Response
 
 from app.core.config import get_settings
 
-_settings = get_settings()
-_NAMESPACE = _settings.metrics_namespace
+logger = logging.getLogger(__name__)
+
+
+def _initial_namespace() -> str:
+    env_value = os.getenv("METRICS_NAMESPACE")
+    if env_value is not None:
+        candidate = env_value.strip()
+        return candidate or "nexustest"
+    try:
+        return get_settings().metrics_namespace
+    except Exception as exc:
+        logger.debug("Falling back to default metrics namespace due to settings error: %s", exc)
+        return "nexustest"
+
+
+_NAMESPACE = _initial_namespace()
 
 _REQUEST_LABELS = ("method", "endpoint", "status", "project_id")
 _IN_PROGRESS_LABELS = ("method", "endpoint", "project_id")

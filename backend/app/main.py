@@ -53,13 +53,20 @@ def create_app() -> FastAPI:
         openapi_url="/api/openapi.json",
     )
 
+    app.state.settings = settings
+
     app.add_middleware(RequestIdMiddleware)
     if settings.metrics_enabled:
         app.add_middleware(MetricsMiddleware)
+    cors_allow_origins = settings.cors_origins or []
+    cors_allow_credentials = True
+    if cors_allow_origins == ["*"]:
+        cors_allow_credentials = False
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
-        allow_credentials=not settings.allow_any_origin,  # Disable credentials when allowing any origin
+        allow_origins=cors_allow_origins,
+        allow_credentials=cors_allow_credentials,
         allow_methods=["*"],
         allow_headers=["*"],
     )

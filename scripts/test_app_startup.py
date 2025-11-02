@@ -19,10 +19,10 @@ def test_app_startup():
     # Test various CORS configurations
     test_cases = [
         ("Default configuration", {}),
-        ("Empty CORS", {"CORS_ORIGINS": ""}),
-        ("JSON array", {"CORS_ORIGINS": '["http://localhost:3000"]'}),
-        ("CSV list", {"CORS_ORIGINS": "http://localhost:3000,http://127.0.0.1:3000"}),
-        ("Wildcard", {"CORS_ORIGINS": "*"}),
+        ("Empty CORS", {"BACKEND_CORS_ORIGINS": ""}),
+        ("JSON array", {"BACKEND_CORS_ORIGINS": '["http://localhost:3000"]'}),
+        ("CSV list", {"BACKEND_CORS_ORIGINS": "http://localhost:3000,http://127.0.0.1:3000"}),
+        ("Wildcard", {"BACKEND_CORS_ORIGINS": "*"}),
         ("Allow any origin", {"ALLOW_ANY_ORIGIN": "true"}),
     ]
     
