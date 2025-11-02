@@ -16,18 +16,80 @@ down_revision: str | None = "202410280001"
 branch_labels: tuple[str, ...] | None = None
 depends_on: tuple[str, ...] | None = None
 
-execution_plan_type_enum = postgresql.ENUM("cron", "interval", name="execution_plan_type_enum")
-notifier_type_enum = postgresql.ENUM("webhook", "feishu", "slack", name="notifier_type_enum")
-notifier_event_type_enum = postgresql.ENUM("run_finished", name="notifier_event_type_enum")
-notifier_event_status_enum = postgresql.ENUM("pending", "success", "failed", name="notifier_event_status_enum")
+execution_plan_type_enum = sa.Enum("cron", "interval", name="execution_plan_type_enum", create_type=False)
+notifier_type_enum = sa.Enum("webhook", "feishu", "slack", name="notifier_type_enum", create_type=False)
+notifier_event_type_enum = sa.Enum("run_finished", name="notifier_event_type_enum", create_type=False)
+notifier_event_status_enum = sa.Enum("pending", "success", "failed", name="notifier_event_status_enum", create_type=False)
 
 
 def upgrade() -> None:
-    bind = op.get_bind()
-    execution_plan_type_enum.create(bind, checkfirst=True)
-    notifier_type_enum.create(bind, checkfirst=True)
-    notifier_event_type_enum.create(bind, checkfirst=True)
-    notifier_event_status_enum.create(bind, checkfirst=True)
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'execution_plan_type_enum' AND n.nspname = 'public'
+            ) THEN
+                CREATE TYPE execution_plan_type_enum AS ENUM ('cron', 'interval');
+            END IF;
+        END
+        $$;
+        """
+    )
+
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'notifier_type_enum' AND n.nspname = 'public'
+            ) THEN
+                CREATE TYPE notifier_type_enum AS ENUM ('webhook', 'feishu', 'slack');
+            END IF;
+        END
+        $$;
+        """
+    )
+
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'notifier_event_type_enum' AND n.nspname = 'public'
+            ) THEN
+                CREATE TYPE notifier_event_type_enum AS ENUM ('run_finished');
+            END IF;
+        END
+        $$;
+        """
+    )
+
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'notifier_event_status_enum' AND n.nspname = 'public'
+            ) THEN
+                CREATE TYPE notifier_event_status_enum AS ENUM ('pending', 'success', 'failed');
+            END IF;
+        END
+        $$;
+        """
+    )
 
     op.create_table(
         "execution_plans",
@@ -209,7 +271,7 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_execution_plans_project_enabled"), table_name="execution_plans")
     op.drop_table("execution_plans")
 
-    notifier_event_status_enum.drop(op.get_bind(), checkfirst=True)
-    notifier_event_type_enum.drop(op.get_bind(), checkfirst=True)
-    notifier_type_enum.drop(op.get_bind(), checkfirst=True)
-    execution_plan_type_enum.drop(op.get_bind(), checkfirst=True)
+    op.execute("DROP TYPE IF EXISTS notifier_event_status_enum")
+    op.execute("DROP TYPE IF EXISTS notifier_event_type_enum")
+    op.execute("DROP TYPE IF EXISTS notifier_type_enum")
+    op.execute("DROP TYPE IF EXISTS execution_plan_type_enum")

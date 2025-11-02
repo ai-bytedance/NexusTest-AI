@@ -12,12 +12,26 @@ branch_labels: tuple[str, ...] | None = None
 depends_on: tuple[str, ...] | None = None
 
 _UTC_NOW = sa.text("TIMEZONE('utc', NOW())")
-_dataset_type_enum = postgresql.ENUM("csv", "excel", "inline", name="dataset_type_enum")
+_dataset_type_enum = sa.Enum("csv", "excel", "inline", name="dataset_type_enum", create_type=False)
 
 
 def upgrade() -> None:
-    bind = op.get_bind()
-    _dataset_type_enum.create(bind, checkfirst=True)
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'dataset_type_enum' AND n.nspname = 'public'
+            ) THEN
+                CREATE TYPE dataset_type_enum AS ENUM ('csv', 'excel', 'inline');
+            END IF;
+        END
+        $$;
+        """
+    )
 
     op.create_table(
         "environments",
@@ -163,5 +177,4 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_environments_project_id"), table_name="environments")
     op.drop_table("environments")
 
-    bind = op.get_bind()
-    _dataset_type_enum.drop(bind, checkfirst=True)
+    op.execute("DROP TYPE IF EXISTS dataset_type_enum")

@@ -17,20 +17,51 @@ branch_labels: tuple[str, ...] | None = None
 depends_on: tuple[str, ...] | None = None
 
 
-issue_sync_state_enum = sa.Enum("ok", "error", name="issue_sync_state_enum")
+issue_sync_state_enum = sa.Enum("ok", "error", name="issue_sync_state_enum", create_type=False)
 integration_webhook_status_enum = sa.Enum(
     "pending",
     "processing",
     "processed",
     "failed",
     name="integration_webhook_status_enum",
+    create_type=False,
 )
 
 
 def upgrade() -> None:
-    bind = op.get_bind()
-    issue_sync_state_enum.create(bind, checkfirst=True)
-    integration_webhook_status_enum.create(bind, checkfirst=True)
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'issue_sync_state_enum' AND n.nspname = 'public'
+            ) THEN
+                CREATE TYPE issue_sync_state_enum AS ENUM ('ok', 'error');
+            END IF;
+        END
+        $$;
+        """
+    )
+
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'integration_webhook_status_enum' AND n.nspname = 'public'
+            ) THEN
+                CREATE TYPE integration_webhook_status_enum AS ENUM ('pending', 'processing', 'processed', 'failed');
+            END IF;
+        END
+        $$;
+        """
+    )
 
     op.add_column(
         "issues",
@@ -177,5 +208,5 @@ def downgrade() -> None:
     op.drop_column("issues", "last_error")
     op.drop_column("issues", "sync_state")
 
-    integration_webhook_status_enum.drop(op.get_bind(), checkfirst=True)
-    issue_sync_state_enum.drop(op.get_bind(), checkfirst=True)
+    op.execute("DROP TYPE IF EXISTS integration_webhook_status_enum")
+    op.execute("DROP TYPE IF EXISTS issue_sync_state_enum")

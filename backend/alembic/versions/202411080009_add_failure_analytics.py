@@ -16,17 +16,32 @@ down_revision: str | None = "202411070008"
 branch_labels: tuple[str, ...] | None = None
 depends_on: tuple[str, ...] | None = None
 
-cluster_status_enum = postgresql.ENUM(
+cluster_status_enum = sa.Enum(
     "open",
     "muted",
     "resolved",
     name="analytics_fail_cluster_status_enum",
+    create_type=False,
 )
 
 
 def upgrade() -> None:
-    bind = op.get_bind()
-    cluster_status_enum.create(bind, checkfirst=True)
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typname = 'analytics_fail_cluster_status_enum' AND n.nspname = 'public'
+            ) THEN
+                CREATE TYPE analytics_fail_cluster_status_enum AS ENUM ('open', 'muted', 'resolved');
+            END IF;
+        END
+        $$;
+        """
+    )
 
     op.create_table(
         "analytics_fail_clusters",
@@ -143,4 +158,4 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_analytics_fail_clusters_project_id"), table_name="analytics_fail_clusters")
     op.drop_table("analytics_fail_clusters")
 
-    cluster_status_enum.drop(op.get_bind(), checkfirst=True)
+    op.execute("DROP TYPE IF EXISTS analytics_fail_cluster_status_enum")
