@@ -1,7 +1,7 @@
 """Initial schema
 
 Revision ID: 202310280000
-Revises: 
+Revises: 202310270000
 Create Date: 2023-10-28 11:07:00.000000
 """
 
@@ -12,7 +12,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "202310280000"
-down_revision: str | None = "202310270000_preflight_reconcile_postgres_enums"
+down_revision: str | None = "202310270000"
 branch_labels: tuple[str, ...] | None = None
 depends_on: tuple[str, ...] | None = None
 
