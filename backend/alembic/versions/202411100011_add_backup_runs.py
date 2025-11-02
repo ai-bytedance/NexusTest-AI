@@ -9,14 +9,23 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects import postgresql as psql
+
+postgresql = psql
 
 revision: str = "202411100011"
 down_revision: str | None = "202411090010"
 branch_labels: tuple[str, ...] | None = None
 depends_on: tuple[str, ...] | None = None
 
-backup_status_enum = sa.Enum("running", "success", "failed", name="backup_status_enum", create_type=False)
+backup_status_enum = psql.ENUM(
+    "running",
+    "success",
+    "failed",
+    name="backup_status_enum",
+    create_type=False,
+    schema="public",
+)
 
 
 def upgrade() -> None:

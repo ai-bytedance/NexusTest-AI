@@ -9,16 +9,47 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects import postgresql as psql
+
+postgresql = psql
 
 revision: str = "202411050006"
 down_revision: str | None = "202411010005"
 branch_labels: tuple[str, ...] | None = None
 depends_on: tuple[str, ...] | None = None
 
-org_role_enum = sa.Enum("owner", "admin", "member", name="org_role_enum", create_type=False)
-team_role_enum = sa.Enum("owner", "admin", "member", name="team_role_enum", create_type=False)
-identity_provider_enum = sa.Enum("feishu", "google", "github", "oidc", name="identity_provider_enum", create_type=False)
+org_role_enum = psql.ENUM(
+    "owner",
+    "admin",
+    "member",
+    name="org_role_enum",
+    create_type=False,
+    schema="public",
+)
+team_role_enum = psql.ENUM(
+    "owner",
+    "admin",
+    "member",
+    name="team_role_enum",
+    create_type=False,
+    schema="public",
+)
+identity_provider_enum = psql.ENUM(
+    "feishu",
+    "google",
+    "github",
+    "oidc",
+    name="identity_provider_enum",
+    create_type=False,
+    schema="public",
+)
+project_role_enum = psql.ENUM(
+    "admin",
+    "member",
+    name="project_role_enum",
+    create_type=False,
+    schema="public",
+)
 
 
 def upgrade() -> None:
@@ -259,7 +290,7 @@ def upgrade() -> None:
         sa.Column("team_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column(
             "role",
-            sa.Enum("admin", "member", name="project_role_enum", create_type=False),
+            project_role_enum,
             nullable=False,
             server_default=sa.text("'member'::project_role_enum"),
         ),

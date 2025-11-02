@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects import postgresql as psql
+
+postgresql = psql
 
 revision: str = "202410300003_add_environments_datasets"
 down_revision: str | None = "202410290002"
@@ -12,7 +14,14 @@ branch_labels: tuple[str, ...] | None = None
 depends_on: tuple[str, ...] | None = None
 
 _UTC_NOW = sa.text("TIMEZONE('utc', NOW())")
-_dataset_type_enum = sa.Enum("csv", "excel", "inline", name="dataset_type_enum", create_type=False)
+_dataset_type_enum = psql.ENUM(
+    "csv",
+    "excel",
+    "inline",
+    name="dataset_type_enum",
+    create_type=False,
+    schema="public",
+)
 
 
 def upgrade() -> None:

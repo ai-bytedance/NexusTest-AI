@@ -9,17 +9,44 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects import postgresql as psql
+
+postgresql = psql
 
 revision: str = "202410290002"
 down_revision: str | None = "202410280001"
 branch_labels: tuple[str, ...] | None = None
 depends_on: tuple[str, ...] | None = None
 
-execution_plan_type_enum = sa.Enum("cron", "interval", name="execution_plan_type_enum", create_type=False)
-notifier_type_enum = sa.Enum("webhook", "feishu", "slack", name="notifier_type_enum", create_type=False)
-notifier_event_type_enum = sa.Enum("run_finished", name="notifier_event_type_enum", create_type=False)
-notifier_event_status_enum = sa.Enum("pending", "success", "failed", name="notifier_event_status_enum", create_type=False)
+execution_plan_type_enum = psql.ENUM(
+    "cron",
+    "interval",
+    name="execution_plan_type_enum",
+    create_type=False,
+    schema="public",
+)
+notifier_type_enum = psql.ENUM(
+    "webhook",
+    "feishu",
+    "slack",
+    name="notifier_type_enum",
+    create_type=False,
+    schema="public",
+)
+notifier_event_type_enum = psql.ENUM(
+    "run_finished",
+    name="notifier_event_type_enum",
+    create_type=False,
+    schema="public",
+)
+notifier_event_status_enum = psql.ENUM(
+    "pending",
+    "success",
+    "failed",
+    name="notifier_event_status_enum",
+    create_type=False,
+    schema="public",
+)
 
 
 def upgrade() -> None:

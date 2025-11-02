@@ -9,14 +9,22 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects import postgresql as psql
+
+postgresql = psql
 
 revision: str = "202410280001"
 down_revision: str | None = "202310280000"
 branch_labels: tuple[str, ...] | None = None
 depends_on: tuple[str, ...] | None = None
 
-project_role_enum = sa.Enum("admin", "member", name="project_role_enum", create_type=False)
+project_role_enum = psql.ENUM(
+    "admin",
+    "member",
+    name="project_role_enum",
+    create_type=False,
+    schema="public",
+)
 
 
 def upgrade() -> None:
