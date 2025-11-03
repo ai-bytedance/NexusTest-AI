@@ -32,9 +32,9 @@ secrets:
   create: true
   stringData:
     SECRET_KEY: "replace-me"
-    DATABASE_URL: "postgresql+psycopg2://app:app@postgresql:5432/app"
+    DATABASE_URL: "postgresql+psycopg://app:app@postgresql:5432/app"
     REDIS_URL: "redis://redis:6379/0"
-    DEEPSEEK_API_KEY: ""
+
 
 nginx:
   enabled: true
@@ -118,7 +118,7 @@ redis:
 
 secrets:
   stringData:
-    DATABASE_URL: postgresql+psycopg2://user:pass@db.example.com:5432/app
+    DATABASE_URL: postgresql+psycopg://user:pass@db.example.com:5432/app
     REDIS_URL: redis://cache.example.com:6379/0
 ```
 

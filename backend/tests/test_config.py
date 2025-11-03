@@ -6,7 +6,7 @@ from app.core.config import Settings
 class TestCorsOriginsParsing:
     def _create_settings(self, **kwargs) -> Settings:
         base = {
-            "database_url": "postgresql+psycopg2://test:test@localhost:5432/test",
+            "database_url": "postgresql+psycopg://test:test@localhost:5432/test",
             "redis_url": "redis://localhost:6379/0",
         }
         base.update(kwargs)

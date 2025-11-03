@@ -108,7 +108,7 @@ docker compose -f infra/docker-compose.yml down
 | APP_ENV | 环境名称 | local |
 | SECRET_KEY | JWT 签名密钥 | replace_me |
 | SECRET_ENC_KEY | 可选加密密钥 | 空 |
-| DATABASE_URL | Postgres 连接 URL | postgresql+psycopg2://app:app@postgres:5432/app |
+| DATABASE_URL | Postgres 连接 URL | postgresql+psycopg://app:app@postgres:5432/app |
 | REDIS_URL | Redis URL | redis://redis:6379/0 |
 | ACCESS_TOKEN_EXPIRE_MINUTES | JWT 过期时间 | 60 |
 | TOKEN_CLOCK_SKEW_SECONDS | JWT 时间偏差 | 30 |
