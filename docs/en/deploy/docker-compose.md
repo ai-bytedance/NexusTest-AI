@@ -25,15 +25,17 @@ Access points:
 
 If you prefer a different host port, edit infra/docker-compose.yml and update the nginx service ports. The default uses "0.0.0.0:8080:80" so remote clients can reach the stack without extra overrides.
 
+> Builder note: Compose commands in this repository set `COMPOSE_DOCKER_CLI_BUILD=0` and `DOCKER_BUILDKIT=0` to force the classic Docker builder and avoid docker/dockerfile frontend pulls. Switch both variables to `1` once your network allows BuildKit again.
+
 Start:
 ```bash
-docker compose -f infra/docker-compose.yml up -d postgres redis
-docker compose -f infra/docker-compose.yml build api celery-worker celery-beat flower --no-cache --progress=plain
-docker compose -f infra/docker-compose.yml up -d
+COMPOSE_DOCKER_CLI_BUILD=0 DOCKER_BUILDKIT=0 docker compose -f infra/docker-compose.yml up -d postgres redis
+COMPOSE_DOCKER_CLI_BUILD=0 DOCKER_BUILDKIT=0 docker compose -f infra/docker-compose.yml build api celery-worker celery-beat flower --no-cache --progress=plain
+COMPOSE_DOCKER_CLI_BUILD=0 DOCKER_BUILDKIT=0 docker compose -f infra/docker-compose.yml up -d
 ```
 The API, worker, beat, and Flower services now build locally from `backend/Dockerfile` and share the `nexustest-backend:local` image tag (drop `--no-cache` after the first successful build if you prefer cached layers).
 
-> Tip: enable BuildKit (`DOCKER_BUILDKIT=1 docker compose …`) and configure registry mirrors if base image pulls are slow in your environment.
+> Tip: once the docker/dockerfile frontend is reachable again, set `COMPOSE_DOCKER_CLI_BUILD=1` and `DOCKER_BUILDKIT=1` (for example: `COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose …`) and configure registry mirrors if base image pulls are slow in your environment.
 
 Stop:
 ```bash
@@ -56,12 +58,17 @@ services:
   nginx:
     build:
       args:
+        NODE_BASE_IMAGE: ${NODE_BASE_IMAGE:-node:18-alpine}
+        NGINX_BASE_IMAGE: ${NGINX_BASE_IMAGE:-nginx:1.25-alpine}
         NPM_REGISTRY: https://registry.npmmirror.com
+        # NODE_BASE_IMAGE: mirror.gcr.io/library/node:18-alpine
+        # NGINX_BASE_IMAGE: mirror.gcr.io/library/nginx:1.25-alpine
         # HTTP_PROXY: http://proxy.yourcorp:8080
         # HTTPS_PROXY: http://proxy.yourcorp:8080
         # USE_LOCAL_DIST: "true"
 ```
 
+- `NODE_BASE_IMAGE` / `NGINX_BASE_IMAGE` allow swapping to a mirror-friendly tag (the defaults match Docker Hub; uncomment one of the mirror examples above if needed).
 - `NPM_REGISTRY` defaults to the npm mirror shown above and enables additional fetch retries inside the image build.
 - Uncomment `HTTP_PROXY` / `HTTPS_PROXY` if you need to route traffic through a proxy.
 - Set `USE_LOCAL_DIST=true` to reuse a prebuilt `frontend/dist/` directory.

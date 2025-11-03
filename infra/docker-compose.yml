@@ -1,3 +1,7 @@
+x-classic-builder-env: &classic-builder-env
+  COMPOSE_DOCKER_CLI_BUILD: ${COMPOSE_DOCKER_CLI_BUILD:-0}
+  DOCKER_BUILDKIT: ${DOCKER_BUILDKIT:-0}
+
 services:
   postgres:
     image: postgres:15-alpine
@@ -42,6 +46,7 @@ services:
       - ../backend/alembic:/app/alembic
       - ../backend/alembic.ini:/app/alembic.ini:ro
     environment:
+      <<: *classic-builder-env
       UVICORN_WORKERS: ${UVICORN_WORKERS:-2}
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-""}
       ALLOW_ANY_ORIGIN: ${ALLOW_ANY_ORIGIN:-false}
@@ -71,6 +76,7 @@ services:
     volumes:
       - ../.env:/app/.env:ro
     environment:
+      <<: *classic-builder-env
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-""}
       ALLOW_ANY_ORIGIN: ${ALLOW_ANY_ORIGIN:-false}
     command: ["sh", "-c", "celery -A app.core.celery_app worker --loglevel=info -Q cases,suites"]
@@ -89,6 +95,7 @@ services:
     volumes:
       - ../.env:/app/.env:ro
     environment:
+      <<: *classic-builder-env
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-""}
       ALLOW_ANY_ORIGIN: ${ALLOW_ANY_ORIGIN:-false}
     command: ["sh", "-c", "celery -A app.core.celery_app beat --loglevel=info"]
@@ -109,6 +116,7 @@ services:
     volumes:
       - ../.env:/app/.env:ro
     environment:
+      <<: *classic-builder-env
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-""}
       ALLOW_ANY_ORIGIN: ${ALLOW_ANY_ORIGIN:-false}
     command: ["sh", "-c", "celery -A app.core.celery_app flower --address=0.0.0.0 --port=5555 --url-prefix=flower --queues=cases,suites"]
@@ -120,7 +128,11 @@ services:
       context: ../
       dockerfile: infra/nginx/Dockerfile
       args:
+        NODE_BASE_IMAGE: ${NODE_BASE_IMAGE:-node:18-alpine}
+        NGINX_BASE_IMAGE: ${NGINX_BASE_IMAGE:-nginx:1.25-alpine}
         NPM_REGISTRY: https://registry.npmmirror.com
+        # NODE_BASE_IMAGE: mirror.gcr.io/library/node:18-alpine
+        # NGINX_BASE_IMAGE: mirror.gcr.io/library/nginx:1.25-alpine
         # HTTP_PROXY: http://proxy.yourcorp:8080
         # HTTPS_PROXY: http://proxy.yourcorp:8080
         # USE_LOCAL_DIST: "true"
@@ -130,6 +142,8 @@ services:
         condition: service_healthy
       flower:
         condition: service_started
+    environment:
+      <<: *classic-builder-env
     ports:
       - "0.0.0.0:8080:80"
 

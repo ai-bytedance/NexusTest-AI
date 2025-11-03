@@ -1,6 +1,8 @@
 .PHONY: up down logs shell migrate revision downgrade lint format test ci
 
 COMPOSE_FILE=infra/docker-compose.yml
+COMPOSE_ENV=COMPOSE_DOCKER_CLI_BUILD=0 DOCKER_BUILDKIT=0
+DOCKER_COMPOSE_CMD=$(COMPOSE_ENV) docker compose -f $(COMPOSE_FILE)
 PYTHON ?= python3
 PRE_COMMIT ?= pre-commit
 PYTEST ?= pytest
@@ -8,28 +10,28 @@ BACKEND_DIR ?= backend
 TEST_DIR ?= $(BACKEND_DIR)/tests
 
 up:
-    docker compose -f $(COMPOSE_FILE) up -d --build
+    $(DOCKER_COMPOSE_CMD) up -d --build
 
 down:
-    docker compose -f $(COMPOSE_FILE) down
+    $(DOCKER_COMPOSE_CMD) down
 
 logs:
-    docker compose -f $(COMPOSE_FILE) logs -f
+    $(DOCKER_COMPOSE_CMD) logs -f
 
 shell:
-    docker compose -f $(COMPOSE_FILE) exec api /bin/bash
+    $(DOCKER_COMPOSE_CMD) exec api /bin/bash
 
 migrate:
-    docker compose -f $(COMPOSE_FILE) run --rm api alembic upgrade head
+    $(DOCKER_COMPOSE_CMD) run --rm api alembic upgrade head
 
 revision:
 ifndef msg
     $(error msg is required. usage: make revision msg="message")
 endif
-    docker compose -f $(COMPOSE_FILE) run --rm api alembic revision --autogenerate -m "$(msg)"
+    $(DOCKER_COMPOSE_CMD) run --rm api alembic revision --autogenerate -m "$(msg)"
 
 downgrade:
-    docker compose -f $(COMPOSE_FILE) run --rm api alembic downgrade -1
+    $(DOCKER_COMPOSE_CMD) run --rm api alembic downgrade -1
 
 lint:
     $(PRE_COMMIT) run --all-files --show-diff-on-failure

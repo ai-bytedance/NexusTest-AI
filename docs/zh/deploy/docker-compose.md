@@ -25,10 +25,14 @@
 
 如需使用其它主机端口，可在 infra/docker-compose.yml 中调整 nginx 的端口映射。默认值为 "0.0.0.0:8080:80"，无需额外 override 即可对外提供访问。
 
+> 构建提示：仓库默认通过设置 `COMPOSE_DOCKER_CLI_BUILD=0` 与 `DOCKER_BUILDKIT=0` 使用经典 Docker builder，避免在构建阶段拉取 docker/dockerfile 前端镜像。网络恢复后，可将这两个变量改为 `1` 重新启用 BuildKit。
+
 启动：
 ```bash
-docker compose -f infra/docker-compose.yml up -d --build
+COMPOSE_DOCKER_CLI_BUILD=0 DOCKER_BUILDKIT=0 docker compose -f infra/docker-compose.yml up -d --build
 ```
+
+> 如需恢复 BuildKit，可设置 `COMPOSE_DOCKER_CLI_BUILD=1` 与 `DOCKER_BUILDKIT=1`（例如：`COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose …`），同时按需配置镜像加速。
 
 停止：
 ```bash
@@ -51,14 +55,19 @@ services:
   nginx:
     build:
       args:
+        NODE_BASE_IMAGE: ${NODE_BASE_IMAGE:-node:18-alpine}
+        NGINX_BASE_IMAGE: ${NGINX_BASE_IMAGE:-nginx:1.25-alpine}
         NPM_REGISTRY: https://registry.npmmirror.com
+        # NODE_BASE_IMAGE: mirror.gcr.io/library/node:18-alpine
+        # NGINX_BASE_IMAGE: mirror.gcr.io/library/nginx:1.25-alpine
         # HTTP_PROXY: http://proxy.yourcorp:8080
         # HTTPS_PROXY: http://proxy.yourcorp:8080
         # USE_LOCAL_DIST: "true"
 ```
 
+- `NODE_BASE_IMAGE` / `NGINX_BASE_IMAGE` 可用于切换到镜像站点的基础镜像标签（默认值指向 Docker Hub，可根据需要取消注释上方示例）。
 - `NPM_REGISTRY` 默认指向上述镜像，并为镜像构建启用额外的 npm 拉取重试。
-- 如果需要通过公司代理，取消注释 `HTTP_PROXY` / `HTTPS_PROXY` 并填入代理地址。
+- 如需通过公司代理，取消注释 `HTTP_PROXY` / `HTTPS_PROXY` 并填入代理地址。
 - 将 `USE_LOCAL_DIST` 设为 `true` 可复用仓库中的 `frontend/dist/` 产物。
 
 当 `USE_LOCAL_DIST=true` 时，请确保仓库中已经存在 `frontend/dist/`（例如先在本地执行 `npm ci && npm run build`）。Dockerfile 会跳过 `npm ci` / `npm run build`，直接将该目录拷贝进 nginx 镜像，从而在无法访问外部 npm 的网络环境中也能完成构建。
