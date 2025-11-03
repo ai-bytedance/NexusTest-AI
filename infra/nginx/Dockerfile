@@ -1,4 +1,7 @@
+# syntax=docker/dockerfile:1.6
+
 ARG NODE_BASE_IMAGE=node:18-alpine
+ARG NGINX_BASE_IMAGE=nginx:1.25-alpine
 FROM ${NODE_BASE_IMAGE} AS builder
 
 WORKDIR /app
@@ -48,8 +51,7 @@ RUN if [ "$USE_LOCAL_DIST" = "true" ]; then \
       npm run build; \
     fi
 
-ARG NGINX_BASE_IMAGE=nginx:1.25-alpine
-FROM ${NGINX_BASE_IMAGE}
+FROM ${NGINX_BASE_IMAGE} AS runtime
 
 ARG USE_LOCAL_DIST=false
 
