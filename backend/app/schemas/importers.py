@@ -160,3 +160,31 @@ class ImportRunDetail(ImportRunInfo):
     diff: list[ImportChange] = Field(default_factory=list)
     context: dict[str, Any] = Field(default_factory=dict)
     approvals: list[ImportApprovalRecord] = Field(default_factory=list)
+
+
+class ImportRunListResponse(ORMModel):
+    runs: list[ImportRunInfo] = Field(default_factory=list)
+
+
+__all__ = [
+    "ImportChangeType",
+    "ImportChange",
+    "ImportSummary",
+    "OpenAPIImportOptions",
+    "OpenAPIImportRequest",
+    "OpenAPIImportResponse",
+    "PostmanImportOptions",
+    "PostmanImportRequest",
+    "PostmanImportResponse",
+    "ImportResyncRequest",
+    "ImportPreviewResponse",
+    "OpenAPIImportPrepareRequest",
+    "PostmanImportPrepareRequest",
+    "ImportPrepareRequest",
+    "ImportApproveRequest",
+    "ImportRollbackRequest",
+    "ImportApprovalRecord",
+    "ImportRunInfo",
+    "ImportRunDetail",
+    "ImportRunListResponse",
+]
