@@ -14,7 +14,8 @@ ARG USE_LOCAL_DIST=false
 ENV HTTP_PROXY=$HTTP_PROXY \
     HTTPS_PROXY=$HTTPS_PROXY \
     NO_PROXY=localhost,127.0.0.1 \
-    NPM_CONFIG_CACHE=/root/.npm
+    NPM_CONFIG_CACHE=/root/.npm \
+    NPM_CONFIG_OMIT=optional
 
 RUN npm config set registry $NPM_REGISTRY \
     && npm config set fetch-retries 5 \
@@ -22,16 +23,17 @@ RUN npm config set registry $NPM_REGISTRY \
     && npm config set fetch-retry-mintimeout 20000 \
     && npm config set audit false \
     && npm config set fund false \
-    && npm config set cache /root/.npm \
-    && npm config set optional false
+    && npm config set cache /root/.npm
 
 COPY frontend/package.json ./
 COPY frontend/package-lock.json ./
 
 RUN if [ "$USE_LOCAL_DIST" = "true" ]; then \
-      echo "USE_LOCAL_DIST enabled, skipping npm ci"; \
+      echo "USE_LOCAL_DIST enabled, skipping npm install"; \
+    elif [ -f package-lock.json ]; then \
+      npm ci --prefer-offline --omit=optional --no-audit --no-fund; \
     else \
-      npm ci --prefer-offline --no-audit --no-fund; \
+      npm install --prefer-offline --omit=optional --no-audit --no-fund; \
     fi
 
 COPY frontend/ ./
