@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Body, Depends, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -54,7 +54,7 @@ run_router = APIRouter(prefix="/import-runs", tags=["importers"])
 @router.post("/prepare", response_model=ResponseEnvelope)
 def prepare_import(
     project_id: UUID,
-    payload: ImportPrepareRequest,
+    payload: ImportPrepareRequest = Body(...),
     context: ProjectContext = Depends(require_project_member),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
@@ -103,7 +103,7 @@ def list_import_runs(
 @router.post("/resync", response_model=ResponseEnvelope)
 def resync_import(
     project_id: UUID,
-    payload: ImportResyncRequest,
+    payload: ImportResyncRequest = Body(...),
     context: ProjectContext = Depends(require_project_member),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
@@ -140,7 +140,7 @@ def get_import_run(
 @run_router.post("/{run_id}/approve", response_model=ResponseEnvelope)
 def approve_import_run_endpoint(
     run_id: UUID,
-    payload: ImportApproveRequest,
+    payload: ImportApproveRequest = Body(...),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
@@ -155,7 +155,7 @@ def approve_import_run_endpoint(
 @run_router.post("/{run_id}/rollback", response_model=ResponseEnvelope)
 def rollback_import_run_endpoint(
     run_id: UUID,
-    payload: ImportRollbackRequest,
+    payload: ImportRollbackRequest = Body(...),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
