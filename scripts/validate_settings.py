@@ -19,7 +19,7 @@ from app.core.config import Settings
 
 def _base_kwargs(additional: dict[str, Any] | None = None) -> dict[str, Any]:
     payload: dict[str, Any] = {
-        "database_url": "postgresql+psycopg2://test:test@localhost:5432/test",
+        "database_url": "postgresql+psycopg://test:test@localhost:5432/test",
         "redis_url": "redis://localhost:6379/0",
     }
     if additional:

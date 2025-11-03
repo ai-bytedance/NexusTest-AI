@@ -41,7 +41,7 @@ def test_app_startup():
                 os.environ[key] = value
             
             # Set required environment variables
-            os.environ.setdefault("DATABASE_URL", "postgresql+psycopg2://test:test@localhost:5432/test")
+            os.environ.setdefault("DATABASE_URL", "postgresql+psycopg://test:test@localhost:5432/test")
             os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
             
             # Try to import and create the app

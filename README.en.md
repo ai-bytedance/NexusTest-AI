@@ -110,7 +110,7 @@ See .env.example for a complete list. Highlights below.
 | APP_ENV | Environment name | local |
 | SECRET_KEY | JWT signing secret | replace_me |
 | SECRET_ENC_KEY | Optional encryption key | empty |
-| DATABASE_URL | Postgres connection URL | postgresql+psycopg2://app:app@postgres:5432/app |
+| DATABASE_URL | Postgres connection URL | postgresql+psycopg://app:app@postgres:5432/app |
 | REDIS_URL | Redis URL | redis://redis:6379/0 |
 | ACCESS_TOKEN_EXPIRE_MINUTES | JWT expiry | 60 |
 | TOKEN_CLOCK_SKEW_SECONDS | JWT clock skew | 30 |

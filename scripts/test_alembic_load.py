@@ -42,7 +42,7 @@ def test_alembic_env_simulation():
             # Create Settings with explicit parameters (simulating direct instantiation)
             # This is what would happen in Alembic env.py if we bypass environment loading
             settings = Settings(
-                database_url="postgresql+psycopg2://test:test@localhost:5432/test",
+                database_url="postgresql+psycopg://test:test@localhost:5432/test",
                 redis_url="redis://localhost:6379/0",
                 **cors_kwargs
             )
@@ -90,7 +90,7 @@ def test_real_world_docker_scenario():
     docker_env = {
         "BACKEND_CORS_ORIGINS": '["http://localhost:8080","http://127.0.0.1:8080","http://192.168.210.129:8080"]',
         "ALLOW_ANY_ORIGIN": "false",
-        "DATABASE_URL": "postgresql+psycopg2://app:app@postgres:5432/app",
+        "DATABASE_URL": "postgresql+psycopg://app:app@postgres:5432/app",
         "REDIS_URL": "redis://redis:6379/0",
     }
     
