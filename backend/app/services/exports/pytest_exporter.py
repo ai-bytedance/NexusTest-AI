@@ -227,7 +227,7 @@ def _slugify(value: str) -> str:
 
 def _helpers_template() -> str:
     return textwrap.dedent(
-        """
+        '''
         from __future__ import annotations
 
         from typing import Any, Iterable
@@ -281,7 +281,7 @@ def _helpers_template() -> str:
                         raise JsonPathError(f"Key '{token}' unavailable in path {path}")
                     current = current[token]
             return current
-        """
+        '''
     ).lstrip()
 
 
