@@ -29,23 +29,60 @@ logger = get_logger()
 LOGIN_PAYLOAD_SCHEMA = {
     "type": "object",
     "properties": {
-        "email": {"type": "string", "format": "email"},
-        "username": {"type": "string"},
-        "password": {"type": "string", "minLength": 8},
+        "identifier": {
+            "type": "string",
+            "description": "Email address or username used to authenticate.",
+        },
+        "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email alias for identifier.",
+        },
+        "username": {
+            "type": "string",
+            "description": "Username alias for identifier, typically used with form submissions.",
+        },
+        "password": {
+            "type": "string",
+            "minLength": 8,
+            "description": "Account password.",
+        },
     },
     "required": ["password"],
     "anyOf": [
+        {"required": ["identifier"]},
         {"required": ["email"]},
         {"required": ["username"]},
     ],
+}
+
+LOGIN_PAYLOAD_EXAMPLES = {
+    "email": {
+        "summary": "Email login",
+        "value": {"email": "admin@example.com", "password": "changeme123"},
+    },
+    "identifier": {
+        "summary": "Identifier login",
+        "value": {"identifier": "admin", "password": "changeme123"},
+    },
+    "form": {
+        "summary": "Form login",
+        "value": {"username": "admin@example.com", "password": "changeme123"},
+    },
 }
 
 LOGIN_REQUEST_OPENAPI_EXTRA = {
     "requestBody": {
         "required": True,
         "content": {
-            "application/json": {"schema": LOGIN_PAYLOAD_SCHEMA},
-            "application/x-www-form-urlencoded": {"schema": LOGIN_PAYLOAD_SCHEMA},
+            "application/json": {
+                "schema": LOGIN_PAYLOAD_SCHEMA,
+                "examples": LOGIN_PAYLOAD_EXAMPLES,
+            },
+            "application/x-www-form-urlencoded": {
+                "schema": LOGIN_PAYLOAD_SCHEMA,
+                "examples": LOGIN_PAYLOAD_EXAMPLES,
+            },
         },
     }
 }
@@ -72,6 +109,35 @@ def _parse_form_payload(body: bytes) -> tuple[dict[str, Any] | None, dict[str, s
         return None, {"parser": "form", "error": "decode_error", "message": exc.reason}
     parsed_form = dict(parse_qsl(text, keep_blank_values=True))
     return parsed_form, None
+
+
+def _normalize_non_empty(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        candidate = value.strip()
+    else:
+        candidate = str(value).strip()
+    if not candidate:
+        return None
+    return candidate
+
+
+def _extract_identifier_from_payload(raw_data: dict[str, Any]) -> tuple[str | None, str | None]:
+    for key in ("identifier", "email", "username"):
+        candidate = _normalize_non_empty(raw_data.get(key))
+        if candidate is not None:
+            return candidate.lower(), key
+    return None, None
+
+
+def _collect_provided_fields(raw_data: dict[str, Any]) -> list[str]:
+    provided = {
+        key
+        for key, value in raw_data.items()
+        if key != "password" and _normalize_non_empty(value) is not None
+    }
+    return sorted(provided)
 
 
 async def parse_login_payload(request: Request) -> LoginRequest:
@@ -112,8 +178,53 @@ async def parse_login_payload(request: Request) -> LoginRequest:
         )
         raise http_exception(status.HTTP_400_BAD_REQUEST, ErrorCode.BAD_REQUEST, "Invalid login payload")
 
+    raw_payload = raw_data or {}
+    identifier_value, identifier_field = _extract_identifier_from_payload(raw_payload)
+    password_raw_value = raw_payload.get("password")
+    normalized_password = _normalize_non_empty(password_raw_value)
+    if normalized_password is not None:
+        if isinstance(password_raw_value, str):
+            password_value = password_raw_value
+        else:
+            password_value = str(password_raw_value)
+    else:
+        password_value = None
+
+    provided_fields = _collect_provided_fields(raw_payload)
+    password_provided = password_value is not None
+
+    log_kwargs: dict[str, Any] = {
+        "path": str(request.url.path),
+        "content_type": content_type or "missing",
+        "provided_fields": provided_fields,
+        "password_provided": password_provided,
+    }
+    if parse_reasons:
+        log_kwargs["reasons"] = parse_reasons
+
+    if identifier_value is None:
+        logger.warning("login_payload_missing_identifier", **log_kwargs)
+        raise http_exception(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCode.BAD_REQUEST,
+            "identifier required",
+        )
+
+    if identifier_field is not None:
+        log_kwargs["identifier_field"] = identifier_field
+
+    if password_value is None:
+        logger.warning("login_payload_missing_password", **log_kwargs)
+        raise http_exception(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCode.BAD_REQUEST,
+            "password required",
+        )
+
+    payload_data = {"identifier": identifier_value, "password": password_value}
+
     try:
-        return LoginRequest.model_validate(raw_data)
+        return LoginRequest.model_validate(payload_data)
     except ValidationError as exc:
         error_fields = sorted(
             {
@@ -121,14 +232,10 @@ async def parse_login_payload(request: Request) -> LoginRequest:
                 for error in exc.errors()
             }
         )
-        provided_fields = sorted(field for field in raw_data.keys() if field != "password")
         logger.warning(
             "login_payload_validation_failed",
-            path=str(request.url.path),
-            content_type=content_type or "missing",
             error_fields=error_fields,
-            provided_fields=provided_fields,
-            password_provided="password" in raw_data,
+            **log_kwargs,
         )
         raise http_exception(
             status.HTTP_400_BAD_REQUEST,
@@ -176,11 +283,12 @@ def login_user(
 ) -> dict:
     normalized_identifier = payload.normalized_identifier()
     user = db.execute(select(User).where(User.email == normalized_identifier)).scalar_one_or_none()
-    if not user or not verify_password(payload.password, user.hashed_password):
+    password_value = payload.password.get_secret_value()
+    if not user or not verify_password(password_value, user.hashed_password):
         raise http_exception(
             status.HTTP_401_UNAUTHORIZED,
             ErrorCode.AUTH_INVALID_CREDENTIALS,
-            "Invalid credentials",
+            "incorrect email/username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
