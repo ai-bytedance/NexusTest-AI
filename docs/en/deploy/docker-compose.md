@@ -58,19 +58,24 @@ services:
   nginx:
     build:
       args:
-        NODE_BASE_IMAGE: ${NODE_BASE_IMAGE:-node:18-alpine}
-        NGINX_BASE_IMAGE: ${NGINX_BASE_IMAGE:-registry.cn-hangzhou.aliyuncs.com/dockerhub/nginx:1.25-alpine}
+        NODE_BASE_IMAGE: ${NODE_BASE_IMAGE:-docker.m.daocloud.io/library/node:18-alpine}
+        NGINX_BASE_IMAGE: ${NGINX_BASE_IMAGE:-docker.m.daocloud.io/library/nginx:1.25-alpine}
         NPM_REGISTRY: https://registry.npmmirror.com
-        # To use the official Docker Hub tag once connectivity allows:
+        # To use the official Docker Hub tags once connectivity allows:
         # NGINX_BASE_IMAGE: nginx:1.25-alpine
-        # NODE_BASE_IMAGE: mirror.gcr.io/library/node:18-alpine
+        # NODE_BASE_IMAGE: node:18-alpine
+        # Alternative public mirrors:
+        # NGINX_BASE_IMAGE: dockerproxy.com/library/nginx:1.25-alpine
+        # NODE_BASE_IMAGE: dockerproxy.com/library/node:18-alpine
+        # NGINX_BASE_IMAGE: hub-mirror.c.163.com/library/nginx:1.25-alpine
+        # NODE_BASE_IMAGE: hub-mirror.c.163.com/library/node:18-alpine
         # HTTP_PROXY: http://proxy.yourcorp:8080
         # HTTPS_PROXY: http://proxy.yourcorp:8080
         # USE_LOCAL_DIST: "true"
 ```
 
-- `NGINX_BASE_IMAGE` defaults to the Alibaba Cloud Docker Hub mirror so builds succeed in restricted networks. Override it via `.env` or `export NGINX_BASE_IMAGE=nginx:1.25-alpine` once Docker Hub is reachable.
-- `NODE_BASE_IMAGE` keeps the Docker Hub default; uncomment the mirror example above if you need to swap registries.
+- `NGINX_BASE_IMAGE` defaults to the DaoCloud Docker Hub mirror so builds succeed in restricted networks. Override it via `.env` or `export NGINX_BASE_IMAGE=nginx:1.25-alpine` once Docker Hub is reachable.
+- `NODE_BASE_IMAGE` also defaults to the DaoCloud mirror; swap to `node:18-alpine` or another listed mirror when your network allows.
 - `NPM_REGISTRY` defaults to the npm mirror shown above and enables additional fetch retries inside the image build.
 - Uncomment `HTTP_PROXY` / `HTTPS_PROXY` if you need to route traffic through a proxy.
 - Set `USE_LOCAL_DIST=true` to reuse a prebuilt `frontend/dist/` directory.
