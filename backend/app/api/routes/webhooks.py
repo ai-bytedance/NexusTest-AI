@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.authz import get_current_user
@@ -180,17 +180,19 @@ async def delete_webhook_subscription(
 ) -> Any:
     """Delete a webhook subscription."""
     webhook_service = WebhookService(db)
-    
+
     success = await webhook_service.delete_subscription(
         subscription_id=subscription_id,
         project_id=project_id,
     )
-    
+
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Webhook subscription not found",
         )
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post(
