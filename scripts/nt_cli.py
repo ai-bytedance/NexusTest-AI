@@ -253,7 +253,7 @@ def authenticate(client: httpx.Client, config: CLIConfig) -> str:
 
     log("Authenticating with supplied credentials …")
     response = client.post(
-        "/api/auth/login",
+        "/api/v1/auth/login",
         json={"email": config.email, "password": config.password},
         headers={"Accept": "application/json"},
     )

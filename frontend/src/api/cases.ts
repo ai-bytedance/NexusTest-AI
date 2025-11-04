@@ -13,14 +13,14 @@ export interface CreateCasePayload {
 export interface UpdateCasePayload extends Partial<CreateCasePayload> {}
 
 export async function listTestCases(projectId: string): Promise<TestCase[]> {
-  return client.get<TestCase[]>(`/v1/projects/${projectId}/test-cases`);
+  return client.get<TestCase[]>(`/projects/${projectId}/test-cases`);
 }
 
 export async function createTestCase(
   projectId: string,
   payload: CreateCasePayload
 ): Promise<TestCase> {
-  return client.post<TestCase>(`/v1/projects/${projectId}/test-cases`, payload);
+  return client.post<TestCase>(`/projects/${projectId}/test-cases`, payload);
 }
 
 export async function updateTestCase(
@@ -29,7 +29,7 @@ export async function updateTestCase(
   payload: UpdateCasePayload
 ): Promise<TestCase> {
   return client.patch<TestCase>(
-    `/v1/projects/${projectId}/test-cases/${caseId}`,
+    `/projects/${projectId}/test-cases/${caseId}`,
     payload
   );
 }
@@ -39,7 +39,7 @@ export async function deleteTestCase(
   caseId: string
 ): Promise<{ id: string; deleted: boolean }> {
   return client.delete<{ id: string; deleted: boolean }>(
-    `/v1/projects/${projectId}/test-cases/${caseId}`
+    `/projects/${projectId}/test-cases/${caseId}`
   );
 }
 
@@ -48,7 +48,7 @@ export async function runTestCase(
   caseId: string
 ): Promise<ExecutionTrigger> {
   return client.post<ExecutionTrigger>(
-    `/v1/projects/${projectId}/execute/case/${caseId}`,
+    `/projects/${projectId}/execute/case/${caseId}`,
     {}
   );
 }

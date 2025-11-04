@@ -24,35 +24,35 @@ export interface AddMemberPayload {
 }
 
 export async function getProjects(): Promise<Project[]> {
-  return client.get<Project[]>("/v1/projects");
+  return client.get<Project[]>("/projects");
 }
 
 export async function getProject(projectId: string): Promise<ProjectWithMembers> {
-  return client.get<ProjectWithMembers>(`/v1/projects/${projectId}`);
+  return client.get<ProjectWithMembers>(`/projects/${projectId}`);
 }
 
 export async function createProject(payload: CreateProjectPayload): Promise<ProjectWithMembers> {
-  return client.post<ProjectWithMembers>("/v1/projects", payload);
+  return client.post<ProjectWithMembers>("/projects", payload);
 }
 
 export async function updateProject(
   projectId: string,
   payload: UpdateProjectPayload
 ): Promise<Project> {
-  return client.patch<Project>(`/v1/projects/${projectId}`, payload);
+  return client.patch<Project>(`/projects/${projectId}`, payload);
 }
 
 export async function deleteProject(
   projectId: string
 ): Promise<{ id: string; deleted: boolean }> {
-  return client.delete<{ id: string; deleted: boolean }>(`/v1/projects/${projectId}`);
+  return client.delete<{ id: string; deleted: boolean }>(`/projects/${projectId}`);
 }
 
 export async function addProjectMember(
   projectId: string,
   payload: AddMemberPayload
 ): Promise<ProjectMember> {
-  return client.post<ProjectMember>(`/v1/projects/${projectId}/members`, payload);
+  return client.post<ProjectMember>(`/projects/${projectId}/members`, payload);
 }
 
 export async function removeProjectMember(
@@ -60,6 +60,6 @@ export async function removeProjectMember(
   userId: string
 ): Promise<{ removed_user_id: string }> {
   return client.delete<{ removed_user_id: string }>(
-    `/v1/projects/${projectId}/members/${userId}`
+    `/projects/${projectId}/members/${userId}`
   );
 }

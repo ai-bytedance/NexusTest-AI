@@ -77,11 +77,11 @@ docker compose -f infra/docker-compose.yml up -d
 # Need port 80 instead? Change nginx ports to "80:80" in infra/docker-compose.yml and restart the stack.
 
 # Create admin, then login to get an access token (copy access_token from response)
-curl -X POST http://localhost:8080/api/auth/register \
+curl -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@example.com","password":"changeme123","role":"admin"}'
 
-curl -X POST http://localhost:8080/api/auth/login \
+curl -X POST http://localhost:8080/api/v1/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"admin@example.com","password":"changeme123"}'
 # Copy .data.access_token as TOKEN

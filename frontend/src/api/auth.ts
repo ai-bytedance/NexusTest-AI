@@ -11,6 +11,6 @@ export interface LoginResult {
 }
 
 export async function login(payload: LoginPayload): Promise<LoginResult> {
-  const response = await client.post<LoginResult>("/v1/auth/login", payload);
+  const response = await client.post<LoginResult>("/auth/login", payload);
   return response;
 }

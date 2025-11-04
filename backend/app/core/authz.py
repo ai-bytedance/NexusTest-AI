@@ -26,7 +26,7 @@ from app.services.rate_limit.engine import enforce_rate_limits
 logger = get_logger()
 
 TOKEN_CONTEXT_STATE_KEY = "token_auth_context"
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 
 @dataclass

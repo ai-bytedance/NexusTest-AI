@@ -4,7 +4,7 @@ import { message } from "antd";
 import { useAuthStore } from "@/stores";
 import type { ApiResponse } from "@/types/api";
 
-const baseURL = import.meta.env.VITE_API_BASE ?? "/api";
+const baseURL = import.meta.env.VITE_API_BASE ?? "/api/v1";
 
 export interface ApiErrorPayload {
   code?: string;
