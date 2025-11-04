@@ -55,19 +55,24 @@ services:
   nginx:
     build:
       args:
-        NODE_BASE_IMAGE: ${NODE_BASE_IMAGE:-node:18-alpine}
-        NGINX_BASE_IMAGE: ${NGINX_BASE_IMAGE:-registry.cn-hangzhou.aliyuncs.com/dockerhub/nginx:1.25-alpine}
+        NODE_BASE_IMAGE: ${NODE_BASE_IMAGE:-docker.m.daocloud.io/library/node:18-alpine}
+        NGINX_BASE_IMAGE: ${NGINX_BASE_IMAGE:-docker.m.daocloud.io/library/nginx:1.25-alpine}
         NPM_REGISTRY: https://registry.npmmirror.com
-        # 当网络恢复可访问 Docker Hub 时可切换回官方镜像：
+        # 当网络恢复可访问 Docker Hub 时，可切换回官方镜像：
         # NGINX_BASE_IMAGE: nginx:1.25-alpine
-        # NODE_BASE_IMAGE: mirror.gcr.io/library/node:18-alpine
+        # NODE_BASE_IMAGE: node:18-alpine
+        # 也可以选择下列其它公共镜像：
+        # NGINX_BASE_IMAGE: dockerproxy.com/library/nginx:1.25-alpine
+        # NODE_BASE_IMAGE: dockerproxy.com/library/node:18-alpine
+        # NGINX_BASE_IMAGE: hub-mirror.c.163.com/library/nginx:1.25-alpine
+        # NODE_BASE_IMAGE: hub-mirror.c.163.com/library/node:18-alpine
         # HTTP_PROXY: http://proxy.yourcorp:8080
         # HTTPS_PROXY: http://proxy.yourcorp:8080
         # USE_LOCAL_DIST: "true"
 ```
 
-- `NGINX_BASE_IMAGE` 默认指向阿里云 Docker Hub 镜像，方便在受限网络下完成构建。网络恢复后，可通过 `.env` 或 `export NGINX_BASE_IMAGE=nginx:1.25-alpine` 切换回官方镜像。
-- `NODE_BASE_IMAGE` 仍使用 Docker Hub 默认值，如需镜像站请取消注释上方示例。
+- `NGINX_BASE_IMAGE` 默认指向 DaoCloud 公共 Docker Hub 镜像，方便在受限网络下完成构建。网络恢复后，可通过 `.env` 或 `export NGINX_BASE_IMAGE=nginx:1.25-alpine` 切换回官方镜像。
+- `NODE_BASE_IMAGE` 同样默认指向 DaoCloud 镜像；如需使用官方 `node:18-alpine` 或其它镜像，可按上方注释修改。
 - `NPM_REGISTRY` 默认指向上述镜像，并为镜像构建启用额外的 npm 拉取重试。
 - 如需通过公司代理，取消注释 `HTTP_PROXY` / `HTTPS_PROXY` 并填入代理地址。
 - 将 `USE_LOCAL_DIST` 设为 `true` 可复用仓库中的 `frontend/dist/` 产物。
