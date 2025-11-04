@@ -58,18 +58,18 @@ export async function listReports(params: ReportListParams): Promise<PaginatedRe
     page,
     page_size: pageSize,
   });
-  return client.get<PaginatedResult<ReportSummary>>(`/v1/reports${query}`);
+  return client.get<PaginatedResult<ReportSummary>>(`/reports${query}`);
 }
 
 export async function getReport(reportId: string): Promise<ReportDetail> {
-  return client.get<ReportDetail>(`/v1/reports/${reportId}`);
+  return client.get<ReportDetail>(`/reports/${reportId}`);
 }
 
 export async function summarizeReport(
   reportId: string,
   overwrite = false
 ): Promise<SummaryActionResponse> {
-  return client.post<SummaryActionResponse>(`/v1/reports/${reportId}/summarize`, {
+  return client.post<SummaryActionResponse>(`/reports/${reportId}/summarize`, {
     overwrite,
   });
 }
@@ -78,7 +78,7 @@ export async function exportReport(
   reportId: string,
   format: "markdown" = "markdown"
 ): Promise<ExportMarkdownResponse> {
-  return client.get<ExportMarkdownResponse>(`/v1/reports/${reportId}/export`, {
+  return client.get<ExportMarkdownResponse>(`/reports/${reportId}/export`, {
     params: { format },
   });
 }
@@ -87,7 +87,7 @@ export async function getDashboardSummary(
   projectId: string,
   days = 14
 ): Promise<DashboardSummary> {
-  return client.get<DashboardSummary>("/v1/metrics/reports/summary", {
+  return client.get<DashboardSummary>("/metrics/reports/summary", {
     params: {
       project_id: projectId,
       days,
@@ -96,5 +96,5 @@ export async function getDashboardSummary(
 }
 
 export async function getTaskStatus(taskId: string): Promise<TaskStatusPayload> {
-  return client.get<TaskStatusPayload>(`/v1/tasks/${taskId}`);
+  return client.get<TaskStatusPayload>(`/tasks/${taskId}`);
 }

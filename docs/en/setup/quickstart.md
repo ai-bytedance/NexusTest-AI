@@ -60,7 +60,7 @@ This brings up Postgres, Redis, API, Celery worker/beat, Flower, and nginx. The 
 ---
 
 ## 5) Access URLs
-- Web UI: http://localhost:8080/ (nginx serves the Vite build with VITE_API_BASE=/api)
+- Web UI: http://localhost:8080/ (nginx serves the Vite build with VITE_API_BASE=/api/v1)
 - API health: http://localhost:8080/api/healthz
 - Readiness: http://localhost:8080/api/readyz
 - Swagger UI: http://localhost:8080/api/docs
@@ -73,11 +73,11 @@ If port 80 is free and you prefer to use it, change the nginx service port mappi
 ## 6) First user (admin)
 
 ```bash
-curl -X POST http://localhost:8080/api/auth/register \
+curl -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@example.com","password":"changeme123","role":"admin"}'
 
-curl -X POST http://localhost:8080/api/auth/login \
+curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@example.com","password":"changeme123"}'
 # copy access_token from response

@@ -12,7 +12,7 @@ from app.services.oauth.providers.github import OAuthProfile, OAuthTokens
 
 def test_oauth_start_link_requires_auth(client: TestClient) -> None:
     response = client.post(
-        "/api/auth/oauth/github/start",
+        "/api/v1/auth/oauth/github/start",
         json={"link": True},
     )
     assert response.status_code == 401
@@ -34,7 +34,7 @@ def test_oauth_start_login_flow_returns_url(
     )
 
     response = client.post(
-        "/api/auth/oauth/github/start",
+        "/api/v1/auth/oauth/github/start",
         json={"redirect_uri": "http://localhost/callback"},
     )
     assert response.status_code == 200
@@ -68,7 +68,7 @@ def test_oauth_callback_login_creates_user_and_identity(
     )
 
     response = client.post(
-        "/api/auth/oauth/github/callback",
+        "/api/v1/auth/oauth/github/callback",
         json={"code": "abc", "state": "STATE"},
     )
     assert response.status_code == 200
@@ -90,14 +90,14 @@ def test_oauth_link_and_unlink_flow(
     monkeypatch: Any,
 ) -> None:
     register_response = client.post(
-        "/api/auth/register",
+        "/api/v1/auth/register",
         json={"email": "link-user@example.com", "password": "changeme123"},
     )
     assert register_response.status_code == 201
     user_id = register_response.json()["data"]["id"]
 
     login_response = client.post(
-        "/api/auth/login",
+        "/api/v1/auth/login",
         json={"email": "link-user@example.com", "password": "changeme123"},
     )
     assert login_response.status_code == 200
@@ -122,7 +122,7 @@ def test_oauth_link_and_unlink_flow(
     )
 
     callback_response = client.post(
-        "/api/auth/oauth/github/callback",
+        "/api/v1/auth/oauth/github/callback",
         headers=headers,
         json={"code": "xyz", "state": "STATE"},
     )
@@ -130,7 +130,7 @@ def test_oauth_link_and_unlink_flow(
     callback_payload = callback_response.json()["data"]
     assert callback_payload["user_id"] == user_id
 
-    list_response = client.get("/api/auth/oauth/identities", headers=headers)
+    list_response = client.get("/api/v1/auth/oauth/identities", headers=headers)
     assert list_response.status_code == 200
     identities_payload = list_response.json()["data"]
     assert identities_payload == [
@@ -142,7 +142,7 @@ def test_oauth_link_and_unlink_flow(
     ]
 
     delete_response = client.delete(
-        "/api/auth/oauth/github",
+        "/api/v1/auth/oauth/github",
         headers=headers,
         params={"account_id": "acct-link"},
     )

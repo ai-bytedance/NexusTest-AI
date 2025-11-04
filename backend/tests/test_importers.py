@@ -25,12 +25,12 @@ def auth_headers(token: str) -> dict[str, str]:
 
 def register_and_login(client: TestClient, email: str) -> str:
     register_resp = client.post(
-        "/api/auth/register",
+        "/api/v1/auth/register",
         json={"email": email, "password": "changeme123"},
     )
     assert register_resp.status_code == 201, register_resp.text
     login_resp = client.post(
-        "/api/auth/login",
+        "/api/v1/auth/login",
         json={"email": email, "password": "changeme123"},
     )
     assert login_resp.status_code == 200, login_resp.text

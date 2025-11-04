@@ -75,11 +75,11 @@ docker compose -f infra/docker-compose.yml up -d --build
 # 如需继续使用 80 端口，可在 infra/docker-compose.yml 中把 nginx 端口映射改为 "80:80" 并重启栈。
 
 # 创建管理员账号并登录获取 access_token
-curl -X POST http://localhost:8080/api/auth/register \
+curl -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@example.com","password":"changeme123","role":"admin"}'
 
-curl -X POST http://localhost:8080/api/auth/login \
+curl -X POST http://localhost:8080/api/v1/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"admin@example.com","password":"changeme123"}'
 # 复制响应中的 .data.access_token 到 TOKEN

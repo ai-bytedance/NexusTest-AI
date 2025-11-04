@@ -28,7 +28,7 @@ See ../../README/security-tokens.md for details (or integrate with your corporat
 
 ## Application rate limits
 
-- Nginx enforces global throttling on /api and /api/auth paths: 10 r/s (burst 20); adjust in infra/nginx/nginx.conf as needed.
+- Nginx enforces global throttling on /api and /api/v1/auth paths: 10 r/s (burst 20); adjust in infra/nginx/nginx.conf as needed.
 - The application also supports project-level policies and token-level policies (execution APIs are recommended to have dedicated limits).
 - Over-limit requests return 429 with a Retry-After header.
 

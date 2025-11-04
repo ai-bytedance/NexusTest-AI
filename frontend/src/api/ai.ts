@@ -59,25 +59,25 @@ export interface SaveGeneratedCasesPayload {
 }
 
 export async function generateCases(payload: GenerateCasesPayload): Promise<Record<string, unknown>> {
-  return client.post<Record<string, unknown>>("/v1/ai/generate-cases", payload);
+  return client.post<Record<string, unknown>>("/ai/generate-cases", payload);
 }
 
 export async function generateAssertions(
   payload: GenerateAssertionsPayload
 ): Promise<Record<string, unknown>> {
-  return client.post<Record<string, unknown>>("/v1/ai/generate-assertions", payload);
+  return client.post<Record<string, unknown>>("/ai/generate-assertions", payload);
 }
 
 export async function generateMockData(
   payload: GenerateMockDataPayload
 ): Promise<Record<string, unknown>> {
-  return client.post<Record<string, unknown>>("/v1/ai/mock-data", payload);
+  return client.post<Record<string, unknown>>("/ai/mock-data", payload);
 }
 
 export async function summarizeReportWithAI(
   payload: SummarizeReportPayload
 ): Promise<Record<string, unknown>> {
-  return client.post<Record<string, unknown>>("/v1/ai/summarize-report", payload);
+  return client.post<Record<string, unknown>>("/ai/summarize-report", payload);
 }
 
 export async function chatWithAssistant(
@@ -85,15 +85,15 @@ export async function chatWithAssistant(
   provider?: string
 ): Promise<ChatCompletion> {
   const suffix = provider ? `?provider=${provider}` : "";
-  return client.post<ChatCompletion>(`/v1/ai/chat${suffix}`, payload);
+  return client.post<ChatCompletion>(`/ai/chat${suffix}`, payload);
 }
 
 export async function listChats(projectId: string): Promise<AIChatSummary[]> {
-  return client.get<AIChatSummary[]>("/v1/ai/chats", { params: { project_id: projectId } });
+  return client.get<AIChatSummary[]>("/ai/chats", { params: { project_id: projectId } });
 }
 
 export async function getChat(projectId: string, chatId: string): Promise<ChatDetail> {
-  return client.get<ChatDetail>(`/v1/ai/chats/${chatId}`, { params: { project_id: projectId } });
+  return client.get<ChatDetail>(`/ai/chats/${chatId}`, { params: { project_id: projectId } });
 }
 
 export async function saveGeneratedCases(
@@ -101,7 +101,7 @@ export async function saveGeneratedCases(
   payload: SaveGeneratedCasesPayload
 ): Promise<{ cases: TestCase[]; message: AIChatMessage }> {
   return client.post<{ cases: TestCase[]; message: AIChatMessage }>(
-    `/v1/ai/chats/${chatId}/save-test-cases`,
+    `/ai/chats/${chatId}/save-test-cases`,
     payload
   );
 }

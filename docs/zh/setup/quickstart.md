@@ -38,7 +38,7 @@ docker compose -f infra/docker-compose.yml up -d --build
 ---
 
 ## 3) 访问地址
-- 前端 UI: http://localhost:8080/（nginx 提供 Vite 构建，默认使用 VITE_API_BASE=/api）
+- 前端 UI: http://localhost:8080/（nginx 提供 Vite 构建，默认使用 VITE_API_BASE=/api/v1）
 - API 健康检查: http://localhost:8080/api/healthz
 - 就绪检查: http://localhost:8080/api/readyz
 - Swagger UI: http://localhost:8080/api/docs
@@ -51,11 +51,11 @@ docker compose -f infra/docker-compose.yml up -d --build
 ## 4) 创建首个用户（管理员）
 
 ```bash
-curl -X POST http://localhost:8080/api/auth/register \
+curl -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@example.com","password":"changeme123","role":"admin"}'
 
-curl -X POST http://localhost:8080/api/auth/login \
+curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@example.com","password":"changeme123"}'
 # 从响应中复制 access_token

@@ -28,7 +28,7 @@
 
 ## 应用层限流
 
-- Nginx 在 /api 与 /api/auth 路径做全局节流：10 r/s（突发 20），可按需调整 infra/nginx/nginx.conf。
+- Nginx 在 /api 与 /api/v1/auth 路径做全局节流：10 r/s（突发 20），可按需调整 infra/nginx/nginx.conf。
 - 应用内还支持项目级策略与 Token 级策略（执行类接口建议单独限制）。
 - 超限返回 429，带 Retry-After 头。
 

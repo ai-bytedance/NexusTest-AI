@@ -45,7 +45,7 @@ RUN if [ "$USE_LOCAL_DIST" = "true" ]; then \
       fi; \
     fi
 
-ENV VITE_API_BASE=/api
+ENV VITE_API_BASE=/api/v1
 
 RUN if [ "$USE_LOCAL_DIST" = "true" ]; then \
       echo "USE_LOCAL_DIST enabled, skipping npm run build"; \

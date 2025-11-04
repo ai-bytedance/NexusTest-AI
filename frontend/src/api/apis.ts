@@ -32,14 +32,14 @@ export interface PostmanImportPayload {
 }
 
 export async function listApis(projectId: string): Promise<ApiDefinition[]> {
-  return client.get<ApiDefinition[]>(`/v1/projects/${projectId}/apis`);
+  return client.get<ApiDefinition[]>(`/projects/${projectId}/apis`);
 }
 
 export async function createApi(
   projectId: string,
   payload: ApiPayload
 ): Promise<ApiDefinition> {
-  return client.post<ApiDefinition>(`/v1/projects/${projectId}/apis`, payload);
+  return client.post<ApiDefinition>(`/projects/${projectId}/apis`, payload);
 }
 
 export async function updateApi(
@@ -47,7 +47,7 @@ export async function updateApi(
   apiId: string,
   payload: ApiUpdatePayload
 ): Promise<ApiDefinition> {
-  return client.patch<ApiDefinition>(`/v1/projects/${projectId}/apis/${apiId}`, payload);
+  return client.patch<ApiDefinition>(`/projects/${projectId}/apis/${apiId}`, payload);
 }
 
 export async function deleteApi(
@@ -55,7 +55,7 @@ export async function deleteApi(
   apiId: string
 ): Promise<{ id: string; deleted: boolean }> {
   return client.delete<{ id: string; deleted: boolean }>(
-    `/v1/projects/${projectId}/apis/${apiId}`
+    `/projects/${projectId}/apis/${apiId}`
   );
 }
 
@@ -64,7 +64,7 @@ export async function importOpenApi(
   payload: OpenApiImportPayload
 ): Promise<OpenAPIImportResponse> {
   return client.post<OpenAPIImportResponse>(
-    `/v1/projects/${projectId}/import/openapi`,
+    `/projects/${projectId}/import/openapi`,
     payload
   );
 }
@@ -74,7 +74,7 @@ export async function importPostmanCollection(
   payload: PostmanImportPayload
 ): Promise<PostmanImportResponse> {
   return client.post<PostmanImportResponse>(
-    `/v1/projects/${projectId}/import/postman`,
+    `/projects/${projectId}/import/postman`,
     payload
   );
 }
