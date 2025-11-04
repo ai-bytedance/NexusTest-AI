@@ -131,8 +131,10 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         return response
 
 
-def get_logger() -> structlog.stdlib.BoundLogger:
-    return structlog.get_logger()
+def get_logger(name: str | None = None, **initial_values: Any) -> structlog.stdlib.BoundLogger:
+    if name is not None:
+        return structlog.get_logger(name, **initial_values)
+    return structlog.get_logger(**initial_values)
 
 
 __all__ = [
