@@ -171,13 +171,15 @@ async def finalize_webhook_rotation(
 @router.delete(
     "/projects/{project_id}/webhooks/{subscription_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
 )
 async def delete_webhook_subscription(
     project_id: uuid.UUID,
     subscription_id: uuid.UUID,
+    response: Response,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> Any:
+) -> Response:
     """Delete a webhook subscription."""
     webhook_service = WebhookService(db)
 
@@ -192,7 +194,8 @@ async def delete_webhook_subscription(
             detail="Webhook subscription not found",
         )
 
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return response
 
 
 @router.post(
