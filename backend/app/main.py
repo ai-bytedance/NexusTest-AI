@@ -4,6 +4,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.api.response import ResponseEnvelope, success_response
 from app.api.routes import (
     admin_backups,
     ai,
@@ -70,6 +71,15 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @app.get(
+        "/health",
+        summary="Service health probe",
+        response_model=ResponseEnvelope,
+        include_in_schema=False,
+    )
+    def health_probe() -> dict:
+        return success_response({"status": "ok"})
 
     app.include_router(health.router, prefix="/api")
     app.include_router(auth.router, prefix="/api/v1")
