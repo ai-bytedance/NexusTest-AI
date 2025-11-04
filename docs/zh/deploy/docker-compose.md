@@ -56,16 +56,18 @@ services:
     build:
       args:
         NODE_BASE_IMAGE: ${NODE_BASE_IMAGE:-node:18-alpine}
-        NGINX_BASE_IMAGE: ${NGINX_BASE_IMAGE:-nginx:1.25-alpine}
+        NGINX_BASE_IMAGE: ${NGINX_BASE_IMAGE:-registry.cn-hangzhou.aliyuncs.com/dockerhub/nginx:1.25-alpine}
         NPM_REGISTRY: https://registry.npmmirror.com
+        # 当网络恢复可访问 Docker Hub 时可切换回官方镜像：
+        # NGINX_BASE_IMAGE: nginx:1.25-alpine
         # NODE_BASE_IMAGE: mirror.gcr.io/library/node:18-alpine
-        # NGINX_BASE_IMAGE: mirror.gcr.io/library/nginx:1.25-alpine
         # HTTP_PROXY: http://proxy.yourcorp:8080
         # HTTPS_PROXY: http://proxy.yourcorp:8080
         # USE_LOCAL_DIST: "true"
 ```
 
-- `NODE_BASE_IMAGE` / `NGINX_BASE_IMAGE` 可用于切换到镜像站点的基础镜像标签（默认值指向 Docker Hub，可根据需要取消注释上方示例）。
+- `NGINX_BASE_IMAGE` 默认指向阿里云 Docker Hub 镜像，方便在受限网络下完成构建。网络恢复后，可通过 `.env` 或 `export NGINX_BASE_IMAGE=nginx:1.25-alpine` 切换回官方镜像。
+- `NODE_BASE_IMAGE` 仍使用 Docker Hub 默认值，如需镜像站请取消注释上方示例。
 - `NPM_REGISTRY` 默认指向上述镜像，并为镜像构建启用额外的 npm 拉取重试。
 - 如需通过公司代理，取消注释 `HTTP_PROXY` / `HTTPS_PROXY` 并填入代理地址。
 - 将 `USE_LOCAL_DIST` 设为 `true` 可复用仓库中的 `frontend/dist/` 产物。

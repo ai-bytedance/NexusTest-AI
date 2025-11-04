@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.6
 
 ARG NODE_BASE_IMAGE=node:18-alpine
-ARG NGINX_BASE_IMAGE=nginx:1.25-alpine
+ARG NGINX_BASE_IMAGE=registry.cn-hangzhou.aliyuncs.com/dockerhub/nginx:1.25-alpine
 FROM ${NODE_BASE_IMAGE} AS builder
 
 WORKDIR /app

@@ -129,10 +129,11 @@ services:
       dockerfile: infra/nginx/Dockerfile
       args:
         NODE_BASE_IMAGE: ${NODE_BASE_IMAGE:-node:18-alpine}
-        NGINX_BASE_IMAGE: ${NGINX_BASE_IMAGE:-nginx:1.25-alpine}
+        NGINX_BASE_IMAGE: ${NGINX_BASE_IMAGE:-registry.cn-hangzhou.aliyuncs.com/dockerhub/nginx:1.25-alpine}
         NPM_REGISTRY: https://registry.npmmirror.com
+        # To use the official Docker Hub image once connectivity allows:
+        # NGINX_BASE_IMAGE: nginx:1.25-alpine
         # NODE_BASE_IMAGE: mirror.gcr.io/library/node:18-alpine
-        # NGINX_BASE_IMAGE: mirror.gcr.io/library/nginx:1.25-alpine
         # HTTP_PROXY: http://proxy.yourcorp:8080
         # HTTPS_PROXY: http://proxy.yourcorp:8080
         # USE_LOCAL_DIST: "true"

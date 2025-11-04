@@ -59,16 +59,18 @@ services:
     build:
       args:
         NODE_BASE_IMAGE: ${NODE_BASE_IMAGE:-node:18-alpine}
-        NGINX_BASE_IMAGE: ${NGINX_BASE_IMAGE:-nginx:1.25-alpine}
+        NGINX_BASE_IMAGE: ${NGINX_BASE_IMAGE:-registry.cn-hangzhou.aliyuncs.com/dockerhub/nginx:1.25-alpine}
         NPM_REGISTRY: https://registry.npmmirror.com
+        # To use the official Docker Hub tag once connectivity allows:
+        # NGINX_BASE_IMAGE: nginx:1.25-alpine
         # NODE_BASE_IMAGE: mirror.gcr.io/library/node:18-alpine
-        # NGINX_BASE_IMAGE: mirror.gcr.io/library/nginx:1.25-alpine
         # HTTP_PROXY: http://proxy.yourcorp:8080
         # HTTPS_PROXY: http://proxy.yourcorp:8080
         # USE_LOCAL_DIST: "true"
 ```
 
-- `NODE_BASE_IMAGE` / `NGINX_BASE_IMAGE` allow swapping to a mirror-friendly tag (the defaults match Docker Hub; uncomment one of the mirror examples above if needed).
+- `NGINX_BASE_IMAGE` defaults to the Alibaba Cloud Docker Hub mirror so builds succeed in restricted networks. Override it via `.env` or `export NGINX_BASE_IMAGE=nginx:1.25-alpine` once Docker Hub is reachable.
+- `NODE_BASE_IMAGE` keeps the Docker Hub default; uncomment the mirror example above if you need to swap registries.
 - `NPM_REGISTRY` defaults to the npm mirror shown above and enables additional fetch retries inside the image build.
 - Uncomment `HTTP_PROXY` / `HTTPS_PROXY` if you need to route traffic through a proxy.
 - Set `USE_LOCAL_DIST=true` to reuse a prebuilt `frontend/dist/` directory.
