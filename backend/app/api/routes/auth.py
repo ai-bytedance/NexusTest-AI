@@ -1,6 +1,9 @@
-from typing import Optional
+import json
+from typing import Any, Optional
+from urllib.parse import parse_qsl
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -13,14 +16,125 @@ from app.logging import get_logger
 from app.models.user import User, UserRole
 from app.schemas.auth import (
     LinkedIdentity,
+    LoginRequest,
     OAuthCallbackRequest,
     OAuthStartRequest,
 )
-from app.schemas.user import UserCreate, UserLogin, UserRead
+from app.schemas.user import UserCreate, UserRead
 from app.services.oauth import service as oauth_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = get_logger()
+
+LOGIN_PAYLOAD_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "email": {"type": "string", "format": "email"},
+        "username": {"type": "string"},
+        "password": {"type": "string", "minLength": 8},
+    },
+    "required": ["password"],
+    "anyOf": [
+        {"required": ["email"]},
+        {"required": ["username"]},
+    ],
+}
+
+LOGIN_REQUEST_OPENAPI_EXTRA = {
+    "requestBody": {
+        "required": True,
+        "content": {
+            "application/json": {"schema": LOGIN_PAYLOAD_SCHEMA},
+            "application/x-www-form-urlencoded": {"schema": LOGIN_PAYLOAD_SCHEMA},
+        },
+    }
+}
+
+
+def _parse_json_payload(body: bytes) -> tuple[dict[str, Any] | None, dict[str, str] | None]:
+    if not body:
+        return {}, None
+    try:
+        payload = json.loads(body)
+    except json.JSONDecodeError as exc:
+        return None, {"parser": "json", "error": "decode_error", "message": exc.msg}
+    if isinstance(payload, dict):
+        return payload, None
+    return None, {"parser": "json", "error": "invalid_type", "type": type(payload).__name__}
+
+
+def _parse_form_payload(body: bytes) -> tuple[dict[str, Any] | None, dict[str, str] | None]:
+    if not body:
+        return {}, None
+    try:
+        text = body.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        return None, {"parser": "form", "error": "decode_error", "message": exc.reason}
+    parsed_form = dict(parse_qsl(text, keep_blank_values=True))
+    return parsed_form, None
+
+
+async def parse_login_payload(request: Request) -> LoginRequest:
+    content_type = (request.headers.get("content-type") or "").lower()
+    body = await request.body()
+    parse_reasons: list[dict[str, str]] = []
+    raw_data: dict[str, Any] | None = None
+
+    if "application/x-www-form-urlencoded" in content_type:
+        raw_data, error = _parse_form_payload(body)
+        if error:
+            parse_reasons.append(error)
+    elif "application/json" in content_type or not content_type:
+        raw_data, error = _parse_json_payload(body)
+        if error:
+            parse_reasons.append(error)
+        if raw_data is None:
+            fallback_data, fallback_error = _parse_form_payload(body)
+            if fallback_error:
+                parse_reasons.append(fallback_error)
+            raw_data = fallback_data
+    else:
+        raw_data, error = _parse_json_payload(body)
+        if error:
+            parse_reasons.append(error)
+        if raw_data is None:
+            fallback_data, fallback_error = _parse_form_payload(body)
+            if fallback_error:
+                parse_reasons.append(fallback_error)
+            raw_data = fallback_data
+
+    if raw_data is None:
+        logger.warning(
+            "login_payload_parse_error",
+            path=str(request.url.path),
+            content_type=content_type or "missing",
+            reasons=parse_reasons or None,
+        )
+        raise http_exception(status.HTTP_400_BAD_REQUEST, ErrorCode.BAD_REQUEST, "Invalid login payload")
+
+    try:
+        return LoginRequest.model_validate(raw_data)
+    except ValidationError as exc:
+        error_fields = sorted(
+            {
+                ".".join(str(part) for part in error.get("loc", ())) or "unknown"
+                for error in exc.errors()
+            }
+        )
+        provided_fields = sorted(field for field in raw_data.keys() if field != "password")
+        logger.warning(
+            "login_payload_validation_failed",
+            path=str(request.url.path),
+            content_type=content_type or "missing",
+            error_fields=error_fields,
+            provided_fields=provided_fields,
+            password_provided="password" in raw_data,
+        )
+        raise http_exception(
+            status.HTTP_400_BAD_REQUEST,
+            ErrorCode.BAD_REQUEST,
+            "Invalid login payload",
+        ) from exc
 
 
 def _get_optional_current_user(
@@ -55,10 +169,13 @@ def register_user(user_in: UserCreate, db: Session = Depends(get_db)) -> dict:
     return success_response(UserRead.model_validate(user), message="User registered")
 
 
-@router.post("/login", response_model=ResponseEnvelope)
-def login_user(payload: UserLogin, db: Session = Depends(get_db)) -> dict:
-    normalized_email = payload.email.lower()
-    user = db.execute(select(User).where(User.email == normalized_email)).scalar_one_or_none()
+@router.post("/login", response_model=ResponseEnvelope, openapi_extra=LOGIN_REQUEST_OPENAPI_EXTRA)
+def login_user(
+    payload: LoginRequest = Depends(parse_login_payload),
+    db: Session = Depends(get_db),
+) -> dict:
+    normalized_identifier = payload.normalized_identifier()
+    user = db.execute(select(User).where(User.email == normalized_identifier)).scalar_one_or_none()
     if not user or not verify_password(payload.password, user.hashed_password):
         raise http_exception(
             status.HTTP_401_UNAUTHORIZED,
