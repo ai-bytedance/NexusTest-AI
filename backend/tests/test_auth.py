@@ -27,7 +27,7 @@ def test_login_invalid_credentials_returns_auth001(client: TestClient) -> None:
     assert invalid_login.status_code == 401
     body = invalid_login.json()
     assert body["code"] == "AUTH001"
-    assert body["message"] == "Invalid credentials"
+    assert body["message"] == "incorrect email/username or password"
 
 
 def test_login_with_json_email_returns_token(client: TestClient) -> None:
@@ -66,15 +66,44 @@ def test_login_with_form_username_returns_token(client: TestClient) -> None:
     assert isinstance(body["data"]["access_token"], str) and body["data"]["access_token"].strip()
 
 
-def test_login_missing_password_returns_bad_request(client: TestClient) -> None:
+def test_login_with_identifier_returns_token(client: TestClient) -> None:
+    register_response = client.post(
+        "/api/v1/auth/register",
+        json={"email": "identifier-login@example.com", "password": "changeme123"},
+    )
+    assert register_response.status_code == 201
+
     response = client.post(
         "/api/v1/auth/login",
-        json={"email": "missing-password@example.com"},
+        json={"identifier": "IDENTIFIER-LOGIN@example.com", "password": "changeme123"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["code"] == "SUCCESS"
+    assert body["data"]["token_type"] == "bearer"
+    assert isinstance(body["data"]["access_token"], str) and body["data"]["access_token"].strip()
+
+
+def test_login_missing_identifier_returns_bad_request(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"password": "changeme123"},
     )
     assert response.status_code == 400
     body = response.json()
     assert body["code"] == "B001"
-    assert body["message"] == "Invalid login payload"
+    assert body["message"] == "identifier required"
+
+
+def test_login_missing_password_returns_bad_request(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "missing-password@example.com", "password": "   "},
+    )
+    assert response.status_code == 400
+    body = response.json()
+    assert body["code"] == "B001"
+    assert body["message"] == "password required"
 
 
 def test_invalid_token_returns_auth003(client: TestClient) -> None:
