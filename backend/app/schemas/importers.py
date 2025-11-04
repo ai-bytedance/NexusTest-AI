@@ -118,8 +118,10 @@ class PostmanImportPrepareRequest(PostmanImportRequest):
     source_id: UUID | None = None
 
 
+ImportPreparePayload = OpenAPIImportPrepareRequest | PostmanImportPrepareRequest
+
 ImportPrepareRequest = Annotated[
-    OpenAPIImportPrepareRequest | PostmanImportPrepareRequest,
+    ImportPreparePayload,
     Field(discriminator="importer"),
 ]
 
@@ -180,6 +182,7 @@ __all__ = [
     "ImportPreviewResponse",
     "OpenAPIImportPrepareRequest",
     "PostmanImportPrepareRequest",
+    "ImportPreparePayload",
     "ImportPrepareRequest",
     "ImportApproveRequest",
     "ImportRollbackRequest",

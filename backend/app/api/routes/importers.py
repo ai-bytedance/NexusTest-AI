@@ -28,7 +28,7 @@ from app.models import (
 )
 from app.schemas.importers import (
     ImportApproveRequest,
-    ImportPrepareRequest,
+    ImportPreparePayload,
     ImportPreviewResponse,
     ImportRollbackRequest,
     ImportRunDetail,
@@ -54,7 +54,7 @@ run_router = APIRouter(prefix="/import-runs", tags=["importers"])
 @router.post("/prepare", response_model=ResponseEnvelope)
 def prepare_import(
     project_id: UUID,
-    payload: Annotated[ImportPrepareRequest, Body(...)],
+    payload: Annotated[ImportPreparePayload, Body(..., discriminator="importer")],
     context: ProjectContext = Depends(require_project_member),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
@@ -168,7 +168,7 @@ def rollback_import_run_endpoint(
 def _prepare_openapi_import(
     db: Session,
     context: ProjectContext,
-    payload: ImportPrepareRequest,
+    payload: ImportPreparePayload,
     source: ImportSource | None,
 ) -> ImportSummary:
     request = payload  # type: ignore[assignment]
@@ -196,7 +196,7 @@ def _prepare_openapi_import(
 def _prepare_postman_import(
     db: Session,
     context: ProjectContext,
-    payload: ImportPrepareRequest,
+    payload: ImportPreparePayload,
     source: ImportSource | None,
 ) -> ImportSummary:
     request = payload  # type: ignore[assignment]
@@ -282,7 +282,7 @@ def _resync_postman(
 
 
 def _resolve_openapi_payload(
-    request: ImportPrepareRequest,
+    request: ImportPreparePayload,
     source: ImportSource | None,
 ) -> tuple[dict[str, Any], str | None, ImportSourceType, str | None, Any]:
     from app.schemas.importers import OpenAPIImportOptions
@@ -318,7 +318,7 @@ def _resolve_openapi_payload(
 
 
 def _resolve_postman_payload(
-    request: ImportPrepareRequest,
+    request: ImportPreparePayload,
     source: ImportSource | None,
 ) -> tuple[dict[str, Any], str | None, ImportSourceType, Any]:
     from app.schemas.importers import PostmanImportOptions
