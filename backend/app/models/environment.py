@@ -65,6 +65,8 @@ class Environment(BaseModel, Base):
         "ExecutionQueue",
         back_populates="environment",
         cascade="all, delete-orphan",
+        foreign_keys="ExecutionQueue.environment_id",
+        primaryjoin="Environment.id == ExecutionQueue.environment_id",
     )
     agents: Mapped[list[Agent]] = relationship(
         "Agent",
