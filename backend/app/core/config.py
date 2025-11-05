@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     oidc_scopes: List[str] = ["openid", "profile", "email"]
     database_url: str
     redis_url: str
-    uvicorn_workers: int = 2
+    uvicorn_workers: int = 1
     cors_origins_raw: str | None = Field(
         default=None,
         alias="BACKEND_CORS_ORIGINS",

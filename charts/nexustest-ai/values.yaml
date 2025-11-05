@@ -31,7 +31,7 @@ config:
   env:
     APP_ENV: production
     PROVIDER: mock
-    UVICORN_WORKERS: "2"
+    UVICORN_WORKERS: "1"
     CORS_ORIGINS: "*"
     ACCESS_TOKEN_EXPIRE_MINUTES: "60"
     TOKEN_CLOCK_SKEW_SECONDS: "0"

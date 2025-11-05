@@ -1,8 +1,13 @@
+from typing import Any
+
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
 from app.api.response import ResponseEnvelope, success_response
 from app.api.routes import (
@@ -36,6 +41,7 @@ from app.api.routes import (
 from app.core.config import get_settings
 from app.core.errors import ErrorCode, create_error_detail
 from app.core.http import close_http_client
+from app.db.session import get_db
 from app.logging import RequestIdMiddleware, configure_logging, get_logger
 from app.observability.metrics import MetricsMiddleware
 
@@ -78,8 +84,38 @@ def create_app() -> FastAPI:
         response_model=ResponseEnvelope,
         include_in_schema=False,
     )
-    def health_probe() -> dict:
-        return success_response({"status": "ok"})
+    def health_probe(db: Session = Depends(get_db)) -> JSONResponse:
+        checks: dict[str, dict[str, Any]] = {
+            "database": {"status": "ok"},
+            "migrations": {"status": "ok"},
+        }
+        status_code = status.HTTP_200_OK
+
+        try:
+            db.execute(text("SELECT 1"))
+        except SQLAlchemyError as exc:
+            checks["database"] = {"status": "error", "error": str(exc)}
+            checks["migrations"] = {
+                "status": "skipped",
+                "reason": "database unavailable",
+            }
+            status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        else:
+            try:
+                version_result = db.execute(text("SELECT version_num FROM alembic_version"))
+                migration_version = version_result.scalar_one_or_none()
+                if migration_version is None:
+                    raise RuntimeError("alembic_version table has no revision")
+                checks["migrations"]["version"] = migration_version
+            except (SQLAlchemyError, RuntimeError) as exc:
+                checks["migrations"] = {"status": "error", "error": str(exc)}
+                status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+
+        overall_status = "ready" if status_code == status.HTTP_200_OK else "degraded"
+        payload = {"status": overall_status, "checks": checks}
+        message = "Service ready" if status_code == status.HTTP_200_OK else "Service unavailable"
+        code = "SUCCESS" if status_code == status.HTTP_200_OK else "DEGRADED"
+        return JSONResponse(status_code=status_code, content=success_response(payload, message=message, code=code))
 
     app.include_router(health.router, prefix="/api")
     app.include_router(auth.router, prefix="/api/v1")

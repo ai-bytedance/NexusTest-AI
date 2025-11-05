@@ -47,10 +47,10 @@ services:
       - ../backend/alembic.ini:/app/alembic.ini:ro
     environment:
       <<: *classic-builder-env
-      UVICORN_WORKERS: ${UVICORN_WORKERS:-2}
+      UVICORN_WORKERS: ${UVICORN_WORKERS:-1}
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-""}
       ALLOW_ANY_ORIGIN: ${ALLOW_ANY_ORIGIN:-false}
-    command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-2}"]
+    command: ["sh", "-c", "alembic upgrade head && printf 'API ready: binding on 0.0.0.0:8000 with %s worker(s)\\n' \"${UVICORN_WORKERS:-1}\" && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-1}"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
