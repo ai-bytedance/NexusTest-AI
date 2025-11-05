@@ -5,6 +5,7 @@ from urllib.parse import parse_qsl
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import ValidationError
 from sqlalchemy import select
+from structlog.contextvars import get_contextvars
 from sqlalchemy.orm import Session
 
 from app.api.response import ResponseEnvelope, success_response
@@ -44,8 +45,8 @@ LOGIN_PAYLOAD_SCHEMA = {
         },
         "password": {
             "type": "string",
-            "minLength": 8,
-            "description": "Account password.",
+            "minLength": 1,
+            "description": "Account password. Must not be blank.",
         },
     },
     "required": ["password"],
@@ -83,6 +84,10 @@ LOGIN_REQUEST_OPENAPI_EXTRA = {
                 "schema": LOGIN_PAYLOAD_SCHEMA,
                 "examples": LOGIN_PAYLOAD_EXAMPLES,
             },
+            "multipart/form-data": {
+                "schema": LOGIN_PAYLOAD_SCHEMA,
+                "examples": LOGIN_PAYLOAD_EXAMPLES,
+            },
         },
     }
 }
@@ -109,6 +114,19 @@ def _parse_form_payload(body: bytes) -> tuple[dict[str, Any] | None, dict[str, s
         return None, {"parser": "form", "error": "decode_error", "message": exc.reason}
     parsed_form = dict(parse_qsl(text, keep_blank_values=True))
     return parsed_form, None
+
+
+async def _parse_request_form(request: Request) -> tuple[dict[str, Any] | None, dict[str, str] | None]:
+    try:
+        form = await request.form()
+    except Exception as exc:  # pragma: no cover - defensive parsing
+        return None, {"parser": "form", "error": "parse_error", "message": str(exc)}
+    form_data: dict[str, Any] = {}
+    for key, value in form.multi_items():
+        if hasattr(value, "filename"):
+            continue
+        form_data[key] = value
+    return form_data, None
 
 
 def _normalize_non_empty(value: Any) -> str | None:
@@ -142,40 +160,47 @@ def _collect_provided_fields(raw_data: dict[str, Any]) -> list[str]:
 
 async def parse_login_payload(request: Request) -> LoginRequest:
     content_type = (request.headers.get("content-type") or "").lower()
-    body = await request.body()
     parse_reasons: list[dict[str, str]] = []
     raw_data: dict[str, Any] | None = None
 
-    if "application/x-www-form-urlencoded" in content_type:
-        raw_data, error = _parse_form_payload(body)
+    if "application/x-www-form-urlencoded" in content_type or "multipart/form-data" in content_type:
+        raw_data, error = await _parse_request_form(request)
         if error:
             parse_reasons.append(error)
-    elif "application/json" in content_type or not content_type:
-        raw_data, error = _parse_json_payload(body)
-        if error:
-            parse_reasons.append(error)
-        if raw_data is None:
-            fallback_data, fallback_error = _parse_form_payload(body)
-            if fallback_error:
-                parse_reasons.append(fallback_error)
-            raw_data = fallback_data
     else:
-        raw_data, error = _parse_json_payload(body)
-        if error:
-            parse_reasons.append(error)
-        if raw_data is None:
-            fallback_data, fallback_error = _parse_form_payload(body)
-            if fallback_error:
-                parse_reasons.append(fallback_error)
-            raw_data = fallback_data
+        body = await request.body()
+        if "application/json" in content_type or not content_type:
+            raw_data, error = _parse_json_payload(body)
+            if error:
+                parse_reasons.append(error)
+            if raw_data is None:
+                fallback_data, fallback_error = _parse_form_payload(body)
+                if fallback_error:
+                    parse_reasons.append(fallback_error)
+                raw_data = fallback_data
+        else:
+            raw_data, error = _parse_json_payload(body)
+            if error:
+                parse_reasons.append(error)
+            if raw_data is None:
+                fallback_data, fallback_error = _parse_form_payload(body)
+                if fallback_error:
+                    parse_reasons.append(fallback_error)
+                raw_data = fallback_data
+
+    request_context = get_contextvars()
+    request_id = request_context.get("request_id") if request_context else None
 
     if raw_data is None:
-        logger.warning(
-            "login_payload_parse_error",
-            path=str(request.url.path),
-            content_type=content_type or "missing",
-            reasons=parse_reasons or None,
-        )
+        log_payload: dict[str, Any] = {
+            "path": str(request.url.path),
+            "content_type": content_type or "missing",
+        }
+        if parse_reasons:
+            log_payload["reasons"] = parse_reasons
+        if request_id:
+            log_payload["request_id"] = request_id
+        logger.warning("login_payload_parse_error", **log_payload)
         raise http_exception(status.HTTP_400_BAD_REQUEST, ErrorCode.BAD_REQUEST, "Invalid login payload")
 
     raw_payload = raw_data or {}
@@ -201,6 +226,8 @@ async def parse_login_payload(request: Request) -> LoginRequest:
     }
     if parse_reasons:
         log_kwargs["reasons"] = parse_reasons
+    if request_id:
+        log_kwargs["request_id"] = request_id
 
     if identifier_value is None:
         logger.warning("login_payload_missing_identifier", **log_kwargs)
@@ -221,7 +248,9 @@ async def parse_login_payload(request: Request) -> LoginRequest:
             "password required",
         )
 
-    payload_data = {"identifier": identifier_value, "password": password_value}
+    payload_data = dict(raw_payload)
+    payload_data["identifier"] = identifier_value
+    payload_data["password"] = password_value
 
     try:
         return LoginRequest.model_validate(payload_data)
@@ -232,11 +261,8 @@ async def parse_login_payload(request: Request) -> LoginRequest:
                 for error in exc.errors()
             }
         )
-        logger.warning(
-            "login_payload_validation_failed",
-            error_fields=error_fields,
-            **log_kwargs,
-        )
+        log_kwargs["error_fields"] = error_fields
+        logger.warning("login_payload_validation_failed", **log_kwargs)
         raise http_exception(
             status.HTTP_400_BAD_REQUEST,
             ErrorCode.BAD_REQUEST,

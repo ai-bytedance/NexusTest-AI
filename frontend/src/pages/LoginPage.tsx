@@ -19,10 +19,17 @@ export default function LoginPage() {
   const from = (location.state as { from?: Location })?.from?.pathname ?? "/";
 
   const handleSubmit = async (values: LoginFormValues) => {
+    const email = values.email.trim();
+    const password = values.password ?? "";
+    if (!password.trim()) {
+      message.error(t("login.password"));
+      return;
+    }
+
     setLoading(true);
     try {
-      const result = await login(values);
-      setAuth(result.access_token, values.email);
+      const result = await login({ email, password });
+      setAuth(result.access_token, email);
       navigate(from, { replace: true });
     } finally {
       setLoading(false);
@@ -34,14 +41,14 @@ export default function LoginPage() {
       <Form.Item
         label={t("login.email")}
         name="email"
-        rules={[{ required: true, type: "email", message: t("login.email") }]}
+        rules={[{ required: true, type: "email", whitespace: true, message: t("login.email") }]}
       >
         <Input placeholder="user@example.com" size="large" />
       </Form.Item>
       <Form.Item
         label={t("login.password")}
         name="password"
-        rules={[{ required: true, message: t("login.password") }]}
+        rules={[{ required: true, whitespace: true, message: t("login.password") }]}
       >
         <Input.Password size="large" placeholder="******" />
       </Form.Item>
