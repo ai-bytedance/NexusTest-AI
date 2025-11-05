@@ -1,6 +1,10 @@
+from functools import lru_cache
+from pathlib import Path
 from time import monotonic
 from typing import Any
 
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -51,6 +55,24 @@ configure_logging()
 logger = get_logger()
 
 HEALTH_CHECK_CACHE_TTL_SECONDS = 5.0
+
+
+@lru_cache(maxsize=1)
+def get_expected_migration_heads() -> set[str]:
+    base_dir = Path(__file__).resolve().parent.parent
+    alembic_ini_path = base_dir / "alembic.ini"
+    if not alembic_ini_path.is_file():
+        raise FileNotFoundError(f"alembic.ini not found at {alembic_ini_path}")
+    config = Config(str(alembic_ini_path))
+    script_location = config.get_main_option("script_location") or "alembic"
+    script_path = Path(script_location)
+    if not script_path.is_absolute():
+        script_path = (alembic_ini_path.parent / script_location).resolve()
+    if not script_path.exists():
+        raise FileNotFoundError(f"Alembic script location not found at {script_path}")
+    config.set_main_option("script_location", str(script_path))
+    script_directory = ScriptDirectory.from_config(config)
+    return set(script_directory.get_heads())
 
 
 def create_app() -> FastAPI:
@@ -113,15 +135,36 @@ def create_app() -> FastAPI:
             }
             status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         else:
+            migrations_check = checks["migrations"]
             try:
-                version_result = db.execute(text("SELECT version_num FROM alembic_version"))
-                migration_version = version_result.scalar_one_or_none()
-                if migration_version is None:
-                    raise RuntimeError("alembic_version table has no revision")
-                checks["migrations"]["version"] = migration_version
-            except (SQLAlchemyError, RuntimeError) as exc:
-                checks["migrations"] = {"status": "error", "error": str(exc)}
+                expected_heads = get_expected_migration_heads()
+                if not expected_heads:
+                    raise RuntimeError("no Alembic heads found")
+            except Exception as exc:  # pragma: no cover - defensive
+                migrations_check["status"] = "error"
+                migrations_check["error"] = f"failed to resolve Alembic heads: {exc}"
                 status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+            else:
+                try:
+                    result = db.execute(text("SELECT version_num FROM alembic_version"))
+                    db_heads = {rev for rev in result.scalars().all() if rev}
+                except SQLAlchemyError as exc:
+                    migrations_check["status"] = "error"
+                    migrations_check["error"] = str(exc)
+                    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+                else:
+                    migrations_check["expected_heads"] = sorted(expected_heads)
+                    if not db_heads:
+                        migrations_check["status"] = "error"
+                        migrations_check["error"] = "alembic_version table has no entries"
+                        status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+                    elif db_heads != expected_heads:
+                        migrations_check["status"] = "error"
+                        migrations_check["error"] = "database schema version mismatch"
+                        migrations_check["db_heads"] = sorted(db_heads)
+                        status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+                    else:
+                        migrations_check["heads"] = sorted(db_heads)
 
         overall_status = "ready" if status_code == status.HTTP_200_OK else "degraded"
         payload = {"status": overall_status, "checks": checks}
