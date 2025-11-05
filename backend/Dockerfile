@@ -25,4 +25,4 @@ COPY . /app
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "sh ./scripts/import_check.sh && alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-2}"]
+CMD ["sh", "-c", "sh ./scripts/import_check.sh && alembic upgrade head && printf 'Starting API on 0.0.0.0:8000 with %s worker(s)\\n' \"${UVICORN_WORKERS:-1}\" && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-1}"]
