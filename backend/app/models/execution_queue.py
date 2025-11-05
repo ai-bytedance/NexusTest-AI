@@ -73,7 +73,11 @@ class ExecutionQueue(BaseModel, Base):
     )
 
     project: Mapped[Project] = relationship("Project", back_populates="queues")
-    environment: Mapped[Environment | None] = relationship("Environment", back_populates="queues")
+    environment: Mapped[Environment | None] = relationship(
+        "Environment",
+        back_populates="queues",
+        foreign_keys=[environment_id],
+    )
     test_cases: Mapped[list[TestCase]] = relationship("TestCase", back_populates="queue")
     test_suites: Mapped[list[TestSuite]] = relationship("TestSuite", back_populates="queue")
     reports: Mapped[list[TestReport]] = relationship("TestReport", back_populates="queue")
