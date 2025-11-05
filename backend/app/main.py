@@ -1,3 +1,4 @@
+from time import monotonic
 from typing import Any
 
 from dotenv import load_dotenv
@@ -49,6 +50,8 @@ load_dotenv()
 configure_logging()
 logger = get_logger()
 
+HEALTH_CHECK_CACHE_TTL_SECONDS = 5.0
+
 
 def create_app() -> FastAPI:
     settings = get_settings()
@@ -61,6 +64,7 @@ def create_app() -> FastAPI:
     )
 
     app.state.settings = settings
+    app.state.health_cache = None
 
     app.add_middleware(RequestIdMiddleware)
     if settings.metrics_enabled:
@@ -85,6 +89,14 @@ def create_app() -> FastAPI:
         include_in_schema=False,
     )
     def health_probe(db: Session = Depends(get_db)) -> JSONResponse:
+        now = monotonic()
+        cache_entry: dict[str, Any] | None = getattr(app.state, "health_cache", None)
+        if cache_entry and cache_entry["expires_at"] > now:
+            return JSONResponse(
+                status_code=cache_entry["status_code"],
+                content=cache_entry["content"],
+            )
+
         checks: dict[str, dict[str, Any]] = {
             "database": {"status": "ok"},
             "migrations": {"status": "ok"},
@@ -115,7 +127,18 @@ def create_app() -> FastAPI:
         payload = {"status": overall_status, "checks": checks}
         message = "Service ready" if status_code == status.HTTP_200_OK else "Service unavailable"
         code = "SUCCESS" if status_code == status.HTTP_200_OK else "DEGRADED"
-        return JSONResponse(status_code=status_code, content=success_response(payload, message=message, code=code))
+        content = success_response(payload, message=message, code=code)
+
+        if status_code == status.HTTP_200_OK:
+            app.state.health_cache = {
+                "expires_at": now + HEALTH_CHECK_CACHE_TTL_SECONDS,
+                "status_code": status_code,
+                "content": content,
+            }
+        else:
+            app.state.health_cache = None
+
+        return JSONResponse(status_code=status_code, content=content)
 
     app.include_router(health.router, prefix="/api")
     app.include_router(auth.router, prefix="/api/v1")
