@@ -72,7 +72,7 @@ spec:
           command:
             {{- toYaml $command | nindent 12 }}
           {{- end }}
-          {{- $defaultArgs := list (printf "uvicorn app.main:app --host 0.0.0.0 --port %d --workers ${UVICORN_WORKERS:-%s}" (int (default .Values.image.port .Values.api.service.targetPort)) (toString (default "1" .Values.config.env.UVICORN_WORKERS))) }}
+          {{- $defaultArgs := list (printf "uvicorn app.main:app --host 0.0.0.0 --port %d --workers ${UVICORN_WORKERS:-%s} --timeout-keep-alive 5" (int (default .Values.image.port .Values.api.service.targetPort)) (toString (default "1" .Values.config.env.UVICORN_WORKERS))) }}
           {{- $args := default $defaultArgs .Values.api.args -}}
 
           args:
