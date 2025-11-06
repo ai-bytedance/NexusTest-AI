@@ -50,7 +50,7 @@ services:
       UVICORN_WORKERS: ${UVICORN_WORKERS:-1}
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-""}
       ALLOW_ANY_ORIGIN: ${ALLOW_ANY_ORIGIN:-false}
-    command: ["sh", "-c", "alembic upgrade head && printf 'API ready: binding on 0.0.0.0:8000 with %s worker(s)\\n' \"${UVICORN_WORKERS:-1}\" && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-1} --timeout-keep-alive 5"]
+    command: ["sh", "-lc", "sh ./scripts/import_check.sh && python -u scripts/wait_for_db.py && alembic upgrade head && printf 'API ready: binding on 0.0.0.0:8000 with %s worker(s)\\n' \"${UVICORN_WORKERS:-1}\" && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-1} --timeout-keep-alive 5"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
