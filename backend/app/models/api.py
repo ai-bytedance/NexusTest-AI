@@ -101,4 +101,6 @@ class Api(BaseModel, Base):
         "ApiArchive",
         back_populates="api",
         cascade="all, delete-orphan",
+        foreign_keys="ApiArchive.api_id",
+        primaryjoin="Api.id == ApiArchive.api_id",
     )

@@ -61,7 +61,12 @@ class ApiArchive(BaseModel, Base):
     )
 
     project: Mapped[Project] = relationship("Project")
-    api: Mapped[Api | None] = relationship("Api", back_populates="archives")
+    api: Mapped[Api | None] = relationship(
+        "Api",
+        back_populates="archives",
+        foreign_keys=[api_id],
+        primaryjoin="ApiArchive.api_id == Api.id",
+    )
     run: Mapped[ImportRun] = relationship("ImportRun", back_populates="archives")
     applied_by: Mapped[User | None] = relationship("User")
 

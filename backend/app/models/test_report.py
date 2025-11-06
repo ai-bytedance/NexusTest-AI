@@ -156,7 +156,7 @@ class TestReport(BaseModel, Base):
 
     parent_report: Mapped[TestReport | None] = relationship(
         "TestReport",
-        remote_side=[id],
+        remote_side="TestReport.id",
         back_populates="child_reports",
     )
     child_reports: Mapped[list[TestReport]] = relationship(
