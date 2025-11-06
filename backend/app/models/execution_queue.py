@@ -72,7 +72,11 @@ class ExecutionQueue(BaseModel, Base):
         server_default=text("'{}'::jsonb"),
     )
 
-    project: Mapped[Project] = relationship("Project", back_populates="queues")
+    project: Mapped[Project] = relationship(
+        "Project",
+        back_populates="queues",
+        foreign_keys=[project_id],
+    )
     environment: Mapped[Environment | None] = relationship(
         "Environment",
         back_populates="queues",
