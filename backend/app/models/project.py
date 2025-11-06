@@ -133,11 +133,15 @@ class Project(BaseModel, Base):
         "ExecutionPolicy",
         back_populates="project",
         cascade="all, delete-orphan",
+        foreign_keys="ExecutionPolicy.project_id",
+        primaryjoin="Project.id == ExecutionPolicy.project_id",
     )
     rate_limit_policies: Mapped[list[RateLimitPolicy]] = relationship(
         "RateLimitPolicy",
         back_populates="project",
         cascade="all, delete-orphan",
+        foreign_keys="RateLimitPolicy.project_id",
+        primaryjoin="Project.id == RateLimitPolicy.project_id",
     )
     notifiers: Mapped[list[Notifier]] = relationship(
         "Notifier",

@@ -34,6 +34,8 @@ class RateLimitPolicy(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     project: Mapped[Project | None] = relationship(
         "Project",
         back_populates="rate_limit_policies",
+        foreign_keys=[project_id],
+        primaryjoin="RateLimitPolicy.project_id == Project.id",
     )
     api_tokens: Mapped[list[ApiToken]] = relationship(
         "ApiToken",

@@ -89,7 +89,12 @@ class ExecutionPolicy(BaseModel, Base):
         server_default=text("TRUE"),
     )
 
-    project: Mapped[Project] = relationship("Project", back_populates="execution_policies")
+    project: Mapped[Project] = relationship(
+        "Project",
+        back_populates="execution_policies",
+        foreign_keys=[project_id],
+        primaryjoin="ExecutionPolicy.project_id == Project.id",
+    )
     queue: Mapped[ExecutionQueue | None] = relationship("ExecutionQueue", back_populates="policies")
 
 __all__ = ["ExecutionPolicy"]
