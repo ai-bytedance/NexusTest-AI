@@ -57,5 +57,7 @@ FROM ${NGINX_BASE_IMAGE} AS runtime
 
 ARG USE_LOCAL_DIST=false
 
+RUN apk add --no-cache curl
+
 COPY infra/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY --from=builder /app/dist/ /usr/share/nginx/html/

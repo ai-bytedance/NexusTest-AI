@@ -9,7 +9,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends libpq5 curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends libpq5 curl iproute2 && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install --upgrade pip && \
@@ -25,4 +25,4 @@ COPY . /app
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "sh ./scripts/import_check.sh && alembic upgrade head && printf 'Starting API on 0.0.0.0:8000 with %s worker(s)\\n' \"${UVICORN_WORKERS:-1}\" && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-1} --timeout-keep-alive 5"]
+CMD ["sh", "-lc", "sh ./scripts/import_check.sh && python -u scripts/wait_for_db.py && alembic upgrade head && printf 'Starting API on 0.0.0.0:8000 with %s worker(s)\\n' \"${UVICORN_WORKERS:-1}\" && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-1} --timeout-keep-alive 5"]
