@@ -96,6 +96,7 @@ class Project(BaseModel, Base):
     queues: Mapped[list[ExecutionQueue]] = relationship(
         "ExecutionQueue",
         back_populates="project",
+        foreign_keys="[ExecutionQueue.project_id]",
         cascade="all, delete-orphan",
     )
     agents: Mapped[list[Agent]] = relationship(
